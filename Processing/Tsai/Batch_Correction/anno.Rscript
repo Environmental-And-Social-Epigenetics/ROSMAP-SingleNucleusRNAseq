@@ -1,0 +1,439 @@
+# Set a CRAN mirror
+# options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# # Step 1: Install remotes and BiocManager if not already installed
+# if (!requireNamespace("remotes", quietly = TRUE)) {
+#   install.packages("remotes")
+# }
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+  install.packages("BiocManager")
+}
+# BiocManager::install("SingleCellExperiment", force = TRUE)
+
+# # Step 2: Install DecoupleR with dependencies using BiocManager
+# BiocManager::install("decoupleR",force = TRUE)
+
+# BiocManager::install("ComplexHeatmap",force = TRUE)
+# BiocManager::install("rhdf5")
+# BiocManager::install("HDF5Array")
+library(HDF5Array)
+
+library(rhdf5)
+# Step 3: Load the package
+library(decoupleR)
+
+# if (!requireNamespace("Seurat", quietly = TRUE)) {
+#   install.packages("Seurat")
+# }
+# if (!requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+#   install.packages("ComplexHeatmap")
+# }
+# if (!requireNamespace("hdf5r", quietly = TRUE)) {
+#   install.packages("hdf5r")
+# }
+
+# # Step 1: Install zellkonverter if necessary
+# if (!requireNamespace("BiocManager", quietly = TRUE)) {
+#     install.packages("BiocManager")
+# }
+# BiocManager::install("zellkonverter")
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+# install.packages("Matrix")
+
+library(Matrix)
+
+# install.packages("reticulate")
+# library(reticulate)
+
+# # Load the Python `anndata` package
+# ad <- import("anndata", convert = FALSE)
+
+
+
+
+# Install necessary packages if not already installed
+# required_packages <- c("zellkonverter", "Seurat", "ComplexHeatmap", "SingleCellExperiment", "decoupleR", "dplyr")
+# for (pkg in required_packages) {
+#   if (!requireNamespace(pkg, quietly = TRUE)) {
+#     install.packages(pkg)
+#   }
+# }
+# Load libraries
+library(zellkonverter)
+library(Seurat)
+library(ComplexHeatmap)
+library(SingleCellExperiment)
+library(decoupleR)
+library(dplyr)
+
+# Step 1: Load RDS file and convert it to a list of data frames in R
+markers_r <- readRDS('Brain_Human_PFC_Markers_Mohammadi2020.rds')
+# Create a list of data frames with each cell type paired with its gene markers
+# Load necessary packages
+library(tibble)
+library(tidyr)
+
+# Convert the list to a tibble and unnest
+markers_long <- enframe(markers_r, name = "cell_type", value = "gene") %>%
+  unnest(cols = gene)
+
+# View the resulting data frame
+head(markers_long)
+
+# markers_dict <- lapply(seq_along(markers_r), function(i) {
+#   data.frame(gene = as.vector(markers_r[[i]]), cell_type = names(markers_r)[i])
+# })
+
+# # Combine all data frames in the list into a single data frame
+# markers_df <- do.call(rbind, markers_dict)
+
+# Step 1: Load only the expression matrix from the .h5ad file, ignoring unnecessary metadata
+adata <- zellkonverter::readH5AD(
+  '/om2/user/mabdel03/files/ACE_Analysis/Analysis/Tsai/Processing/ACE/Final_Pipeline/Batch_Correction/postClustering103124.h5ad',
+  use_hdf5 = TRUE  # Enables more efficient loading of large datasets
+)
+# Load the .h5ad file with `reticulate`
+# adata <- ad$read_h5ad('/om2/user/mabdel03/files/ACE_Analysis/Analysis/Tsai/Processing/ACE/Final_Pipeline/Batch_Correction/postPCA101524.h5ad')
+
+# Access the `log1p_total_counts` column in `obs`
+# log1p_total_counts <- py_to_r(adata$obs[["log1p_total_counts"]])
+# 
+# Extract data matrix and convert it to a usable format
+
+# Create Seurat object from the converted matrix
+# seurat_obj <- CreateSeuratObject(counts = log1p_total_counts)
+# 
+
+# # Step 2: Remove complex elements in `uns` and `obs` if they are not essential
+# adata$uns <- NULL  # Remove if unstructured annotations are not needed
+# adata$obs <- adata$obs[, c("X_scvi_batch", "X_scvi_labels")]  # Select only necessary columns
+
+# log1p_total_counts <- adata@colData$log1p_total_counts
+# log1p_total_counts <- as.matrix(log1p_total_counts)
+# print( dim(log1p_total_counts))
+# print(dim(adata))
+# rownames(log1p_total_counts) <- rownames(adata)
+# colnames(log1p_total_counts) <- colnames(adata)
+# assays(adata)$X <- Matrix(log1p_total_counts, sparse = TRUE)
+# X_matrix <- assays(sce)[["X"]]
+
+
+print("c")
+# Ensure row names (gene names) are present in the counts matrix
+# if (is.null(rownames(adata))) {
+#   stop("The .h5ad file does not have row names for features (genes). Ensure gene names are available.")
+# } else {
+#   # Assign row names to SingleCellExperiment object
+#   sce <- SingleCellExperiment(assays = list(counts = as.matrix(assays(adata)$X)))
+#   rownames(sce) <- rownames(adata)  # Set row names for the matrix
+# }
+
+# # Ensure the primary matrix (counts) is set up correctly for Seurat
+# logcounts(sce) <-  as.matrix(assays(adata)$X)
+# Converprint("made")t SingleCellExperiment to Seurat object
+# seurat_obj <- Seurat::as.Seurat(sce, counts = "counts")
+# BiocManager::install("scater")
+library(SingleCellExperiment)
+library(scater)
+library(dplyr)
+library(ComplexHeatmap)
+library(zellkonverter)
+
+# Assuming `adata` is your AnnData object converted to SCE
+dense_counts <- as.matrix(assays(adata)$X)  # Ensure this is a dense matrix
+print("made")
+
+# Create SingleCellExperiment object with dense counts
+sce <- SingleCellExperiment(assays = list(counts = dense_counts))
+# install.packages("purrr")
+
+# Load purrr if necessary
+# library(purrr)
+# Create an empty data frame to store results
+# markers_long <- data.frame(gene = character(), cell_type = character(), stringsAsFactors = FALSE)
+
+# Loop over each element in markers_df to build the long format data frame
+# for (cell_type_name in names(markers_df)) {
+#   # Get the genes for the current cell type
+#   genes <- markers_df[[cell_type_name]]
+  
+#   # Create a temporary data frame with the genes and the cell type name
+#   temp_df <- data.frame(gene = genes, cell_type = cell_type_name, stringsAsFactors = FALSE)
+  
+#   # Append to markers_long
+#   markers_long <- rbind(markers_long, temp_df)
+# }
+# Assuming `markers_long` is your tibble
+markers_df <- as.data.frame(markers_long)
+
+
+
+
+# head(markers_long)
+
+# print(markers_long)
+# # Print column names
+# print(colnames(markers_long))
+
+# # Print dimensions (number of rows and columns)
+# print(dim(markers_long))
+
+# # Print structure (gives an overview of the data types and sample values)
+# str(markers_long)
+
+# Step 3: Run ORA for marker enrichment
+# ora_results <- run_ora(
+#   mat = counts(sce),  # Use counts from the SCE object
+#   net = markers_df,
+#   source = "cell_type",
+#   target = "gene",
+#   min_n = 3,
+#   verbose = TRUE
+# )
+# dim(counts(sce))  # Check dimensions of your count matrix
+# dim(markers_df)    # Check dimensions of your markers_df
+
+# ora_results <- run_ora(
+#   mat = counts(sce),  # Use counts from the SCE object
+#   net = markers_df,
+#   source = "source",  # or "cell_type" if you kept the original name
+#   target = "target",  # or "gene" if you kept the original name
+#   min_n = 3,
+#   verbose = TRUE
+# )
+library(SingleCellExperiment)
+# View the resulting markers_long
+# Rename the columns if necessary
+colnames(markers_df) <- c("source", "target")
+# markers_df$condition <- "default"
+# str(markers_df)
+
+mat_genes <- rownames(sce)
+markers_sources <- markers_df$target
+
+# Find the intersection
+common_genes <- intersect(mat_genes, markers_sources)
+print(mat_genes)
+print(markers_sources)
+# Check the result
+if (length(common_genes) == 0) {
+  print("No common genes between the matrix row names and markers_df source column.")
+} else {
+  print(paste("Number of common genes:", length(common_genes)))
+  print("Common genes:")
+  print(common_genes)
+}
+
+
+# Define parameters
+chunk_size <- 5000  # Adjust based on memory constraints
+num_cols <- ncol(sce)
+chunk_indices <- split(sample(num_cols), ceiling(seq_along(1:num_cols) / chunk_size))
+
+# Initialize a list to store results
+ora_results_list <- list()
+
+# Get the counts matrix from the SingleCellExperiment object
+# counts_matrix <- counts(sce)
+
+
+
+# Run `run_ora` on each chunk
+for (i in seq_along(chunk_indices)) {
+  print(i)
+  chunk <- sce[, chunk_indices[[i]]]  # Subset the SCE object by the chunk indices
+  # Extract counts matrix
+  counts_matrix <- counts(chunk)
+
+  # Check the dimensions
+  # print(dim(counts_matrix))  # Assuming it shows genes x conditions
+
+  # # If the structure is genes x conditions, transpose it
+  # if (nrow(counts_matrix) < ncol(counts_matrix)) {
+  #     counts_matrix <- t(counts_matrix)  # Transpose to have genes in rows
+  # }
+
+  # Set appropriate row names (target nodes, e.g., gene names)
+  # rownames(counts_matrix) <- rownames(sce)  # Ensure row names are gene names
+
+  # Check the dimensions
+  dim(counts_matrix)  # Should print (genes x conditions)
+
+  # Print row and column names to confirm orientation
+  # print("Row names (should be genes):")
+  # print(head(rownames(counts_matrix)))
+
+  # print("Column names (should be samples/conditions):")
+  # print(head(colnames(counts_matrix)))
+
+  counts_df <- as.data.frame(counts_matrix)
+  transposed_matrix <- t(counts_df)
+  # counts_long <- counts_df %>%
+  #   rownames_to_column(var = "target") %>%
+  #   pivot_longer(cols = -target, names_to = "condition", values_to = "expression")
+
+  # Ensure you have `target` and `condition` columns in the data
+  # Check if `counts_long` has the required structure
+  # head(counts_long)
+
+  # Ensure that the counts matrix has conditions as columns
+  # Assign condition names to the columns
+  # Here, 'Condition1', 'Condition2', etc., should be your actual condition names
+  # colnames(counts_matrix) <- paste("Condition", seq_len(ncol(counts_matrix)), sep="_")
+
+  # At this point, ensure your counts_matrix is in the correct format for `run_ora`
+
+  # mat <- counts_matrix  # Final formatted matrix
+  # mat_df <- as.data.frame(mat)
+  # rownames(mat_df) <- rownames(mat)  # Ensure the row names are preserved
+
+  # print(head(mat))
+  library(tibble)
+  library(tidyr)
+  library(dplyr)
+
+  # Convert counts matrix to data frame and pivot to long format
+  counts_long <- counts_df %>%
+    rownames_to_column(var = "target") %>%
+    pivot_longer(cols = -target, names_to = "condition", values_to = "expression")
+
+  # # Check the structure to ensure correct format
+  # print(head(counts_long))
+
+  # # Check for common genes between `target` in `counts_long` and `target` in `markers_df`
+  # mat_genes <- unique(counts_long$target)      # Unique targets in counts_long
+  # markers_sources <- unique(markers_df$target) # Unique targets in markers_df
+
+  # # Find intersection
+  # common_genes <- intersect(mat_genes, markers_sources)
+
+  # Print the result
+  # if (length(common_genes) == 0) {
+  #   print("No common genes between counts_long targets and markers_df target column.")
+  # } else {
+  #   print(paste("Number of common genes:", length(common_genes)))
+  #   print("Common genes:")
+  #   print(common_genes)
+  # }
+  filtered_counts_long <- counts_long %>%
+    filter(target %in% mat_genes)
+  library(tidyr)
+
+  # Convert long to wide format
+  # counts_wide <- filtered_counts_long %>%
+  #     pivot_wider(names_from = condition, values_from = expression)
+  # # Convert tibble to data frame
+  counts_df <- as.data.frame(filtered_counts_long)
+  counts_transposed <- counts_long %>%
+    pivot_wider(names_from = target, values_from = expression) %>%
+    rename(condition = condition)
+  print(counts_transposed)
+  # Set row names using the gene names from the 'target' column, then remove the 'target' column
+  # rownames(counts_df) <- counts_df$target
+  # counts_df$target <- NULL  # Remove the target column now stored as row names
+
+  # # Check the structure
+  # print(head(counts_df))
+
+  # Check the structure to confirm
+#   rownames(counts_wide) <- counts_wide$target
+
+# # Remove the 'target' column from the data frame, leaving only the expression data
+#   counts_wide <- counts_wide[, -which(names(counts_wide) == "target")]
+
+  # Print the first few rows to confirm that the gene names are now row names
+  # print(head(counts_wide))
+  # print(head(counts_wide))
+  # mat_targets <- rownames(counts_df) # Assuming mat is a data frame with rownames
+  # marker_targets <- markers_df$target
+  # print(rownames(counts_df))
+  # print(markers_df$target)
+  # common_genes <- intersect(mat_targets, marker_targets)
+
+  # print(paste("Number of common genes:", length(common_genes)))
+
+  # source_counts <- filtered_counts_long %>%
+  #   group_by(condition) %>%
+  #   summarize(target_count = n()) %>%
+  #   filter(target_count >= 5)
+  # print(source_counts)
+  # print(str(filtered_counts_long))
+  # print(str(markers_df))
+  print(head(transposed_matrix))
+  ora_results_list[[i]] <- run_ora(
+    mat = transposed_matrix,  
+    net = markers_df,
+    source = "source",
+    target = "target",
+    minsize = 1,
+    verbose = TRUE
+  )
+}
+
+# Combine the results (if needed)
+# Example: Assuming you want to bind results into a single data frame
+ora_results <- do.call(rbind, ora_results_list)
+
+
+
+
+print("run")
+
+# Store ORA results in SCE metadata
+colData(sce)$ora_estimate <- ora_results$estimate
+
+# Handle Inf values in ORA results
+max_val <- max(ora_results$estimate[is.finite(ora_results$estimate)], na.rm = TRUE)
+ora_results$estimate[is.infinite(ora_results$estimate)] <- max_val
+
+# Step 4: Rank sources for each cluster
+ranked_clusters <- rank_sources_groups(
+  ora_results,
+  sce,  # Pass the SCE object instead of Seurat object
+  groupby = "leiden_res0_2",  # Adjust if your clustering information is stored differently
+  reference = "rest",
+  method = "t_test_overestim_var"
+)
+
+print("ranked")
+# Step 5: Extract and annotate top 3 cell types for each cluster
+top_3_ctypes <- ranked_clusters %>%
+  group_by(group) %>%
+  top_n(n = 3, wt = estimate) %>%
+  pull(cell_type)
+
+# Create a dictionary for annotations
+annotation_dict <- top_3_ctypes %>%
+  group_by(group) %>%
+  summarise(cell_type = first(cell_type)) %>%
+  deframe()
+
+# Annotate cell types based on leiden clustering
+colData(sce)$cell_type <- sapply(colData(sce)$leiden_res0_2, function(x) annotation_dict[[as.character(x)]])
+
+print("step 5 done")
+
+# Step 6: Visualize UMAP plot
+plotReducedDim(sce, dimred = "UMAP", colour_by = "cell_type")
+
+# Additional QC visualizations
+plotQC(sce, features = c("nCount_RNA", "percent.mt", "scDblFinder_score", "scDblFinder_class"))
+
+print("step 6 done")
+
+# Step 7: Heatmap of enrichment scores
+Heatmap(
+  ora_results$estimate,
+  cluster_rows = TRUE,
+  cluster_columns = TRUE,
+  name = "Z-scaled scores",
+  col = colorRamp2(c(-3, 0, 3), c("blue", "white", "red")),
+  show_row_names = TRUE,
+  show_column_names = TRUE
+)
+
+# Step 8: Convert back to AnnData and save as .h5ad
+adata2 <- as.SingleCellExperiment(sce)  # You can directly use the SCE object here
+zellkonverter::writeH5AD(adata2, '/om2/user/mabdel03/files/ACE_Analysis/Analysis/Tsai/Processing/ACE/Final_Pipeline/Batch_Correction/postAnnotation.h5ad')
+
+print("step 8 done")

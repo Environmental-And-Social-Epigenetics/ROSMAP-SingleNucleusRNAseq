@@ -1,0 +1,55 @@
+library(Seurat)
+library(scater)
+library(scDblFinder)
+library(BiocParallel)
+library(zellkonverter)
+
+setwd("/net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts/")
+
+# Libraries to process
+#libraries <- list('200227-B12-B', '200930-B55-A', '200826-B49-A', '200806-B44-B', '200225-B10-A', 
+                  '190403-B4-B', '190409-B5-A', '200306-B16-A', '200312-B20-A', '200313-B23-B')
+
+libraries <- list.dirs("/net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts/", full.names = FALSE, recursive = FALSE)
+
+libraries <- libraries[libraries != "qc_plots"]
+libraries <- libraries[libraries != "figures"]
+libraries <- libraries[libraries != "concatObjFinal.zarr"]
+libraries <- libraries[libraries != "OutputP2"]
+
+for(library in libraries) {
+  root <- library
+  sub_1 <- paste0(library, 'OutputP1.h5ad')
+  if (file.exists(sub_1)) {
+    # Read h5ad data
+    h5_data <- readH5AD(sub_1)
+    h5_data_X <- h5_data@assays@data$X
+
+    library(SingleCellExperiment)
+
+    # Initialize SingleCellExperiment
+    set.seed(123)
+    sce <- SingleCellExperiment(list(counts = h5_data_X))
+
+    # Run scDblFinder
+    sce2 <- scDblFinder(sce)
+  
+    # Extract doublet classification
+    doublet_class_vector <- sce2$scDblFinder.class
+
+    # Add doublet score and class to colData
+    colData(sce)$scDblFinder_score <- sce2$scDblFinder.score
+    colData(sce)$scDblFinder_class <- doublet_class_vector
+
+    # Example: If doublet_class_vector is a separate vector
+    colData(sce)$doublet_class <- doublet_class_vector
+    filtered_sce <- sce[, colData(sce)$doublet_class == 'singlet']
+
+    # Save the modified AnnData object
+    writeH5AD(filtered_sce, file.path(paste0(library, "OutputP2.h5ad")))
+
+    # Print summary to confirm doublets were removed
+    print(paste("Total cells before doublet removal:", ncol(h5_data_X)))
+    print(paste("Total cells after doublet removal:", ncol(sce)))
+  }
+}

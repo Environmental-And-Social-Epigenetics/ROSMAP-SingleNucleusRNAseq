@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# R
+.Rhistory
+.Rdata
+.RData
+.Ruserdata
+
+# Data files (too large for git)
+*.h5
+*.h5ad
+*.h5seurat
+*.rds
+*.RDS
+*.csv
+*.tsv
+*.mtx
+*.mtx.gz
+
+# FASTQ/BAM files
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.bai
+*.cram
+*.crai
+*.sam
+
+# VCF files
+*.vcf
+*.vcf.gz
+*.vcf.gz.tbi
+*.vcf.gz.csi
+*.bcf
+
+# Reference files
+*.fa
+*.fa.fai
+*.fasta
+*.fasta.fai
+*.dict
+*.gtf
+*.gtf.gz
+*.bed
+
+# SLURM logs
+slurm-*.out
+slurm-*.err
+*.out
+*.err
+
+# System files
+.DS_Store
+Thumbs.db
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Large outputs
+figures/
+output/
+outputs/
+results/
+
+# Local configuration overrides (keep paths.sh as template)
+config/paths.local.sh
+
