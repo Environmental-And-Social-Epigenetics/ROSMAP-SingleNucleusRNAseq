@@ -29,10 +29,11 @@ export QC_ENV="${CONDA_ENV_BASE}/qcEnv"
 # Permanent storage (home/project directory)
 export DATA_ROOT="/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis"
 
-# Scratch/temporary storage - UPDATE THIS FOR YOUR CLUSTER
-# Note: The old OpenMind paths were /om/scratch/Mon/mabdel03 or /om/scratch/Sun/mabdel03
-# These need to be updated to your cluster's scratch filesystem
-export SCRATCH_ROOT="/path/to/your/scratch"  # <-- UPDATE THIS
+# This repository root
+export REPO_ROOT="${DATA_ROOT}/ROSMAP-SingleNucleusRNAseq"
+
+# Scratch/temporary storage (1TB limit on Engaging)
+export SCRATCH_ROOT="/home/mabdel03/orcd/scratch"
 
 # =============================================================================
 # REFERENCE DATA
@@ -61,14 +62,22 @@ export DEJAGER_PREPROCESSED="${DATA_ROOT}/Data/DeJager/Preprocessed_Counts"
 # TSAI DATA PATHS
 # =============================================================================
 
-# Tsai FASTQs are on Engaging filesystem - paths come from CSV
-# Output counts (per cohort)
+# Tsai FASTQs CSV (self-contained in repo)
+export TSAI_FASTQS_CSV="${REPO_ROOT}/Data/Tsai/All_ROSMAP_FASTQs.csv"
+
+# Temporary Cell Ranger output (scratch - deleted after CellBender)
+export TSAI_CELLRANGER_SCRATCH="${SCRATCH_ROOT}/Tsai/Cellranger_Counts"
+
+# Temporary CellBender output (scratch - copied to permanent then deleted)
+export TSAI_CELLBENDER_SCRATCH="${SCRATCH_ROOT}/Tsai/Cellbender_Output"
+
+# Preprocessed counts (CellBender output) - permanent storage
+export TSAI_PREPROCESSED="${DATA_ROOT}/Data/Tsai/Preprocessed_Counts"
+
+# Legacy cohort-specific paths (for reference)
 export TSAI_COUNTS_ACE="${SCRATCH_ROOT}/Tsai/ACE/Counts"
 export TSAI_COUNTS_RESILIENT="${SCRATCH_ROOT}/Tsai/Resilient/Counts"
 export TSAI_COUNTS_SOCISL="${SCRATCH_ROOT}/Tsai/SocIsl/Counts"
-
-# Preprocessed counts (CellBender output) - permanent storage
-export TSAI_PREPROCESSED="${DATA_ROOT}/Data/Tsai/Preprocessing/Preprocessed_Counts"
 
 # =============================================================================
 # HELPER FUNCTIONS

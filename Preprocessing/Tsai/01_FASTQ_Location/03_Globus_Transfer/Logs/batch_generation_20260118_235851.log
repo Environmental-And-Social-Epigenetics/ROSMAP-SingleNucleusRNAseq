@@ -1,0 +1,18 @@
+Globus Batch File Generation Log
+==================================================
+Timestamp: 2026-01-18T23:58:51.654372
+Input CSV: /orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq/Data/Tsai/All_ROSMAP_FASTQs.csv
+Output batch file: /orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/01_FASTQ_Location/03_Globus_Transfer/Batch_Files/globus_batch.txt
+Destination base: /om/scratch/Mon/mabdel03/Tsai_Data/FASTQs
+
+Statistics:
+  Total FASTQ files: 5197
+  Unique projids: 480
+  Unique Library_IDs: 492
+  Unique run IDs: 20
+  Multi-source samples: 272
+  Total data size: 9.00 TB
+
+Globus Endpoints:
+  Source (Engaging): c52fcff2-761c-11eb-8cfc-cd623f92e1c0
+  Destination (Openmind): cbc6f8da-d37e-11eb-bde9-5111456017d9

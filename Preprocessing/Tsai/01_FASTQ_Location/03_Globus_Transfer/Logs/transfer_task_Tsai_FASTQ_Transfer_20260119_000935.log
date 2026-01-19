@@ -1,0 +1,17 @@
+Globus Transfer Log
+===================
+Timestamp: Mon Jan 19 00:10:41 EST 2026
+Task ID: 0d33f9cd-f4f5-11f0-9dfe-0affc77eb8a5
+Label: Tsai_FASTQ_Transfer_20260119_000935
+Source: ec54b570-cac5-47f7-b2a1-100c2078686f (MIT ORCD Engaging Collection)
+Destination: cbc6f8da-d37e-11eb-bde9-5111456017d9 (Openmind)
+Files: 5197
+
+To check status:
+  globus task show 0d33f9cd-f4f5-11f0-9dfe-0affc77eb8a5
+
+To monitor:
+  globus task wait 0d33f9cd-f4f5-11f0-9dfe-0affc77eb8a5
+
+Web interface:
+  https://app.globus.org/activity/0d33f9cd-f4f5-11f0-9dfe-0affc77eb8a5

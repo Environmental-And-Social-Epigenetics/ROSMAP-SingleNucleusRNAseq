@@ -15,10 +15,10 @@ ROSMAP-SingleNucleusRNAseq/
 │   │   ├── 02_Cellranger_Counts/
 │   │   ├── 03_Cellbender/
 │   │   └── 04_Demuxlet_Freemuxlet/
-│   └── Tsai/               # Tsai-specific preprocessing
-│       ├── 01_FASTQ_Location/
-│       ├── 02_Cellranger_Counts/
-│       └── 03_Cellbender/
+│   └── Tsai/               # Tsai-specific preprocessing (480 patients)
+│       ├── 01_FASTQ_Location/    # FASTQ discovery and indexing
+│       ├── 02_Cellranger_Counts/ # Automated batch pipeline (CR + CellBender)
+│       └── 03_Cellbender/        # Legacy cohort notebooks
 ├── Processing/              # QC and cell type annotation
 │   ├── DeJager/
 │   └── Tsai/
@@ -45,9 +45,9 @@ Converts raw FASTQ files into ambient RNA-corrected count matrices.
 
 | Step | DeJager | Tsai |
 |------|---------|------|
-| 1. Data Acquisition | Download FASTQs from Synapse | Locate FASTQs on Engaging |
-| 2. Alignment & Counting | Cell Ranger `count` | Cell Ranger `count` |
-| 3. Ambient RNA Removal | CellBender | CellBender |
+| 1. Data Acquisition | Download FASTQs from Synapse | Locate FASTQs on Engaging (indexed in CSV) |
+| 2. Alignment & Counting | Cell Ranger `count` | Cell Ranger `count` (batched, 30 patients/batch) |
+| 3. Ambient RNA Removal | CellBender | CellBender (GPU-accelerated) |
 | 4. Sample Assignment | Demuxlet/Freemuxlet (WGS-based) | Known from metadata |
 
 ### Phase 2: Processing
@@ -123,11 +123,20 @@ conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/synapse_env
 
 ## SLURM Resources
 
-| Step | Cores | Memory | Time | GPU |
-|------|-------|--------|------|-----|
-| Cell Ranger | 32 | 128GB | 47h | - |
-| CellBender | 32 | 128-500GB | 47h | A100 |
-| Demuxlet | 80 | 400GB | 48h | - |
+### DeJager Pipeline
+
+| Step | Partition | Cores | Memory | Time | GPU |
+|------|-----------|-------|--------|------|-----|
+| Cell Ranger | mit_normal | 32 | 128GB | 47h | - |
+| CellBender | mit_normal_gpu | 32 | 128-500GB | 47h | A100 |
+| Demuxlet | mit_normal | 80 | 400GB | 48h | - |
+
+### Tsai Pipeline (Updated)
+
+| Step | Partition | Cores | Memory | Time | GPU |
+|------|-----------|-------|--------|------|-----|
+| Cell Ranger | mit_preemptable | 16 | 64GB | 2 days | - |
+| CellBender | mit_normal_gpu | 4 | 64GB | 4h | 1 |
 
 ## Data Locations
 
@@ -146,10 +155,12 @@ Data paths are configured in `config/paths.sh`. Update `SCRATCH_ROOT` for your c
 | Data Type | Variable | Default Path |
 |-----------|----------|--------------|
 | FASTQs | (from CSV) | Located on Engaging filesystem |
-| Counts | `TSAI_COUNTS_{cohort}` | `${SCRATCH_ROOT}/Tsai/{cohort}/Counts/` |
-| Preprocessed | `TSAI_PREPROCESSED` | `${DATA_ROOT}/Data/Tsai/Preprocessing/Preprocessed_Counts/` |
+| FASTQ Index | `TSAI_FASTQS_CSV` | `${REPO_ROOT}/Data/Tsai/All_ROSMAP_FASTQs.csv` |
+| Cell Ranger (temp) | `TSAI_CELLRANGER_SCRATCH` | `${SCRATCH_ROOT}/Tsai/Cellranger_Counts/` |
+| CellBender (temp) | `TSAI_CELLBENDER_SCRATCH` | `${SCRATCH_ROOT}/Tsai/Cellbender_Output/` |
+| Preprocessed | `TSAI_PREPROCESSED` | `${DATA_ROOT}/Data/Tsai/Preprocessed_Counts/` |
 
-Where `{cohort}` is one of: ACE, Resilient, SocIsl
+**Dataset:** 480 patients, 5,197 FASTQ files, processed in 16 batches of 30 patients each.
 
 ## Known Issues
 
