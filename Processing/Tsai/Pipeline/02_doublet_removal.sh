@@ -13,12 +13,16 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 source "${REPO_ROOT}/config/paths.sh"
 
+# NOTE: SLURM log redirection is handled by submit_pipeline.sh via
+# command-line --output/--error flags.
 mkdir -p "${TSAI_PROCESSING_LOGS}"
-export SLURM_OUTPUT="${TSAI_PROCESSING_LOGS}/tsai_doublets_%A_%a.out"
-export SLURM_ERROR="${TSAI_PROCESSING_LOGS}/tsai_doublets_%A_%a.err"
 
 source "${CONDA_INIT_SCRIPT}"
 conda activate "${SINGLECELL_ENV}"
+if [[ -z "${CONDA_PREFIX:-}" ]]; then
+    echo "ERROR: Failed to activate conda environment: ${SINGLECELL_ENV}"
+    exit 1
+fi
 
 INPUT_DIR="${TSAI_QC_FILTERED}"
 OUTPUT_DIR="${TSAI_DOUBLET_REMOVED}"

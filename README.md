@@ -9,7 +9,9 @@ This repository contains the single nucleus RNA sequencing (snRNA-seq) analysis 
 
 ```
 ROSMAP-SingleNucleusRNAseq/
-├── Preprocessing/           # Raw data processing (FASTQs → Cellbender outputs)
+├── config/                  # Central path configuration (paths.sh)
+├── setup/                   # First-time setup guide and install scripts
+├── Preprocessing/           # Raw data processing (FASTQs → CellBender outputs)
 │   ├── DeJager/            # DeJager-specific preprocessing
 │   │   ├── 01_FASTQ_Download/
 │   │   ├── 02_Cellranger_Counts/
@@ -26,10 +28,10 @@ ROSMAP-SingleNucleusRNAseq/
 │       │   ├── 01_qc_filter.*
 │       │   ├── 02_doublet_removal.*
 │       │   ├── 03_integration_annotation.*
+│       │   ├── submit_pipeline.sh # SLURM submission wrapper
 │       │   ├── Resources/         # Marker gene references
 │       │   └── envs/              # Conda environment specs
-│       ├── QC/                    # Legacy per-sample scripts
-│       └── Batch_Correction/      # Legacy batch correction scripts
+│       └── archive/               # Superseded legacy scripts
 └── Analysis/                # Downstream analysis
     ├── DeJager/
     │   ├── DEG_Analysis/
@@ -86,37 +88,40 @@ Conda environment specs are provided in `Processing/Tsai/Pipeline/envs/`.
 
 ### Path Configuration
 
-Before running the pipeline, configure paths in `config/paths.sh`:
+Before running the pipeline, configure paths in `config/paths.sh` (or create
+`config/paths.local.sh` for per-user overrides):
 
 ```bash
-# Source the configuration
 source config/paths.sh
-
-# Verify paths are correct
 check_paths
 ```
 
-**Important**: Update `SCRATCH_ROOT` in `config/paths.sh` to point to your cluster's scratch filesystem.
+See `setup/README.md` for a complete first-time setup guide.
 
 ### Conda Environments
 
-All environments are located at `/orcd/data/lhtsai/001/om2/mabdel03/conda_envs/`:
+Create the processing pipeline environments using the automated installer:
 
 ```bash
-# Initialize conda
-source /orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh
+source config/paths.sh
+bash setup/install_envs.sh
+```
 
-# CellBender environment
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/Cellbender_env
+Or manually from the YAML specs in `Processing/Tsai/Pipeline/envs/`.
+After creation, use the variables from `config/paths.sh`:
 
-# Synapse download environment
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/synapse_env
+```bash
+source config/paths.sh
+init_conda
+conda activate "${QC_ENV}"          # Stage 1
+conda activate "${SINGLECELL_ENV}"  # Stage 2
+conda activate "${BATCHCORR_ENV}"   # Stage 3
 ```
 
 ### Reference Files
 
 - Human reference genome: `refdata-gex-GRCh38-2020-A`
-- Location: `/orcd/data/lhtsai/001/om2/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A`
+- Set `CELLRANGER_REF` in `config/paths.sh` to the reference directory
 
 ## SLURM Resources
 
@@ -161,11 +166,11 @@ Data paths are configured in `config/paths.sh`. Update `SCRATCH_ROOT` for your c
 
 ## Known Issues
 
-> **Warning**: Several scripts contain hardcoded paths that may need to be updated for your environment. See individual directory READMEs for specific issues.
+See `KNOWN_ISSUES.md` for a detailed tracker. Key remaining items:
 
-1. **Hardcoded paths**: Many scripts reference `/orcd/data/lhtsai/001/om2/mabdel03/` or `/om/scratch/Mon/mabdel03/` paths
-2. **Demuxlet scripts**: Contains extensive commented-out parameter tuning code that should be cleaned up
-3. **Scratch paths**: Some scripts reference temporary scratch directories that may not persist
+1. **Demuxlet scripts**: Contains commented-out parameter tuning code that should be cleaned up
+2. **Scratch dependencies**: Intermediate data on scratch may be cleaned up before processing completes
+3. **DeJager processing scripts**: Named "TsaiPipeline" (historical artifact) — rename pending
 
 ## Contributing
 

@@ -74,40 +74,34 @@ def parse_args() -> argparse.Namespace:
         help="Overwrite existing outputs instead of skipping them.",
     )
     parser.add_argument(
-        "--counts-lower-percentile",
-        type=float,
-        default=4.5,
-        help="Lower percentile threshold for log1p total counts.",
+        "--counts-nmads",
+        type=int,
+        default=4,
+        help="Number of MADs for log1p_total_counts outlier detection.",
     )
     parser.add_argument(
-        "--counts-upper-percentile",
-        type=float,
-        default=96.0,
-        help="Upper percentile threshold for log1p total counts.",
-    )
-    parser.add_argument(
-        "--genes-lower-percentile",
-        type=float,
-        default=5.0,
-        help="Lower percentile threshold for log1p genes by counts.",
-    )
-    parser.add_argument(
-        "--genes-upper-percentile",
-        type=float,
-        default=100.0,
-        help="Upper percentile threshold for log1p genes by counts.",
-    )
-    parser.add_argument(
-        "--max-mt",
-        type=float,
-        default=10.0,
-        help="Maximum allowed mitochondrial percentage.",
+        "--genes-nmads",
+        type=int,
+        default=4,
+        help="Number of MADs for log1p_n_genes_by_counts outlier detection.",
     )
     parser.add_argument(
         "--top20-nmads",
+        type=int,
+        default=4,
+        help="Number of MADs for pct_counts_in_top_20_genes outlier detection.",
+    )
+    parser.add_argument(
+        "--mt-nmads",
+        type=int,
+        default=3,
+        help="Number of MADs for pct_counts_mt outlier detection.",
+    )
+    parser.add_argument(
+        "--mt-pct-threshold",
         type=float,
-        default=4.0,
-        help="Number of MADs for pct_counts_in_top_20_genes outlier detection. Set to 0 to disable.",
+        default=7.5,
+        help="Hard upper threshold for mitochondrial percentage.",
     )
     return parser.parse_args()
 
@@ -139,15 +133,6 @@ def parse_requested_samples(raw_sample_ids: str, available_samples: list[str]) -
         missing_str = ", ".join(missing)
         raise ValueError(f"Requested sample IDs are not available as complete CellBender outputs: {missing_str}")
     return requested
-
-
-def is_outlier_percentile(
-    adata: sc.AnnData, metric: str, lower_percentile: float, upper_percentile: float
-) -> pd.Series:
-    values = adata.obs[metric]
-    lower_threshold = np.percentile(values, lower_percentile)
-    upper_threshold = np.percentile(values, upper_percentile)
-    return (values < lower_threshold) | (values > upper_threshold)
 
 
 def is_outlier_mad(adata: sc.AnnData, metric: str, nmads: int) -> pd.Series:
@@ -209,44 +194,26 @@ def run_qc_filter(sample_id: str, args: argparse.Namespace) -> Path:
     )
 
     adata.obs["outlier"] = (
-        is_outlier_percentile(
-            adata,
-            "log1p_total_counts",
-            args.counts_lower_percentile,
-            args.counts_upper_percentile,
-        )
-        | is_outlier_percentile(
-            adata,
-            "log1p_n_genes_by_counts",
-            args.genes_lower_percentile,
-            args.genes_upper_percentile,
-        )
+        is_outlier_mad(adata, "log1p_total_counts", args.counts_nmads)
+        | is_outlier_mad(adata, "log1p_n_genes_by_counts", args.genes_nmads)
+        | is_outlier_mad(adata, "pct_counts_in_top_20_genes", args.top20_nmads)
     )
-    adata.obs["mt_outlier"] = adata.obs["pct_counts_mt"] > args.max_mt
-
-    if args.top20_nmads > 0:
-        adata.obs["top20_outlier"] = is_outlier_mad(
-            adata, "pct_counts_in_top_20_genes", int(args.top20_nmads)
-        )
-    else:
-        adata.obs["top20_outlier"] = False
-
-    adata.obs["mad_total_counts_outlier"] = is_outlier_mad(adata, "log1p_total_counts", 5)
-    adata.obs["mad_n_genes_outlier"] = is_outlier_mad(adata, "log1p_n_genes_by_counts", 5)
+    adata.obs["mt_outlier"] = (
+        is_outlier_mad(adata, "pct_counts_mt", args.mt_nmads)
+        | (adata.obs["pct_counts_mt"] > args.mt_pct_threshold)
+    )
 
     pre_filter_n_cells = adata.n_obs
     filtered = adata[
         (~adata.obs["outlier"])
         & (~adata.obs["mt_outlier"])
-        & (~adata.obs["top20_outlier"])
     ].copy()
     filtered.uns["qc_filtering"] = {
-        "counts_lower_percentile": args.counts_lower_percentile,
-        "counts_upper_percentile": args.counts_upper_percentile,
-        "genes_lower_percentile": args.genes_lower_percentile,
-        "genes_upper_percentile": args.genes_upper_percentile,
-        "max_mt": args.max_mt,
+        "counts_nmads": args.counts_nmads,
+        "genes_nmads": args.genes_nmads,
         "top20_nmads": args.top20_nmads,
+        "mt_nmads": args.mt_nmads,
+        "mt_pct_threshold": args.mt_pct_threshold,
         "input_path": str(input_path),
     }
 

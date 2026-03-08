@@ -16,6 +16,15 @@ ensure_r_package <- function(package_name, local_lib, bioc = TRUE) {
     return(invisible(TRUE))
   }
 
+  # Fallback: attempt to install the missing package.  This requires internet
+  # access and may fail on compute nodes.  The recommended approach is to create
+  # the conda environment from envs/stage2_doublets.yml, which includes all
+  # required R packages.
+  message(sprintf(
+    "[WARN] Package '%s' not found in conda env — attempting install to %s",
+    package_name, local_lib
+  ))
+
   dir.create(local_lib, recursive = TRUE, showWarnings = FALSE)
   .libPaths(unique(c(local_lib, .libPaths())))
 
@@ -29,7 +38,10 @@ ensure_r_package <- function(package_name, local_lib, bioc = TRUE) {
   }
 
   if (!requireNamespace(package_name, quietly = TRUE)) {
-    stop(sprintf("Unable to load required package: %s", package_name), call. = FALSE)
+    stop(sprintf(
+      "Unable to load required package: %s. Ensure the conda environment was created from envs/stage2_doublets.yml",
+      package_name
+    ), call. = FALSE)
   }
 }
 
@@ -162,16 +174,33 @@ parse_requested_samples <- function(raw_sample_ids, available_samples) {
 }
 
 append_doublet_summary <- function(summary_path, sample_id, n_before, n_after, n_doublets) {
+  header <- "sample_id,n_cells_before,n_singlets,n_doublets,pct_doublets"
   row <- sprintf(
-    "%s,%d,%d,%d,%.1f\n",
+    "%s,%d,%d,%d,%.1f",
     sample_id, n_before, n_after, n_doublets,
     100 * n_doublets / max(n_before, 1)
   )
-  if (!file.exists(summary_path)) {
-    cat("sample_id,n_cells_before,n_singlets,n_doublets,pct_doublets\n",
-        file = summary_path, append = FALSE)
-  }
-  cat(row, file = summary_path, append = TRUE)
+
+  # Write row to a temporary file, then use flock + bash to safely append.
+  # This avoids interleaved writes when 32 SLURM array tasks run concurrently.
+  tmp <- tempfile(fileext = ".csv")
+  writeLines(row, tmp)
+
+  lock_path <- paste0(summary_path, ".lock")
+  cmd <- sprintf(
+    'flock -x %s bash -c %s',
+    shQuote(lock_path),
+    shQuote(sprintf(
+      '[ ! -s %s ] && echo %s > %s; cat %s >> %s',
+      shQuote(summary_path),
+      shQuote(header),
+      shQuote(summary_path),
+      shQuote(tmp),
+      shQuote(summary_path)
+    ))
+  )
+  system(cmd)
+  unlink(tmp)
 }
 
 process_sample <- function(sample_id, args) {

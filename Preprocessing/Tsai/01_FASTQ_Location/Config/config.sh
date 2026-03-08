@@ -1,25 +1,25 @@
 #!/bin/bash
 #
 # Configuration file for FASTQ Transfer Pipeline
-# All paths and parameters are defined here for easy modification
+#
+# This config sources the main config/paths.sh and adds FASTQ-transfer-specific
+# variables on top.
 #
 
 # =============================================================================
-# CONDA CONFIGURATION
+# LOAD GLOBAL PATHS
 # =============================================================================
 
-# Conda initialization script
-export CONDA_INIT_SCRIPT="/orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh"
-
-# Conda environment with pandas for Python scripts
-export CONDA_ENV="/orcd/data/lhtsai/001/om2/mabdel03/conda_envs/python_data_analysis"
+CONFIG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${CONFIG_DIR}/../../../.." && pwd)"
+source "${REPO_ROOT}/config/paths.sh"
 
 # =============================================================================
-# BASE PATHS
+# FASTQ TRANSFER PIPELINE PATHS
 # =============================================================================
 
 # Root directory for this pipeline
-export PIPELINE_ROOT="/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/FASTQ_Transfer"
+export PIPELINE_ROOT="${TSAI_FASTQ_TRANSFER_ROOT}"
 
 # Old directory containing original CSVs
 export OLD_DIR="${PIPELINE_ROOT}/Old"
@@ -31,7 +31,7 @@ export NEW_DIR="${PIPELINE_ROOT}/New"
 # INPUT CSVs (from original pipeline)
 # =============================================================================
 
-# Master mapping CSV: projid -> Library_ID -> Tsai_path (797 rows, 483 projids)
+# Master mapping CSV: projid -> Library_ID -> Tsai_path
 export MASTER_CSV="${OLD_DIR}/CSVs/Tsai_To_Openmind.csv"
 
 # Backup locations CSV
@@ -74,7 +74,6 @@ export NUM_PARALLEL_JOBS=32
 export SLURM_TIME="10:00:00"
 export SLURM_MEM="64G"
 export SLURM_CPUS=32
-export SLURM_MAIL_USER="mabdel03@mit.edu"
 
 # =============================================================================
 # HELPER FUNCTION: Ensure directories exist
@@ -85,4 +84,3 @@ ensure_dirs() {
     mkdir -p "${LOG_DIR}"
     mkdir -p "${TEMP_DIR}"
 }
-

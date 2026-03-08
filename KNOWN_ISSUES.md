@@ -7,22 +7,13 @@ This document consolidates known issues identified during the organization of th
 ### 1. Scratch Space Paths Need Configuration
 
 **Severity**: High
-**Status**: Partially resolved
-**Affected Scripts**: Preprocessing scripts that read/write intermediate data
+**Status**: Resolved
 
-The **Processing/Tsai/Pipeline/** shell wrappers now source `config/paths.sh` and derive all paths from it.  Preprocessing scripts still reference old OpenMind scratch paths and need updating.
-
-**Remaining files to update:**
-
-| Directory | File | Lines to Check |
-|-----------|------|----------------|
-| `Preprocessing/DeJager/02_Cellranger_Counts/` | `Count_DeJager.py` | Lines 10-19 |
-| `Preprocessing/DeJager/02_Cellranger_Counts/` | `example_count.sh` | Lines 5-6, 9-10 |
-| `Preprocessing/DeJager/03_Cellbender/` | `example_cellbender.sh` | Lines 4-5, 15, 17 |
-| `Preprocessing/Tsai/02_Cellranger_Counts/` | All example scripts | Throughout |
-| `Preprocessing/Tsai/03_Cellbender/` | All example scripts | Throughout |
-
-**Recommendation**: Migrate these to source `config/paths.sh` as done for the processing pipeline.
+All scripts now source `config/paths.sh` and derive paths from configured
+variables.  Preprocessing scripts (DeJager and Tsai) have been migrated.
+Hardcoded Synapse auth tokens in the DeJager download scripts have been
+removed (use `synapse login --rememberMe` or `SYNAPSE_AUTH_TOKEN` env var
+instead).
 
 ---
 
@@ -177,7 +168,7 @@ to reflect the current Pipeline.
 | Issue | Status | Date Fixed |
 |-------|--------|------------|
 | 1. Hardcoded paths (pipeline) | Resolved | 2026-03-08 |
-| 1. Hardcoded paths (preprocessing) | Open | - |
+| 1. Hardcoded paths (preprocessing) | Resolved | 2026-03-08 |
 | 2. Demuxlet cleanup | Open | - |
 | 3. Scratch dependencies | Open | - |
 | 4. Pipeline naming | Open | - |

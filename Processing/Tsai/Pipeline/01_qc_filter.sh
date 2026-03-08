@@ -13,15 +13,19 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 source "${REPO_ROOT}/config/paths.sh"
 
-# Redirect SLURM logs (create directory if needed)
+# NOTE: SLURM log redirection is handled by submit_pipeline.sh via
+# command-line --output/--error flags.  Setting them here as env vars
+# does not work (SLURM reads log paths at submission time, not runtime).
 mkdir -p "${TSAI_PROCESSING_LOGS}"
-export SLURM_OUTPUT="${TSAI_PROCESSING_LOGS}/tsai_qc_%A_%a.out"
-export SLURM_ERROR="${TSAI_PROCESSING_LOGS}/tsai_qc_%A_%a.err"
 
 source "${CONDA_INIT_SCRIPT}"
 conda activate "${QC_ENV}"
+if [[ -z "${CONDA_PREFIX:-}" ]]; then
+    echo "ERROR: Failed to activate conda environment: ${QC_ENV}"
+    exit 1
+fi
 
-INPUT_DIR="${WORKSPACE_ROOT}/Tsai_Data/Cellbender_Outputs"
+INPUT_DIR="${TSAI_PREPROCESSED}"
 OUTPUT_DIR="${TSAI_QC_FILTERED}"
 METADATA_CSV="${TSAI_METADATA_CSV}"
 

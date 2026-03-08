@@ -12,12 +12,18 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 source "${REPO_ROOT}/config/paths.sh"
 
+# NOTE: SLURM log redirection is handled by submit_pipeline.sh via
+# command-line --output/--error flags.
+# Stage 3 is a single integration job (not a SLURM array) because it
+# must load and concatenate all samples simultaneously.
 mkdir -p "${TSAI_PROCESSING_LOGS}"
-export SLURM_OUTPUT="${TSAI_PROCESSING_LOGS}/tsai_integrate_%j.out"
-export SLURM_ERROR="${TSAI_PROCESSING_LOGS}/tsai_integrate_%j.err"
 
 source "${CONDA_INIT_SCRIPT}"
 conda activate "${BATCHCORR_ENV}"
+if [[ -z "${CONDA_PREFIX:-}" ]]; then
+    echo "ERROR: Failed to activate conda environment: ${BATCHCORR_ENV}"
+    exit 1
+fi
 
 INPUT_DIR="${TSAI_DOUBLET_REMOVED}"
 OUTPUT_DIR="${TSAI_INTEGRATED}"

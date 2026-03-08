@@ -33,12 +33,12 @@ track per-sample cell counts before/after filtering across all array tasks.
 - Input: CellBender `processed_feature_bc_matrix_filtered.h5`
 - Output: `{projid}_qc.h5ad`
 
-Filtering rules:
+Filtering rules (MAD-based, matching DeJager reference):
 
-- Mitochondrial percentage > 10%
-- `log1p_total_counts` outside the 4.5th to 96th percentile
-- `log1p_n_genes_by_counts` outside the 5th to 100th percentile
-- `pct_counts_in_top_20_genes` beyond 4 MADs from median (disable with `--top20-nmads 0`)
+- `log1p_total_counts` beyond 4 MADs from median
+- `log1p_n_genes_by_counts` beyond 4 MADs from median
+- `pct_counts_in_top_20_genes` beyond 4 MADs from median
+- `pct_counts_mt` beyond 3 MADs from median OR > 7.5%
 
 ### Stage 2: Doublet Removal
 
@@ -64,16 +64,16 @@ If the active R environment is missing a required Bioconductor package such as `
   - `cluster_annotation_top3.csv`
   - UMAP figures in `03_Integrated/figures/`
 
-Stage 3 performs:
+Stage 3 performs (matching DeJager reference):
 
 1. Metadata join on `projid`
-2. Raw counts preservation in `layers["counts"]`
-3. Normalization and log transform
-4. HVG selection with `seurat_v3`
-5. PCA
+2. Normalization (median-based) and log transform
+3. HVG selection with `seurat` (dispersion-based)
+4. Scaling (no clipping)
+5. PCA (50 components)
 6. Harmony batch correction
 7. Leiden clustering at 0.2, 0.5, and 1.0
-8. UMAP
+8. UMAP (default min_dist=0.5)
 9. ORA-based annotation with the Mohammadi 2020 marker list
 
 ## Batch Variable

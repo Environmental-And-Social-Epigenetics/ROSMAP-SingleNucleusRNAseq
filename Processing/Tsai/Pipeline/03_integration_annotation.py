@@ -59,10 +59,8 @@ def parse_args() -> argparse.Namespace:
         default="leiden_res0_5",
         help="Cluster key used for ORA-based cell type annotation.",
     )
-    parser.add_argument("--n-top-genes", type=int, default=3000)
     parser.add_argument("--n-pcs", type=int, default=50)
     parser.add_argument("--n-neighbors", type=int, default=15)
-    parser.add_argument("--min-dist", type=float, default=0.15)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -250,58 +248,57 @@ def main() -> None:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    metadata = load_metadata(args.metadata_csv)
-    available_samples = discover_samples(args.input_dir, args.metadata_csv)
-    selected_samples = parse_requested_samples(args.sample_ids, available_samples)
-    if not selected_samples:
-        raise SystemExit("No singlet inputs were found to integrate.")
+    # ── Checkpoint: resume from integrated object if annotation failed ──
+    if integrated_path.exists() and not annotated_path.exists() and not args.overwrite:
+        print(f"[resume] Loading existing integrated object from {integrated_path}")
+        combined = ad.read_h5ad(integrated_path)
+    else:
+        metadata = load_metadata(args.metadata_csv)
+        available_samples = discover_samples(args.input_dir, args.metadata_csv)
+        selected_samples = parse_requested_samples(args.sample_ids, available_samples)
+        if not selected_samples:
+            raise SystemExit("No singlet inputs were found to integrate.")
 
-    adatas, loaded_sample_ids = load_adatas(selected_samples, args, metadata)
-    if not adatas:
-        raise SystemExit("No samples could be loaded (all missing from metadata?).")
-    combined = ad.concat(
-        adatas,
-        join="inner",
-        merge="same",
-        label="concat_sample_id",
-        keys=loaded_sample_ids,
-        index_unique="-",
-    )
-    combined.obs["sample_id"] = combined.obs["sample_id"].astype(str)
-    combined.obs["batch"] = combined.obs["batch"].astype(str).astype("category")
-    combined.layers["counts"] = combined.X.copy()
+        adatas, loaded_sample_ids = load_adatas(selected_samples, args, metadata)
+        if not adatas:
+            raise SystemExit("No samples could be loaded (all missing from metadata?).")
+        combined = ad.concat(
+            adatas,
+            join="inner",
+            merge="same",
+            label="concat_sample_id",
+            keys=loaded_sample_ids,
+            index_unique="-",
+        )
+        combined.obs["sample_id"] = combined.obs["sample_id"].astype(str)
+        combined.obs["batch"] = combined.obs["batch"].astype(str).astype("category")
 
-    print(f"[concat] {combined.n_obs} cells x {combined.n_vars} genes")
+        print(f"[concat] {combined.n_obs} cells x {combined.n_vars} genes")
 
-    sc.pp.normalize_total(combined, target_sum=1e4)
-    sc.pp.log1p(combined)
-    combined.raw = combined.copy()
+        sc.pp.normalize_total(combined)
+        sc.pp.log1p(combined)
+        combined.raw = combined.copy()
 
-    sc.pp.highly_variable_genes(
-        combined,
-        flavor="seurat_v3",
-        layer="counts",
-        n_top_genes=args.n_top_genes,
-    )
-    combined = combined[:, combined.var["highly_variable"]].copy()
-    sc.pp.scale(combined, max_value=10)
-    sc.tl.pca(combined, svd_solver="arpack", n_comps=args.n_pcs)
+        sc.pp.highly_variable_genes(combined, flavor="seurat")
+        combined = combined[:, combined.var["highly_variable"]].copy()
+        sc.pp.scale(combined)
+        sc.tl.pca(combined, svd_solver="arpack", n_comps=args.n_pcs)
 
-    harmony_result = hm.run_harmony(combined.obsm["X_pca"], combined.obs, "batch")
-    combined.obsm["X_harmony"] = harmony_result.Z_corr.T
+        harmony_result = hm.run_harmony(combined.obsm["X_pca"], combined.obs, "batch")
+        combined.obsm["X_harmony"] = harmony_result.Z_corr.T
 
-    sc.pp.neighbors(
-        combined,
-        use_rep="X_harmony",
-        n_neighbors=args.n_neighbors,
-    )
-    sc.tl.leiden(combined, key_added="leiden_res0_2", resolution=0.2)
-    sc.tl.leiden(combined, key_added="leiden_res0_5", resolution=0.5)
-    sc.tl.leiden(combined, key_added="leiden_res1", resolution=1.0)
-    sc.tl.umap(combined, min_dist=args.min_dist)
+        sc.pp.neighbors(
+            combined,
+            use_rep="X_harmony",
+            n_neighbors=args.n_neighbors,
+        )
+        sc.tl.leiden(combined, key_added="leiden_res0_2", resolution=0.2)
+        sc.tl.leiden(combined, key_added="leiden_res0_5", resolution=0.5)
+        sc.tl.leiden(combined, key_added="leiden_res1", resolution=1.0)
+        sc.tl.umap(combined)
 
-    combined.write_h5ad(integrated_path)
-    print(f"[write] integrated object -> {integrated_path}")
+        combined.write_h5ad(integrated_path)
+        print(f"[write] integrated object -> {integrated_path}")
 
     markers_df = load_markers(args.markers_rds)
     combined = run_annotation(

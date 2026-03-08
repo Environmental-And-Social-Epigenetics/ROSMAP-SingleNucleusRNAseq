@@ -3,9 +3,11 @@
 Generate Cell Ranger batch scripts for Tsai patients from local FASTQs.
 
 Expected FASTQ layout:
-    /om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/<projid>/<Library_ID>/*.fastq.gz
+    <TSAI_FASTQS_DIR>/<projid>/<Library_ID>/*.fastq.gz
 
 Usage:
+    # Source config first so all env vars are set
+    source ../../Config/cellranger_config.sh
     python generate_batch_scripts.py [--dry-run]
 """
 
@@ -16,57 +18,63 @@ import shutil
 from pathlib import Path
 
 
-# Configuration - override via environment variables when needed
-BATCH_SIZE = int(os.environ.get("TSAI_BATCH_SIZE", "30"))
-REPO_ROOT = os.environ.get(
-    "REPO_ROOT", "/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq"
-)
+# Configuration — all values read from environment variables.
+# Source config/paths.sh (or Config/cellranger_config.sh, which sources it)
+# before running this script so all variables are set correctly.
+if "REPO_ROOT" not in os.environ:
+    print(
+        "WARNING: REPO_ROOT not set in environment. "
+        "Source config/paths.sh or Config/cellranger_config.sh first.",
+        flush=True,
+    )
+
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "30"))
+REPO_ROOT = os.environ.get("REPO_ROOT", "")
 PIPELINE_DIR = os.environ.get(
-    "PIPELINE_DIR", f"{REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts"
+    "PIPELINE_DIR",
+    os.path.join(REPO_ROOT, "Preprocessing/Tsai/02_Cellranger_Counts") if REPO_ROOT else "",
 )
 
 # Input FASTQs
 FASTQS_ROOT = Path(
-    os.environ.get("TSAI_FASTQS_DIR", "/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs")
+    os.environ.get("TSAI_FASTQS_ROOT", os.environ.get("TSAI_FASTQS_DIR", ""))
 )
 
 # Output directories
-BATCH_SCRIPTS_DIR = f"{PIPELINE_DIR}/Batch_Scripts"
-TRACKING_DIR = f"{PIPELINE_DIR}/Tracking"
-LOGS_OUT = f"{PIPELINE_DIR}/Logs/Outs"
-LOGS_ERR = f"{PIPELINE_DIR}/Logs/Errs"
+BATCH_SCRIPTS_DIR = os.environ.get("BATCH_SCRIPTS_DIR", f"{PIPELINE_DIR}/Batch_Scripts")
+TRACKING_DIR = os.environ.get("TRACKING_DIR", f"{PIPELINE_DIR}/Tracking")
+LOGS_OUT = os.environ.get("LOGS_OUT", f"{PIPELINE_DIR}/Logs/Outs")
+LOGS_ERR = os.environ.get("LOGS_ERR", f"{PIPELINE_DIR}/Logs/Errs")
 
 # Scratch paths
 CELLRANGER_OUTPUT = os.environ.get(
-    "TSAI_CELLRANGER_OUTPUT", "/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs"
+    "CELLRANGER_OUTPUT", os.environ.get("TSAI_CELLRANGER_OUTPUT", "")
 )
 CELLBENDER_OUTPUT = os.environ.get(
-    "TSAI_CELLBENDER_SCRATCH", "/om/scratch/Mon/mabdel03/Tsai/Cellbender_Output"
+    "CELLBENDER_OUTPUT", os.environ.get("TSAI_CELLBENDER_SCRATCH", "")
 )
 
 # Permanent storage
 FINAL_OUTPUT = os.environ.get(
-    "TSAI_PREPROCESSED",
-    "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessed_Counts",
+    "FINAL_OUTPUT", os.environ.get("TSAI_PREPROCESSED", "")
 )
 
 # Cell Ranger settings
-CELLRANGER_PATH = os.environ.get(
-    "CELLRANGER_PATH", "/om2/user/mabdel03/apps/yard/cellranger-8.0.0"
-)
-TRANSCRIPTOME = os.environ.get(
-    "CELLRANGER_REF",
-    "/om2/user/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A",
-)
+CELLRANGER_PATH = os.environ.get("CELLRANGER_PATH", "")
+TRANSCRIPTOME = os.environ.get("TRANSCRIPTOME", os.environ.get("CELLRANGER_REF", ""))
+
+# SLURM parameters (from cellranger_config.sh)
+CR_SLURM_TIME = os.environ.get("CR_SLURM_TIME", "2-00:00:00")
+CR_SLURM_CPUS = os.environ.get("CR_SLURM_CPUS", "16")
+CR_SLURM_MEM = os.environ.get("CR_SLURM_MEM", "64G")
+CB_SLURM_TIME = os.environ.get("CB_SLURM_TIME", "4:00:00")
+CB_SLURM_CPUS = os.environ.get("CB_SLURM_CPUS", "4")
+CB_SLURM_MEM = os.environ.get("CB_SLURM_MEM", "64G")
+SLURM_MAIL_USER = os.environ.get("SLURM_MAIL_USER", "")
 
 # Conda
-CONDA_INIT = os.environ.get(
-    "CONDA_INIT_SCRIPT",
-    "/orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh",
-)
-CELLBENDER_ENV = os.environ.get(
-    "CELLBENDER_ENV", "/orcd/data/lhtsai/001/om2/mabdel03/conda_envs/Cellbender_env"
-)
+CONDA_INIT = os.environ.get("CONDA_INIT_SCRIPT", "")
+CELLBENDER_ENV = os.environ.get("CELLBENDER_ENV", "")
 
 
 def generate_cellranger_script(projid, library_ids, fastq_dirs, batch_num):
@@ -76,15 +84,16 @@ def generate_cellranger_script(projid, library_ids, fastq_dirs, batch_num):
     output_dir = f"{CELLRANGER_OUTPUT}/{projid}"
     sample_arg = ",".join(library_ids)
     
+    mail_line = f"#SBATCH --mail-user={SLURM_MAIL_USER}" if SLURM_MAIL_USER else ""
     script = f"""#!/bin/bash
 #SBATCH --job-name=cr_{projid}
-#SBATCH --time=2-00:00:00
+#SBATCH --time={CR_SLURM_TIME}
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --cpus-per-task={CR_SLURM_CPUS}
+#SBATCH --mem={CR_SLURM_MEM}
 #SBATCH --output={LOGS_OUT}/cellranger_{projid}_%j.out
 #SBATCH --error={LOGS_ERR}/cellranger_{projid}_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+{mail_line}
 #SBATCH --mail-type=FAIL
 
 # Cell Ranger count for patient {projid} (Batch {batch_num})
@@ -127,16 +136,17 @@ def generate_cellbender_script(projid, batch_num):
     output_h5 = f"{output_dir}/cellbender_output.h5"
     final_dir = f"{FINAL_OUTPUT}/{projid}"
     
+    mail_line = f"#SBATCH --mail-user={SLURM_MAIL_USER}" if SLURM_MAIL_USER else ""
     script = f"""#!/bin/bash
 #SBATCH --job-name=cb_{projid}
 #SBATCH --gres=gpu:1
-#SBATCH --time=4:00:00
+#SBATCH --time={CB_SLURM_TIME}
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=64G
+#SBATCH --cpus-per-task={CB_SLURM_CPUS}
+#SBATCH --mem={CB_SLURM_MEM}
 #SBATCH --output={LOGS_OUT}/cellbender_{projid}_%j.out
 #SBATCH --error={LOGS_ERR}/cellbender_{projid}_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+{mail_line}
 #SBATCH --mail-type=FAIL
 
 # CellBender for patient {projid} (Batch {batch_num})

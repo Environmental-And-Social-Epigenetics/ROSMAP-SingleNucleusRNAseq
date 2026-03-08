@@ -91,8 +91,8 @@ export CB_SLURM_CPUS="4"
 export CB_SLURM_MEM="64G"
 export CB_SLURM_GPU="1"
 
-# Email for notifications
-export SLURM_MAIL_USER="mabdel03@mit.edu"
+# Email for notifications (inherited from config/paths.sh; override here if needed)
+# export SLURM_MAIL_USER="override@example.com"
 
 # =============================================================================
 # INPUT/OUTPUT PATHS

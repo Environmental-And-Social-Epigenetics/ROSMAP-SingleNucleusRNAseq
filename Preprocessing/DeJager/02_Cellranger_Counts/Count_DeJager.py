@@ -1,70 +1,103 @@
 """
-Script generate and submit batch scripts for counts for each library
-This script will generate counts for all of the DeJager libraries
+Generate and submit Cell Ranger count batch scripts for each DeJager library.
+
+Reads paths from environment variables set by config/paths.sh.
+
+Usage:
+    source config/paths.sh
+    python Count_DeJager.py
 """
+
 import os
-import pandas as pd
 import subprocess
-import time  # Import time module
 
-df = pd.read_csv('/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/FASTQs_Download/FASTQ_Download_CSVs/Synapse_FASTQ_IDs.csv')
+import pandas as pd
 
-#FASTQs location
-in_root = '/om/scratch/Mon/mabdel03/FASTQs'
 
-#Output directory to send counts to
-out_root = '/om/scratch/Mon/mabdel03/Counts'
+# Resolve paths from environment (set by config/paths.sh)
+DATA_ROOT = os.environ.get(
+    "DATA_ROOT",
+    "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis",
+)
+DEJAGER_FASTQS = os.environ.get(
+    "DEJAGER_FASTQS",
+    os.path.join(os.environ.get("SCRATCH_ROOT", "/om/scratch/Mon/mabdel03"), "FASTQs"),
+)
+DEJAGER_COUNTS = os.environ.get(
+    "DEJAGER_COUNTS",
+    os.path.join(os.environ.get("SCRATCH_ROOT", "/om/scratch/Mon/mabdel03"), "Counts"),
+)
+CELLRANGER_PATH = os.environ.get(
+    "CELLRANGER_PATH",
+    "/om2/user/mabdel03/apps/yard/cellranger-8.0.0",
+)
+CELLRANGER_REF = os.environ.get(
+    "CELLRANGER_REF",
+    "/om2/user/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A",
+)
+SLURM_MAIL_USER = os.environ.get("SLURM_MAIL_USER", "")
 
-#Directory to save count batch scripts to 
-parent_scripts = '/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/Original_Counts/Counts_Batch_Scripts'
+SYNAPSE_CSV = os.path.join(
+    DATA_ROOT, "Data/DeJager/FASTQs_Download/FASTQ_Download_CSVs/Synapse_FASTQ_IDs.csv"
+)
 
-#Make folders for each library's counts outputs
-for libID in set(df['LibraryID']):
-	#Construct the full directory path
-	dir_path = os.path.join(out_root, libID)
+# Output directories
+BATCH_SCRIPTS_DIR = os.path.join(
+    DATA_ROOT, "Data/DeJager/Original_Counts/Counts_Batch_Scripts"
+)
+LOGS_OUT = os.path.join(DATA_ROOT, "Data/DeJager/Original_Counts/Counts_outs")
+LOGS_ERR = os.path.join(DATA_ROOT, "Data/DeJager/Original_Counts/Counts_errors")
 
-	# Check if the directory already exists
-	if not os.path.exists(dir_path):
-		os.mkdir(dir_path)
-	else:
-    		print(f"Directory {dir_path} already exists.")
+df = pd.read_csv(SYNAPSE_CSV)
+in_root = DEJAGER_FASTQS
+out_root = DEJAGER_COUNTS
 
-script_counter = 0  # Initialize counter for bash scripts
+# Create output directories
+os.makedirs(BATCH_SCRIPTS_DIR, exist_ok=True)
+os.makedirs(LOGS_OUT, exist_ok=True)
+os.makedirs(LOGS_ERR, exist_ok=True)
 
-#Iterate over each library
-for libID in set(df['LibraryID']):
-    fastqs = os.path.join(in_root, libID) #Directory w/ FASTQs
-    files = os.listdir(fastqs) #list out FASTQs
-    samples = [piece.split('_')[0]+'_'+piece.split('_')[1] for piece in files]
-    unique_samples = list(set(samples)) #List of distinct samples
+# Make folders for each library's counts outputs
+for libID in set(df["LibraryID"]):
+    dir_path = os.path.join(out_root, libID)
+    os.makedirs(dir_path, exist_ok=True)
 
-    if len(unique_samples) == 2: #if two samples, specify both
-        sample = f'{unique_samples[0]},{unique_samples[1]}'
-    else: #else just the one sample
+# Build mail line for SBATCH header
+mail_line = ""
+if SLURM_MAIL_USER:
+    mail_line = f"#SBATCH --mail-user={SLURM_MAIL_USER}"
+
+# Iterate over each library and generate + submit batch scripts
+for libID in set(df["LibraryID"]):
+    fastqs = os.path.join(in_root, libID)
+    files = os.listdir(fastqs)
+    samples = [piece.split("_")[0] + "_" + piece.split("_")[1] for piece in files]
+    unique_samples = list(set(samples))
+
+    if len(unique_samples) == 2:
+        sample = f"{unique_samples[0]},{unique_samples[1]}"
+    else:
         sample = unique_samples[0]
 
-    
-    filename = libID+'_count.sh' #name the file for the count batch script --> libID_count.sh
-    f = open(os.path.join(parent_scripts, filename), 'x') #make the file
-    out_dir = os.path.join(out_root, libID) 
-    out = os.path.join(out_root, libID)
+    filename = libID + "_count.sh"
+    filepath = os.path.join(BATCH_SCRIPTS_DIR, filename)
+    out_dir = os.path.join(out_root, libID)
 
-
-    #sbatch info + count command
     output = f"""#!/bin/bash
 #SBATCH -t 47:00:00
 #SBATCH -n 32
 #SBATCH --mem=128G
-#SBATCH --output=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/Original_Counts/Counts_outs/slurm-%j.out
-#SBATCH --error=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/Original_Counts/Counts_errors/slurm-%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+#SBATCH --output={LOGS_OUT}/slurm-%j.out
+#SBATCH --error={LOGS_ERR}/slurm-%j.err
+{mail_line}
 #SBATCH --mail-type=FAIL
-export PATH=/orcd/data/lhtsai/001/om2/mabdel03/apps/yard/cellranger-8.0.0:$PATH
-cellranger count --create-bam true --include-introns true --nosecondary --r1-length 26 --id {libID} --transcriptome=/orcd/data/lhtsai/001/om2/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A --sample {sample} --fastqs {fastqs} --output-dir={out_dir}
+export PATH={CELLRANGER_PATH}:$PATH
+cellranger count --create-bam true --include-introns true --nosecondary --r1-length 26 --id {libID} --transcriptome={CELLRANGER_REF} --sample {sample} --fastqs {fastqs} --output-dir={out_dir}
 """
-    f.write(output) #write to the file
-    f.close()
-    sbatch_command = f'sbatch {os.path.join(parent_scripts, filename)}' #submit sbatch command
-    process = subprocess.Popen(sbatch_command.split(), stdout=subprocess.PIPE)
-    output, error = process.communicate()
+    with open(filepath, "w") as f:
+        f.write(output)
 
+    sbatch_command = f"sbatch {filepath}"
+    process = subprocess.Popen(sbatch_command.split(), stdout=subprocess.PIPE)
+    stdout, _ = process.communicate()
+    print(f"Submitted {libID}: {stdout.decode().strip()}")
