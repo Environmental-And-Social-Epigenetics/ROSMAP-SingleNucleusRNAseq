@@ -22,10 +22,14 @@ ROSMAP-SingleNucleusRNAseq/
 ├── Processing/              # QC and cell type annotation
 │   ├── DeJager/
 │   └── Tsai/
-│       ├── QC/
-│       │   ├── Doublets/
-│       │   └── Outliers/
-│       └── Batch_Correction/
+│       ├── Pipeline/              # Primary 3-stage pipeline (current)
+│       │   ├── 01_qc_filter.*
+│       │   ├── 02_doublet_removal.*
+│       │   ├── 03_integration_annotation.*
+│       │   ├── Resources/         # Marker gene references
+│       │   └── envs/              # Conda environment specs
+│       ├── QC/                    # Legacy per-sample scripts
+│       └── Batch_Correction/      # Legacy batch correction scripts
 └── Analysis/                # Downstream analysis
     ├── DeJager/
     │   ├── DEG_Analysis/
@@ -50,18 +54,15 @@ Converts raw FASTQ files into ambient RNA-corrected count matrices.
 | 3. Ambient RNA Removal | CellBender | CellBender (GPU-accelerated) |
 | 4. Sample Assignment | Demuxlet/Freemuxlet (WGS-based) | Known from metadata |
 
-### Phase 2: Processing
+### Phase 2: Processing (Tsai Pipeline)
 
-Quality control and preprocessing of the count matrices.
+The primary processing pipeline lives in `Processing/Tsai/Pipeline/` and runs in three stages:
 
-1. **Doublet Detection**: DoubletFinder (R) to identify and remove doublets
-2. **Outlier Removal**: Filter cells based on QC metrics (gene count, UMI count, mitochondrial %)
-3. **Normalization**: Size factor normalization and log transformation
-4. **Feature Selection**: Highly variable gene selection
-5. **Batch Correction**: Harmony integration across samples
-6. **Dimensionality Reduction**: PCA and UMAP
-7. **Clustering**: Leiden/Louvain clustering
-8. **Cell Type Annotation**: Marker-based annotation
+1. **Stage 1 — QC Filtering** (`01_qc_filter.py`): Percentile-based outlier removal and mitochondrial % filtering
+2. **Stage 2 — Doublet Removal** (`02_doublet_removal.Rscript`): scDblFinder-based doublet detection
+3. **Stage 3 — Integration & Annotation** (`03_integration_annotation.py`): Normalization, HVG selection, PCA, Harmony batch correction, Leiden clustering, UMAP, and ORA-based cell type annotation with Mohammadi 2020 markers
+
+See `Processing/Tsai/Pipeline/README.md` for full details.
 
 ### Phase 3: Analysis
 
@@ -77,15 +78,11 @@ Downstream biological analyses.
 
 - **Cell Ranger** v8.0.0
 - **CellBender** (GPU-accelerated)
-- **Python** 3.8+ with:
-  - scanpy
-  - anndata
-  - harmony-pytorch
-  - scrublet
-- **R** 4.0+ with:
-  - Seurat
-  - DoubletFinder
-- **Singularity** (for Demuxafy container)
+- **Python** 3.10+ with: scanpy, anndata, harmonypy, decoupler
+- **R** 4.2+ with: scDblFinder, zellkonverter, BiocParallel
+- **Singularity** (for Demuxafy container, DeJager only)
+
+Conda environment specs are provided in `Processing/Tsai/Pipeline/envs/`.
 
 ### Path Configuration
 

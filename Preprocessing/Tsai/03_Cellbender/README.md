@@ -1,100 +1,88 @@
 # 03_Cellbender
 
-Remove ambient RNA from Cell Ranger outputs using CellBender.
+Standalone CellBender pipeline that runs on CellRanger outputs produced by
+`Preprocessing/Tsai/02_Cellranger_Counts`.
 
 ## Overview
 
-CellBender uses a deep generative model to distinguish true cell-associated RNA from ambient background contamination.
+This directory provides a Python-based batch script generator plus helper
+scripts to submit and track CellBender jobs. It reads the patient list and
+batch assignments from:
+
+`Preprocessing/Tsai/02_Cellranger_Counts/Tracking/batch_assignments.csv`
 
 ## Scripts
 
 | Script | Description |
 |--------|-------------|
-| `ACE_Cellbender.ipynb` | Generate batch scripts for ACE cohort |
-| `Resilient_Cellbender.ipynb` | Generate batch scripts for Resilient cohort |
-| `example_cellbender_Resilient.sh` | Example batch script |
+| `Scripts/generate_batch_scripts.py` | Generate SLURM scripts for each patient |
+| `Scripts/run_batch.sh` | Submit all CellBender jobs for one batch |
+| `Scripts/run_all_batches.sh` | Submit all batches in sequence |
+| `Scripts/check_status.sh` | Show progress from tracking files |
 
-## Prerequisites
+## Configuration
 
-### CellBender Environment
+All defaults are defined in:
 
-```bash
-source /orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/Cellbender_env
-```
+`Config/cellbender_config.sh`
 
-### GPU Access
+This file sources `config/paths.sh` and defines:
+- Input/output paths
+- CellBender parameters
+- SLURM resource settings
 
-CellBender requires GPU acceleration:
-```bash
-#SBATCH --gres=gpu:a100:1
-```
+Override any value by exporting an environment variable before running the
+generator (e.g., `CB_FPR=0.02`).
 
 ## Usage
 
-### 1. Generate batch scripts
-
-Open and run the appropriate Jupyter notebook:
-- `ACE_Cellbender.ipynb` for ACE cohort
-- `Resilient_Cellbender.ipynb` for Resilient cohort
-
-### 2. Submit jobs
-
 ```bash
-sbatch example_cellbender_Resilient.sh
+# Generate scripts from batch assignments
+python Scripts/generate_batch_scripts.py
+
+# Optional: only generate scripts for completed CellRanger samples
+python Scripts/generate_batch_scripts.py --only-completed
+
+# Submit a single batch
+./Scripts/run_batch.sh 1
+
+# Submit all batches
+./Scripts/run_all_batches.sh
+
+# Check progress
+./Scripts/check_status.sh
 ```
 
-## Key Parameters
+## Inputs
 
-```bash
-cellbender remove-background \
-    --cuda \                      # Use GPU
-    --input <RAW_MATRIX.h5> \     # Cell Ranger raw output
-    --fpr 0 \                     # False positive rate (stringent)
-    --output <OUTPUT.h5>          # Output path
+CellRanger raw counts (per patient):
+
+```
+${TSAI_CELLRANGER_OUTPUT}/{projid}/outs/raw_feature_bc_matrix.h5
 ```
 
-## Input
+## Outputs
 
-Cell Ranger raw counts:
-```
-/om/scratch/Mon/mabdel03/Tsai/{cohort}/Counts/{projid}/outs/raw_feature_bc_matrix.h5
-```
+CellBender output (scratch):
 
-## Output
-
-CellBender-corrected counts:
 ```
-/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/Preprocessed_Counts/{cohort}/{projid}/
-├── processed_feature_bc_matrix.h5           # Corrected counts
-├── processed_feature_bc_matrix_filtered.h5  # Filtered version
-└── processed_feature_bc_matrix.pdf          # QC plots
+${TSAI_CELLBENDER_SCRATCH}/{projid}/cellbender_output.h5
 ```
 
-## Cohort Paths
+Final outputs (permanent):
 
-| Cohort | Output Path |
-|--------|-------------|
-| ACE | `Preprocessed_Counts/ACE/` |
-| Resilient | `Preprocessed_Counts/Resilient/` |
-| SocIsl | `Preprocessed_Counts/SocIsl/` |
+```
+${TSAI_PREPROCESSED}/{projid}/
+├── cellbender_output.h5
+└── cellbender_output_filtered.h5
+```
 
-## Resource Requirements
+## Tracking
 
-| Parameter | Value |
-|-----------|-------|
-| Cores | 32 |
-| Memory | 500GB |
-| Time | 47 hours |
-| GPU | A100 |
+Tracking files are stored in:
 
-> **Note**: Tsai samples may require more memory (500GB) compared to DeJager (128GB).
+`Preprocessing/Tsai/03_Cellbender/Tracking/`
 
-## Known Issues
-
-> **⚠️ GPU Memory**: Large samples may require more GPU memory.
-
-> **⚠️ Output Directory**: The script changes to output directory before running. Ensure it exists.
-
-> **⚠️ Hardcoded Paths**: Update input/output paths in notebooks for your environment.
+- `cellbender_completed.txt`
+- `cellbender_failed.txt`
 

@@ -1,28 +1,34 @@
 #!/usr/bin/env python3
 """
-Generate Cell Ranger batch scripts for all Tsai patients.
+Generate Cell Ranger batch scripts for Tsai patients from local FASTQs.
 
-This script reads All_ROSMAP_FASTQs.csv and generates:
-1. Per-patient Cell Ranger batch scripts
-2. Per-patient CellBender batch scripts
-3. Batch assignment file (which patients are in which batch)
-4. Master patient list with all metadata
+Expected FASTQ layout:
+    /om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/<projid>/<Library_ID>/*.fastq.gz
 
 Usage:
     python generate_batch_scripts.py [--dry-run]
 """
 
 import argparse
+import csv
 import os
-import pandas as pd
+import shutil
 from pathlib import Path
 
 
-# Configuration - these match cellranger_config.sh
-BATCH_SIZE = 30
-REPO_ROOT = "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq"
-PIPELINE_DIR = f"{REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts"
-INPUT_CSV = f"{REPO_ROOT}/Data/Tsai/All_ROSMAP_FASTQs.csv"
+# Configuration - override via environment variables when needed
+BATCH_SIZE = int(os.environ.get("TSAI_BATCH_SIZE", "30"))
+REPO_ROOT = os.environ.get(
+    "REPO_ROOT", "/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq"
+)
+PIPELINE_DIR = os.environ.get(
+    "PIPELINE_DIR", f"{REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts"
+)
+
+# Input FASTQs
+FASTQS_ROOT = Path(
+    os.environ.get("TSAI_FASTQS_DIR", "/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs")
+)
 
 # Output directories
 BATCH_SCRIPTS_DIR = f"{PIPELINE_DIR}/Batch_Scripts"
@@ -31,31 +37,47 @@ LOGS_OUT = f"{PIPELINE_DIR}/Logs/Outs"
 LOGS_ERR = f"{PIPELINE_DIR}/Logs/Errs"
 
 # Scratch paths
-SCRATCH_ROOT = "/home/mabdel03/orcd/scratch"
-CELLRANGER_OUTPUT = f"{SCRATCH_ROOT}/Tsai/Cellranger_Counts"
-CELLBENDER_OUTPUT = f"{SCRATCH_ROOT}/Tsai/Cellbender_Output"
+CELLRANGER_OUTPUT = os.environ.get(
+    "TSAI_CELLRANGER_OUTPUT", "/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs"
+)
+CELLBENDER_OUTPUT = os.environ.get(
+    "TSAI_CELLBENDER_SCRATCH", "/om/scratch/Mon/mabdel03/Tsai/Cellbender_Output"
+)
 
 # Permanent storage
-FINAL_OUTPUT = "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessed_Counts"
+FINAL_OUTPUT = os.environ.get(
+    "TSAI_PREPROCESSED",
+    "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessed_Counts",
+)
 
 # Cell Ranger settings
-CELLRANGER_PATH = "/orcd/data/lhtsai/001/om2/mabdel03/apps/yard/cellranger-8.0.0"
-TRANSCRIPTOME = "/orcd/data/lhtsai/001/om2/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A"
+CELLRANGER_PATH = os.environ.get(
+    "CELLRANGER_PATH", "/om2/user/mabdel03/apps/yard/cellranger-8.0.0"
+)
+TRANSCRIPTOME = os.environ.get(
+    "CELLRANGER_REF",
+    "/om2/user/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A",
+)
 
 # Conda
-CONDA_INIT = "/orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh"
-CELLBENDER_ENV = "/orcd/data/lhtsai/001/om2/mabdel03/conda_envs/Cellbender_env"
+CONDA_INIT = os.environ.get(
+    "CONDA_INIT_SCRIPT",
+    "/orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh",
+)
+CELLBENDER_ENV = os.environ.get(
+    "CELLBENDER_ENV", "/orcd/data/lhtsai/001/om2/mabdel03/conda_envs/Cellbender_env"
+)
 
 
-def generate_cellranger_script(projid, library_id, fastq_dirs, batch_num):
+def generate_cellranger_script(projid, library_ids, fastq_dirs, batch_num):
     """Generate a Cell Ranger batch script for a single patient."""
     
     fastqs_arg = ",".join(fastq_dirs)
     output_dir = f"{CELLRANGER_OUTPUT}/{projid}"
+    sample_arg = ",".join(library_ids)
     
     script = f"""#!/bin/bash
 #SBATCH --job-name=cr_{projid}
-#SBATCH --partition=mit_preemptable
 #SBATCH --time=2-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -66,7 +88,7 @@ def generate_cellranger_script(projid, library_id, fastq_dirs, batch_num):
 #SBATCH --mail-type=FAIL
 
 # Cell Ranger count for patient {projid} (Batch {batch_num})
-# Library ID: {library_id}
+# Library IDs: {",".join(library_ids)}
 # FASTQ directories: {len(fastq_dirs)}
 
 set -e
@@ -83,9 +105,9 @@ cellranger count \\
     --include-introns=true \\
     --nosecondary \\
     --r1-length=26 \\
-    --id={library_id} \\
+    --id={projid} \\
     --transcriptome={TRANSCRIPTOME} \\
-    --sample={library_id} \\
+    --sample={sample_arg} \\
     --fastqs={fastqs_arg} \\
     --output-dir={output_dir}
 
@@ -107,7 +129,6 @@ def generate_cellbender_script(projid, batch_num):
     
     script = f"""#!/bin/bash
 #SBATCH --job-name=cb_{projid}
-#SBATCH --partition=mit_normal_gpu
 #SBATCH --gres=gpu:1
 #SBATCH --time=4:00:00
 #SBATCH --ntasks=1
@@ -159,6 +180,52 @@ echo "CellBender completed for {projid}"
     return script
 
 
+def discover_patients(fastqs_root):
+    """Discover patients and FASTQ directories from local layout."""
+    patient_dirs = sorted([p for p in fastqs_root.iterdir() if p.is_dir()], key=lambda p: p.name)
+    patient_data = []
+    skipped = []
+
+    for patient_dir in patient_dirs:
+        library_dirs = sorted([d for d in patient_dir.iterdir() if d.is_dir()], key=lambda d: d.name)
+        fastq_dirs = []
+        library_ids = []
+
+        for lib_dir in library_dirs:
+            if any(lib_dir.glob("*.fastq.gz")):
+                fastq_dirs.append(str(lib_dir))
+                library_ids.append(lib_dir.name)
+            else:
+                run_dirs = [d for d in lib_dir.iterdir() if d.is_dir()]
+                for run_dir in run_dirs:
+                    if any(run_dir.glob("*.fastq.gz")):
+                        fastq_dirs.append(str(run_dir))
+                        library_ids.append(lib_dir.name)
+
+        if not fastq_dirs:
+            if any(patient_dir.glob("*.fastq.gz")):
+                fastq_dirs.append(str(patient_dir))
+                library_ids.append(patient_dir.name)
+
+        if not fastq_dirs:
+            skipped.append(patient_dir.name)
+            continue
+
+        n_fastqs = sum(len(list(Path(d).glob("*.fastq.gz"))) for d in fastq_dirs)
+
+        patient_data.append(
+            {
+                "projid": patient_dir.name,
+                "library_ids": library_ids,
+                "fastq_dirs": fastq_dirs,
+                "n_source_dirs": len(fastq_dirs),
+                "n_fastqs": n_fastqs,
+            }
+        )
+
+    return patient_data, skipped
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate Cell Ranger batch scripts")
     parser.add_argument("--dry-run", action="store_true", help="Print summary without creating files")
@@ -168,39 +235,25 @@ def main():
     print("Generating Cell Ranger + CellBender Batch Scripts")
     print("=" * 60)
     
-    # Read the FASTQ CSV
-    print(f"\nReading: {INPUT_CSV}")
-    df = pd.read_csv(INPUT_CSV)
-    
-    print(f"Total FASTQ records: {len(df)}")
-    print(f"Unique patients (projids): {df['projid'].nunique()}")
-    print(f"Unique Library_IDs: {df['Library_ID'].nunique()}")
-    
-    # Group by projid to get patient-level information
-    patient_data = []
-    
-    for projid in df['projid'].unique():
-        patient_df = df[df['projid'] == projid]
-        
-        # Get unique source directories
-        source_dirs = patient_df['source_dir'].unique().tolist()
-        
-        # Get the primary Library_ID (first one)
-        library_id = patient_df['Library_ID'].iloc[0]
-        
-        # Count FASTQ files
-        n_fastqs = len(patient_df)
-        
-        patient_data.append({
-            'projid': projid,
-            'library_id': library_id,
-            'source_dirs': source_dirs,
-            'n_source_dirs': len(source_dirs),
-            'n_fastqs': n_fastqs
-        })
-    
-    # Sort by projid for consistent ordering
-    patient_data = sorted(patient_data, key=lambda x: x['projid'])
+    # Discover patients from FASTQ directory layout
+    print(f"\nScanning FASTQs: {FASTQS_ROOT}")
+    if not FASTQS_ROOT.exists():
+        raise SystemExit(f"ERROR: FASTQs root not found: {FASTQS_ROOT}")
+
+    patient_data, skipped = discover_patients(FASTQS_ROOT)
+
+    unique_library_ids = set()
+    total_fastqs = 0
+    for patient in patient_data:
+        unique_library_ids.update(patient["library_ids"])
+        total_fastqs += patient["n_fastqs"]
+
+    print(f"Total FASTQ files: {total_fastqs}")
+    print(f"Unique patients (projids): {len(patient_data)}")
+    print(f"Unique Library_IDs: {len(unique_library_ids)}")
+
+    if skipped:
+        print(f"WARNING: Skipped {len(skipped)} patients with no FASTQs.")
     
     # Assign batch numbers
     for i, patient in enumerate(patient_data):
@@ -230,6 +283,12 @@ def main():
     os.makedirs(LOGS_OUT, exist_ok=True)
     os.makedirs(LOGS_ERR, exist_ok=True)
     
+    # Clean existing batch scripts to avoid stale jobs
+    if os.path.isdir(BATCH_SCRIPTS_DIR):
+        for entry in os.listdir(BATCH_SCRIPTS_DIR):
+            if entry.startswith("batch_"):
+                shutil.rmtree(os.path.join(BATCH_SCRIPTS_DIR, entry), ignore_errors=True)
+
     # Create batch subdirectories
     for batch_num in range(1, n_batches + 1):
         os.makedirs(f"{BATCH_SCRIPTS_DIR}/batch_{batch_num}/cellranger", exist_ok=True)
@@ -239,13 +298,13 @@ def main():
     print(f"\nGenerating scripts...")
     
     for patient in patient_data:
-        projid = patient['projid']
-        library_id = patient['library_id']
-        source_dirs = patient['source_dirs']
-        batch_num = patient['batch']
+        projid = patient["projid"]
+        library_ids = patient["library_ids"]
+        source_dirs = patient["fastq_dirs"]
+        batch_num = patient["batch"]
         
         # Cell Ranger script
-        cr_script = generate_cellranger_script(projid, library_id, source_dirs, batch_num)
+        cr_script = generate_cellranger_script(projid, library_ids, source_dirs, batch_num)
         cr_path = f"{BATCH_SCRIPTS_DIR}/batch_{batch_num}/cellranger/{projid}_cellranger.sh"
         with open(cr_path, 'w') as f:
             f.write(cr_script)
@@ -259,13 +318,51 @@ def main():
         os.chmod(cb_path, 0o755)
     
     # Save patient metadata
-    metadata_df = pd.DataFrame(patient_data)
-    metadata_df['source_dirs'] = metadata_df['source_dirs'].apply(lambda x: '|'.join(x))
-    metadata_df.to_csv(f"{TRACKING_DIR}/patient_metadata.csv", index=False)
-    
+    metadata_path = f"{TRACKING_DIR}/patient_metadata.csv"
+    with open(metadata_path, "w", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "projid",
+                "library_ids",
+                "fastq_dirs",
+                "n_source_dirs",
+                "n_fastqs",
+                "batch",
+                "index",
+            ],
+        )
+        writer.writeheader()
+        for patient in patient_data:
+            writer.writerow(
+                {
+                    "projid": patient["projid"],
+                    "library_ids": "|".join(patient["library_ids"]),
+                    "fastq_dirs": "|".join(patient["fastq_dirs"]),
+                    "n_source_dirs": patient["n_source_dirs"],
+                    "n_fastqs": patient["n_fastqs"],
+                    "batch": patient["batch"],
+                    "index": patient["index"],
+                }
+            )
+
     # Save batch assignments
-    batch_df = metadata_df[['projid', 'library_id', 'batch', 'index']]
-    batch_df.to_csv(f"{TRACKING_DIR}/batch_assignments.csv", index=False)
+    batch_path = f"{TRACKING_DIR}/batch_assignments.csv"
+    with open(batch_path, "w", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["projid", "library_ids", "batch", "index"],
+        )
+        writer.writeheader()
+        for patient in patient_data:
+            writer.writerow(
+                {
+                    "projid": patient["projid"],
+                    "library_ids": "|".join(patient["library_ids"]),
+                    "batch": patient["batch"],
+                    "index": patient["index"],
+                }
+            )
     
     # Initialize tracking files
     open(f"{TRACKING_DIR}/cellranger_completed.txt", 'a').close()

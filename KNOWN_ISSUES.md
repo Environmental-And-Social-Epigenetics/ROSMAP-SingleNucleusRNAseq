@@ -6,16 +6,13 @@ This document consolidates known issues identified during the organization of th
 
 ### 1. Scratch Space Paths Need Configuration
 
-**Severity**: High  
+**Severity**: High
+**Status**: Partially resolved
 **Affected Scripts**: Preprocessing scripts that read/write intermediate data
 
-The scripts reference old OpenMind scratch paths (`/om/scratch/Mon/mabdel03/`, `/om/scratch/Sun/mabdel03/`) that need to be updated for your cluster.
+The **Processing/Tsai/Pipeline/** shell wrappers now source `config/paths.sh` and derive all paths from it.  Preprocessing scripts still reference old OpenMind scratch paths and need updating.
 
-**Solution**: 
-1. Edit `config/paths.sh` and set `SCRATCH_ROOT` to your cluster's scratch filesystem
-2. Update individual scripts to use the configuration file, or manually update paths
-
-**Files to update:**
+**Remaining files to update:**
 
 | Directory | File | Lines to Check |
 |-----------|------|----------------|
@@ -25,7 +22,7 @@ The scripts reference old OpenMind scratch paths (`/om/scratch/Mon/mabdel03/`, `
 | `Preprocessing/Tsai/02_Cellranger_Counts/` | All example scripts | Throughout |
 | `Preprocessing/Tsai/03_Cellbender/` | All example scripts | Throughout |
 
-**Recommendation**: Create a configuration file with paths as variables.
+**Recommendation**: Migrate these to source `config/paths.sh` as done for the processing pipeline.
 
 ---
 
@@ -83,12 +80,12 @@ Scripts are named "TsaiPipeline" (e.g., `firstStageTsaiPipeline.py`) even though
 
 ### 5. Conda Environment Paths - RESOLVED
 
-**Severity**: Low  
+**Severity**: Low
 **Status**: Fixed
 
-All conda environment paths have been updated to use:
-- Init: `source /orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh`
-- Envs: `/orcd/data/lhtsai/001/om2/mabdel03/conda_envs/<env_name>`
+All conda environment paths are now centralized in `config/paths.sh`.
+Processing pipeline shell wrappers source this config.  Environment specs for
+recreating envs from scratch are in `Processing/Tsai/Pipeline/envs/`.
 
 ---
 
@@ -132,16 +129,64 @@ CellBender requires GPU:
 
 ---
 
+### 10. `.gitignore` Blocked Essential Pipeline Files — RESOLVED
+
+**Severity**: High
+**Status**: Fixed
+
+The blanket `*.csv` and `*.rds` rules in `.gitignore` prevented
+`patient_metadata.csv` and `Brain_Human_PFC_Markers_Mohammadi2020.rds` from
+being tracked.  Whitelist exceptions have been added.
+
+---
+
+### 11. Hemoglobin Gene Regex Bug — RESOLVED
+
+**Severity**: Low
+**Status**: Fixed
+
+`r"^HB[^(P)]"` in `01_qc_filter.py` and `03_integration_annotation.py` used a
+character class that excluded literal `(`, `)`, and `P`.  Corrected to
+`r"^HB[^P]"`.
+
+---
+
+### 12. No QC Summary Tracking — RESOLVED
+
+**Severity**: Medium
+**Status**: Fixed
+
+Stages 1 and 2 now produce `qc_summary.csv` and `doublet_summary.csv`
+respectively, tracking per-sample cell counts before/after filtering.
+
+---
+
+### 13. Stale Parent READMEs — RESOLVED
+
+**Severity**: Medium
+**Status**: Fixed
+
+`Processing/README.md`, `Processing/Tsai/README.md`, and the root `README.md`
+referenced DoubletFinder/Scrublet and outdated directory structures.  Updated
+to reflect the current Pipeline.
+
+---
+
 ## Resolution Tracking
 
-| Issue | Status | Assigned | Date Fixed |
-|-------|--------|----------|------------|
-| Hardcoded paths | Open | - | - |
-| Demuxlet cleanup | Open | - | - |
-| Scratch dependencies | Open | - | - |
-| Pipeline naming | Open | - | - |
-| Conda paths | Open | - | - |
-| SocIsl scripts | Open | - | - |
+| Issue | Status | Date Fixed |
+|-------|--------|------------|
+| 1. Hardcoded paths (pipeline) | Resolved | 2026-03-08 |
+| 1. Hardcoded paths (preprocessing) | Open | - |
+| 2. Demuxlet cleanup | Open | - |
+| 3. Scratch dependencies | Open | - |
+| 4. Pipeline naming | Open | - |
+| 5. Conda paths | Resolved | 2026-03-08 |
+| 6. SocIsl scripts | Open | - |
+| 10. .gitignore blocking files | Resolved | 2026-03-08 |
+| 11. Hemoglobin regex bug | Resolved | 2026-03-08 |
+| 12. No QC summary tracking | Resolved | 2026-03-08 |
+| 13. Stale parent READMEs | Resolved | 2026-03-08 |
 
 ---
 

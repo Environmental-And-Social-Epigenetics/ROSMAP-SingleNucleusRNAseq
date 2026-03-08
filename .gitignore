@@ -29,6 +29,10 @@ __pycache__/
 *.mtx
 *.mtx.gz
 
+# Whitelist small metadata/resource files required by the pipeline
+!Preprocessing/Tsai/02_Cellranger_Counts/Tracking/patient_metadata.csv
+!Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds
+
 # FASTQ/BAM files
 *.fastq
 *.fastq.gz
@@ -60,8 +64,9 @@ __pycache__/
 # SLURM logs
 slurm-*.out
 slurm-*.err
-*.out
-*.err
+
+# R local library (auto-bootstrapped by 02_doublet_removal.Rscript)
+Processing/Tsai/Pipeline/R_libs/
 
 # System files
 .DS_Store

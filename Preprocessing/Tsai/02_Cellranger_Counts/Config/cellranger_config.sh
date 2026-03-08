@@ -98,11 +98,11 @@ export SLURM_MAIL_USER="mabdel03@mit.edu"
 # INPUT/OUTPUT PATHS
 # =============================================================================
 
-# Input CSV with all FASTQ locations
-export INPUT_CSV="${TSAI_FASTQS_CSV}"
+# Input FASTQs root (organized by projid)
+export TSAI_FASTQS_ROOT="${TSAI_FASTQS_DIR}"
 
-# Scratch directories (temporary)
-export CELLRANGER_OUTPUT="${TSAI_CELLRANGER_SCRATCH}"
+# Cell Ranger output (per projid)
+export CELLRANGER_OUTPUT="${TSAI_CELLRANGER_OUTPUT}"
 export CELLBENDER_OUTPUT="${TSAI_CELLBENDER_SCRATCH}"
 
 # Permanent storage for final CellBender outputs
@@ -139,7 +139,6 @@ get_batch_patients() {
 
 # Check scratch usage
 check_scratch_usage() {
-    local usage=$(du -sh "${SCRATCH_ROOT}" 2>/dev/null | cut -f1)
-    echo "Current scratch usage: ${usage}"
+    return 0
 }
 
