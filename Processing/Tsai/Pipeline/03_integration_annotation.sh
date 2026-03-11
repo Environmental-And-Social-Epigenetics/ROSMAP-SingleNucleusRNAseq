@@ -2,13 +2,18 @@
 #SBATCH -J tsai_integrate
 #SBATCH -t 48:00:00
 #SBATCH -n 32
-#SBATCH --mem=256G
+#SBATCH --mem=500G
 #SBATCH --mail-type=BEGIN,END,FAIL
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+# When submitted via submit_pipeline.sh, REPO_ROOT is already exported.
+# Fall back to deriving from BASH_SOURCE for standalone use.
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    REPO_ROOT="$(cd "${_SCRIPT_DIR}/../../.." && pwd)"
+fi
+SCRIPT_DIR="${REPO_ROOT}/Processing/Tsai/Pipeline"
 
 source "${REPO_ROOT}/config/paths.sh"
 
@@ -18,8 +23,14 @@ source "${REPO_ROOT}/config/paths.sh"
 # must load and concatenate all samples simultaneously.
 mkdir -p "${TSAI_PROCESSING_LOGS}"
 
+export HDF5_USE_FILE_LOCKING=FALSE
+
+# Temporarily relax nounset for conda activation (some activate.d scripts
+# reference unset variables like ADDR2LINE).
+set +u
 source "${CONDA_INIT_SCRIPT}"
 conda activate "${BATCHCORR_ENV}"
+set -u
 if [[ -z "${CONDA_PREFIX:-}" ]]; then
     echo "ERROR: Failed to activate conda environment: ${BATCHCORR_ENV}"
     exit 1
