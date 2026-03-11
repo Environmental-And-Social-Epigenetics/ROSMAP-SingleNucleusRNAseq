@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Submit Processing pipeline stages to SLURM.
+# Submit DeJager Processing pipeline stages to SLURM.
 #
 # This wrapper sources config/paths.sh and passes --output/--error flags on the
 # sbatch command line so that SLURM logs land in the configured log directory.
@@ -27,7 +27,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 source "${REPO_ROOT}/config/paths.sh"
 source "${REPO_ROOT}/config/preflight.sh"
 
-LOG_DIR="${TSAI_PROCESSING_LOGS}"
+LOG_DIR="${DEJAGER_PROCESSING_LOGS}"
 mkdir -p "${LOG_DIR}"
 
 # Build optional sbatch flags from config
@@ -70,7 +70,7 @@ submit_stage() {
 
     # Run preflight check before submission
     if [[ "${NO_PREFLIGHT}" == "false" ]]; then
-        preflight_check "tsai-stage${stage}" || \
+        preflight_check "dejager-stage${stage}" || \
             { echo "Preflight failed. Use --no-preflight to skip."; exit 1; }
         echo ""
     fi
@@ -80,8 +80,8 @@ submit_stage() {
         1)
             echo "Submitting Stage 1 — QC filtering ..."
             sbatch_output=$(sbatch \
-                --output="${LOG_DIR}/tsai_qc_%A_%a.out" \
-                --error="${LOG_DIR}/tsai_qc_%A_%a.err" \
+                --output="${LOG_DIR}/dej_qc_%A_%a.out" \
+                --error="${LOG_DIR}/dej_qc_%A_%a.err" \
                 "${dep_flags[@]+"${dep_flags[@]}"}" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
                 "${SCRIPT_DIR}/01_qc_filter.sh")
@@ -91,22 +91,22 @@ submit_stage() {
             echo "  Submitting Stage 1 aggregate plots ..."
             sbatch_output=$(sbatch \
                 --dependency="afterok:${LAST_JOB_ID}" \
-                --job-name=tsai_qc_agg \
+                --job-name=dej_qc_agg \
                 --time=00:30:00 \
                 --ntasks=1 \
                 --mem=8G \
-                --output="${LOG_DIR}/tsai_qc_aggregate_%j.out" \
-                --error="${LOG_DIR}/tsai_qc_aggregate_%j.err" \
+                --output="${LOG_DIR}/dej_qc_aggregate_%j.out" \
+                --error="${LOG_DIR}/dej_qc_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python ${SCRIPT_DIR}/01_qc_filter.py --output-dir ${TSAI_QC_FILTERED} --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python ${SCRIPT_DIR}/01_qc_filter.py --output-dir ${DEJAGER_QC_FILTERED} --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
         2)
             echo "Submitting Stage 2 — Doublet removal ..."
             sbatch_output=$(sbatch \
-                --output="${LOG_DIR}/tsai_doublets_%A_%a.out" \
-                --error="${LOG_DIR}/tsai_doublets_%A_%a.err" \
+                --output="${LOG_DIR}/dej_doublets_%A_%a.out" \
+                --error="${LOG_DIR}/dej_doublets_%A_%a.err" \
                 "${dep_flags[@]+"${dep_flags[@]}"}" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
                 "${SCRIPT_DIR}/02_doublet_removal.sh")
@@ -116,22 +116,22 @@ submit_stage() {
             echo "  Submitting Stage 2 aggregate plots ..."
             sbatch_output=$(sbatch \
                 --dependency="afterok:${LAST_JOB_ID}" \
-                --job-name=tsai_dbl_agg \
+                --job-name=dej_dbl_agg \
                 --time=00:30:00 \
                 --ntasks=1 \
                 --mem=8G \
-                --output="${LOG_DIR}/tsai_doublets_aggregate_%j.out" \
-                --error="${LOG_DIR}/tsai_doublets_aggregate_%j.err" \
+                --output="${LOG_DIR}/dej_doublets_aggregate_%j.out" \
+                --error="${LOG_DIR}/dej_doublets_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && Rscript ${SCRIPT_DIR}/02_doublet_removal.Rscript --output-dir ${TSAI_DOUBLET_REMOVED} --input-dir ${TSAI_QC_FILTERED} --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && Rscript ${SCRIPT_DIR}/02_doublet_removal.Rscript --output-dir ${DEJAGER_DOUBLET_REMOVED} --input-dir ${DEJAGER_QC_FILTERED} --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
         3)
             echo "Submitting Stage 3 — Integration & annotation ..."
             sbatch_output=$(sbatch \
-                --output="${LOG_DIR}/tsai_integrate_%j.out" \
-                --error="${LOG_DIR}/tsai_integrate_%j.err" \
+                --output="${LOG_DIR}/dej_integrate_%j.out" \
+                --error="${LOG_DIR}/dej_integrate_%j.err" \
                 "${dep_flags[@]+"${dep_flags[@]}"}" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
                 "${SCRIPT_DIR}/03_integration_annotation.sh")
