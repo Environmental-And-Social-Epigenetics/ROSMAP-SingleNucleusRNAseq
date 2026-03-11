@@ -1,0 +1,59 @@
+cellbender:remove-background: Command:
+cellbender remove-background --cuda --input /om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/10101291/outs/raw_feature_bc_matrix.h5 --fpr 0 --output /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/10101291/processed_feature_bc_matrix.h5
+cellbender:remove-background: CellBender 0.3.0
+cellbender:remove-background: (Workflow hash 051dbd6733)
+cellbender:remove-background: 2026-01-31 15:12:37
+cellbender:remove-background: Running remove-background
+cellbender:remove-background: Loading data from /om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/10101291/outs/raw_feature_bc_matrix.h5
+Traceback (most recent call last):
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/bin/cellbender", line 8, in <module>
+    sys.exit(main())
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/base_cli.py", line 118, in main
+    cli_dict[args.tool].run(args)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/cli.py", line 185, in run
+    return main(args)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/cli.py", line 230, in main
+    posterior = run_remove_background(args)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/run.py", line 84, in run_remove_background
+    dataset_obj = get_dataset_obj(args=args)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/data/dataset.py", line 538, in get_dataset_obj
+    fpr=args.fpr,
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/data/dataset.py", line 104, in __init__
+    self.data = load_data(self.input_file)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/data/io.py", line 441, in load_data
+    data = FileLoader(load_fn).load(input_file)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/data/io.py", line 65, in load
+    data = self.load_fn(file)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/data/io.py", line 705, in get_matrix_from_cellranger_h5
+    cellranger_version = detect_cellranger_version_h5(filename=filename)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/cellbender/remove_background/data/io.py", line 522, in detect_cellranger_version_h5
+    with tables.open_file(filename, 'r') as f:
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/tables/file.py", line 300, in open_file
+    return File(filename, mode, title, root_uep, filters, **kwargs)
+  File "/om2/user/mabdel03/conda_envs/Cellbender_env/lib/python3.7/site-packages/tables/file.py", line 750, in __init__
+    self._g_new(filename, mode, **params)
+  File "tables/hdf5extension.pyx", line 486, in tables.hdf5extension.File._g_new
+tables.exceptions.HDF5ExtError: HDF5 error back trace
+
+  File "H5F.c", line 620, in H5Fopen
+    unable to open file
+  File "H5VLcallback.c", line 3501, in H5VL_file_open
+    failed to iterate over available VOL connector plugins
+  File "H5PLpath.c", line 578, in H5PL__path_table_iterate
+    can't iterate over plugins in plugin path '(null)'
+  File "H5PLpath.c", line 620, in H5PL__path_table_iterate_process_path
+    can't open directory: /usr/local/hdf5/lib/plugin
+  File "H5VLcallback.c", line 3351, in H5VL__file_open
+    open failed
+  File "H5VLnative_file.c", line 97, in H5VL__native_file_open
+    unable to open file
+  File "H5Fint.c", line 1898, in H5F_open
+    unable to lock the file
+  File "H5FD.c", line 1625, in H5FD_lock
+    driver lock request failed
+  File "H5FDsec2.c", line 1002, in H5FD__sec2_lock
+    unable to lock file, errno = 5, error message = 'Input/output error'
+
+End of HDF5 error back trace
+
+Unable to open/create file '/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/10101291/outs/raw_feature_bc_matrix.h5'

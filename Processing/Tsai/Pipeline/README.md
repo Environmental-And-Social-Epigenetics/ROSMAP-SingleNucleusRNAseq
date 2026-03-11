@@ -33,19 +33,20 @@ track per-sample cell counts before/after filtering across all array tasks.
 - Input: CellBender `processed_feature_bc_matrix_filtered.h5`
 - Output: `{projid}_qc.h5ad`
 
-Filtering rules (MAD-based, matching DeJager reference):
+Filtering rules (percentile-based):
 
-- `log1p_total_counts` beyond 4 MADs from median
-- `log1p_n_genes_by_counts` beyond 4 MADs from median
-- `pct_counts_in_top_20_genes` beyond 4 MADs from median
-- `pct_counts_mt` beyond 3 MADs from median OR > 7.5%
+| Metric | Threshold |
+|--------|-----------|
+| `log1p_total_counts` | Below 4.5th or above 96th percentile |
+| `log1p_n_genes_by_counts` | Below 5th percentile |
+| `pct_counts_mt` | Above 10% |
 
 ### Stage 2: Doublet Removal
 
 - Script: `02_doublet_removal.Rscript`
 - Wrapper: `02_doublet_removal.sh`
 - Environment: `SINGLECELL_ENV` (see `config/paths.sh`; env spec in `envs/stage2_doublets.yml`)
-- Method: `scDblFinder`
+- Method: `scDblFinder` (seed=123, 4 workers)
 - Input: `{projid}_qc.h5ad`
 - Output: `{projid}_singlets.h5ad`
 
@@ -64,56 +65,52 @@ If the active R environment is missing a required Bioconductor package such as `
   - `cluster_annotation_top3.csv`
   - UMAP figures in `03_Integrated/figures/`
 
-Stage 3 performs (matching DeJager reference):
+Stage 3 processing steps:
 
-1. Metadata join on `projid`
-2. Normalization (median-based) and log transform
-3. HVG selection with `seurat` (dispersion-based)
-4. Scaling (no clipping)
-5. PCA (50 components)
-6. Harmony batch correction
-7. Leiden clustering at 0.2, 0.5, and 1.0
-8. UMAP (default min_dist=0.5)
-9. ORA-based annotation with the Mohammadi 2020 marker list
+| Step | Function | Key parameters |
+|------|----------|----------------|
+| Normalization | `sc.pp.normalize_total` | Per-cell median-based normalization |
+| Log transform | `sc.pp.log1p` | Natural log(1 + x) |
+| HVG selection | `sc.pp.highly_variable_genes` | `flavor="seurat_v3"`, `n_top_genes=3000`, `layer="counts"` |
+| PCA | `sc.tl.pca` | `n_comps=30`, `svd_solver="arpack"`, `use_highly_variable=True` |
+| Batch correction | `harmonypy.run_harmony` | Input: `X_pca`; batch variable: `projid` |
+| Neighbors | `sc.pp.neighbors` | `n_neighbors=30`, `n_pcs=30`, `metric="cosine"`, `use_rep="X_harmony"` |
+| Clustering | `sc.tl.leiden` | Resolutions: **0.2**, **0.5**, **1.0** |
+| UMAP | `sc.tl.umap` | `min_dist=0.15`, `random_state=0` |
+| Annotation | `decoupler.run_ora` | Markers: Mohammadi 2020 PFC reference; `use_raw=False`; top-1 cell type per `leiden_res0_5` cluster |
 
-## Batch Variable
+## Quick Start
 
-Harmony uses the metadata column `batch`, which is the sequencing batch identifier from `patient_metadata.csv`.
-
-This is the correct technical covariate for correction because each Tsai sample corresponds to a single individual. Correcting on `projid` would remove biological signal rather than batch effects.
-
-## Sample Discovery
-
-The per-sample stages auto-discover complete inputs and preserve metadata order from `patient_metadata.csv`.
-
-Current data snapshot:
-
-- 474 sample directories in `Tsai_Data/Cellbender_Outputs/`
-- 447 complete CellBender outputs with `processed_feature_bc_matrix_filtered.h5`
-
-The SLURM wrappers default to `#SBATCH --array=1-447%32` for the current dataset. If that count changes, override the array range at submit time instead of editing the scripts:
+Run the entire pipeline with automatic dependency chaining:
 
 ```bash
 cd <REPO_ROOT>/Processing/Tsai/Pipeline
-sbatch --array=1-$(python 01_qc_filter.py --list-samples | wc -l) 01_qc_filter.sh
-sbatch --array=1-$(Rscript 02_doublet_removal.Rscript --list-samples | wc -l) 02_doublet_removal.sh
+./submit_pipeline.sh all
 ```
 
-## Suggested Run Order
+Submit individual stages:
 
 ```bash
-cd <REPO_ROOT>/Processing/Tsai/Pipeline
-sbatch 01_qc_filter.sh
-sbatch 02_doublet_removal.sh
-sbatch 03_integration_annotation.sh
+./submit_pipeline.sh 1        # Stage 1 only
+./submit_pipeline.sh 2 3      # Stages 2 and 3 (chained)
 ```
 
-For testing on a small subset:
+For testing on a small subset (runs locally, no SLURM):
 
 ```bash
 python 01_qc_filter.py --sample-ids 10100574,10100862
 Rscript 02_doublet_removal.Rscript --sample-ids 10100574,10100862
 python 03_integration_annotation.py --sample-ids 10100574,10100862
+```
+
+## Sample Discovery
+
+The per-sample stages auto-discover complete inputs and preserve metadata order from `patient_metadata.csv`.
+
+The SLURM wrappers default to `#SBATCH --array=1-476%32` for the current dataset. If that count changes, override the array range at submit time:
+
+```bash
+sbatch --array=1-$(python 01_qc_filter.py --list-samples | wc -l) 01_qc_filter.sh
 ```
 
 ## Configuration
@@ -124,10 +121,3 @@ paths.  To adapt the pipeline for a new cluster, edit `config/paths.sh` only —
 no changes to the pipeline scripts are needed.
 
 Conda environment specs are in `envs/` for recreating environments from scratch.
-
-## Notes
-
-- The pipeline is self-contained within the repo for scripts and secondary resources.
-- It reuses the tracked Tsai metadata file already present in the repository.
-- The Stage 3 marker reference is now stored in `Resources/` so annotation does not depend on external paths.
-- Stages 1 and 2 produce per-sample summary CSVs (`qc_summary.csv`, `doublet_summary.csv`) for tracking cell counts across the dataset.

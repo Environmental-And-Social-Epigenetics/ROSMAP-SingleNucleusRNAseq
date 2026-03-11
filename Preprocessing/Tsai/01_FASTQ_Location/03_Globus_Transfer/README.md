@@ -5,7 +5,7 @@ Transfer FASTQ files from Engaging cluster to Openmind using Globus CLI batch tr
 ## Overview
 
 - **Source:** Engaging cluster (`/nfs/picower001/lhtsailab/...`)
-- **Destination:** Openmind scratch (`/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs`)
+- **Destination:** Openmind scratch (`${TSAI_FASTQS_DIR}` — see `config/paths.sh`)
 - **Data:** ~5200 FASTQ files, ~9 TB, 480 patients
 
 ## Directory Structure
@@ -13,7 +13,7 @@ Transfer FASTQ files from Engaging cluster to Openmind using Globus CLI batch tr
 Files are organized for easy Cellranger processing:
 
 ```
-/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/
+${TSAI_FASTQS_DIR}/
 ├── <projid>/
 │   └── <Library_ID>/
 │       ├── [run_id/]           # Only for samples with multiple sequencing runs
@@ -110,7 +110,7 @@ After transfer, point Cellranger to the patient directory:
 
 ```bash
 cellranger count \
-    --fastqs=/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/<projid>/<Library_ID> \
+    --fastqs=${TSAI_FASTQS_DIR}/<projid>/<Library_ID> \
     --sample=<Library_ID> \
     ...
 ```
@@ -119,6 +119,6 @@ For multi-run samples, Cellranger will automatically find all FASTQs in subdirec
 
 ## Notes
 
-- The `/om/scratch/Mon/` directory may have retention policies - check cluster documentation
+- The scratch directory may have retention policies — check cluster documentation
 - Globus uses checksums to verify transfer integrity
-- The conda environment for Globus CLI: `/home/mabdel03/conda_envs/globus_env`
+- Globus CLI requires a separate conda environment — see `setup/README.md`

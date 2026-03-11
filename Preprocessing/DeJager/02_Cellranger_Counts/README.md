@@ -19,13 +19,14 @@ This step aligns reads to the human reference genome and generates gene expressi
 ### Cell Ranger
 
 ```bash
-export PATH=/orcd/data/lhtsai/001/om2/mabdel03/apps/yard/cellranger-8.0.0:$PATH
+source config/paths.sh
+export PATH=${CELLRANGER_PATH}:$PATH
 ```
 
 ### Reference Genome
 
 ```
-/orcd/data/lhtsai/001/om2/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A
+${CELLRANGER_REF}  (see config/paths.sh)
 ```
 
 ## Usage
@@ -67,14 +68,14 @@ cellranger count \
 
 FASTQs from Step 01:
 ```
-/om/scratch/Mon/mabdel03/FASTQs/{LibraryID}/
+${DEJAGER_FASTQS}/{LibraryID}/
 ```
 
 ## Output
 
 Cell Ranger outputs:
 ```
-/om/scratch/Mon/mabdel03/Counts/{LibraryID}/
+${DEJAGER_COUNTS}/{LibraryID}/
 ├── outs/
 │   ├── raw_feature_bc_matrix.h5      # Raw counts
 │   ├── filtered_feature_bc_matrix.h5 # Filtered counts
@@ -93,7 +94,7 @@ Cell Ranger outputs:
 
 ## Known Issues
 
-> **⚠️ Hardcoded Paths**: The `Count_DeJager.py` script has hardcoded input/output paths. Update lines 10-19 for your environment.
+> **⚠️ Path Configuration**: All paths are configured in `config/paths.sh`. Run `source config/paths.sh && check_paths` to verify.
 
 > **⚠️ Sample Naming**: Some libraries have two samples (A and B lanes). The script handles this automatically.
 

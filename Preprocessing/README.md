@@ -57,7 +57,7 @@ cellranger count \
     --include-introns true \
     --nosecondary \
     --r1-length 26 \
-    --transcriptome=/orcd/data/lhtsai/001/om2/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A \
+    --transcriptome=${CELLRANGER_REF} \
     --sample <SAMPLE_ID> \
     --fastqs <FASTQ_DIR> \
     --output-dir=<OUTPUT_DIR>

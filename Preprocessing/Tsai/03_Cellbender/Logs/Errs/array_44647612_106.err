@@ -1,0 +1,285 @@
+cellbender:remove-background: Command:
+cellbender remove-background --cuda --input /tmp/cellbender_44650018_106/raw_feature_bc_matrix.h5 --fpr 0 --output /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix.h5
+cellbender:remove-background: CellBender 0.3.0
+cellbender:remove-background: (Workflow hash cce5958c2b)
+cellbender:remove-background: 2026-01-31 20:10:26
+cellbender:remove-background: Running remove-background
+cellbender:remove-background: Loading data from /tmp/cellbender_44650018_106/raw_feature_bc_matrix.h5
+cellbender:remove-background: CellRanger v3 format
+cellbender:remove-background: Features in dataset: 36601 Gene Expression
+cellbender:remove-background: Trimming features for inference.
+cellbender:remove-background: 29863 features have nonzero counts.
+cellbender:remove-background: Prior on counts for cells is 6666
+cellbender:remove-background: Prior on counts for empty droplets is 80
+cellbender:remove-background: Excluding 8995 features that are estimated to have <= 0.1 background counts in cells.
+cellbender:remove-background: Including 20868 features in the analysis.
+cellbender:remove-background: Trimming barcodes for inference.
+cellbender:remove-background: Excluding barcodes with counts below 40
+cellbender:remove-background: Using 1793 probable cell barcodes, plus an additional 7087 barcodes, and 59081 empty droplets.
+cellbender:remove-background: Largest surely-empty droplet has 98 UMI counts.
+cellbender:remove-background: Attempting to unpack tarball "ckpt.tar.gz" to /tmp/tmp0eoo8emp
+cellbender:remove-background: No saved checkpoint.
+cellbender:remove-background: No checkpoint loaded.
+cellbender:remove-background: Running inference...
+cellbender:remove-background: [epoch 001]  average training loss: 7839.5802
+cellbender:remove-background: [epoch 002]  average training loss: 6864.7788  (2.9 seconds per epoch)
+cellbender:remove-background: Will checkpoint every 145 epochs
+cellbender:remove-background: [epoch 003]  average training loss: 6012.6820
+cellbender:remove-background: [epoch 004]  average training loss: 5172.8550
+cellbender:remove-background: [epoch 005]  average training loss: 4838.2944
+cellbender:remove-background: [epoch 005] average test loss: 5067.1578
+cellbender:remove-background: [epoch 006]  average training loss: 4552.3351
+cellbender:remove-background: [epoch 007]  average training loss: 4317.6267
+cellbender:remove-background: [epoch 008]  average training loss: 4170.1606
+cellbender:remove-background: [epoch 009]  average training loss: 4060.9710
+cellbender:remove-background: [epoch 010]  average training loss: 4061.8224
+cellbender:remove-background: [epoch 010] average test loss: 4161.4021
+cellbender:remove-background: [epoch 011]  average training loss: 4108.0246
+cellbender:remove-background: [epoch 012]  average training loss: 4084.8718
+cellbender:remove-background: [epoch 013]  average training loss: 4052.3988
+cellbender:remove-background: [epoch 014]  average training loss: 4021.7708
+cellbender:remove-background: [epoch 015]  average training loss: 4065.0099
+cellbender:remove-background: [epoch 015] average test loss: 3993.2601
+cellbender:remove-background: [epoch 016]  average training loss: 4038.8649
+cellbender:remove-background: [epoch 017]  average training loss: 3921.1650
+cellbender:remove-background: [epoch 018]  average training loss: 3817.7724
+cellbender:remove-background: [epoch 019]  average training loss: 3774.9638
+cellbender:remove-background: [epoch 020]  average training loss: 3761.6365
+cellbender:remove-background: [epoch 020] average test loss: 3794.7525
+cellbender:remove-background: [epoch 021]  average training loss: 3759.0556
+cellbender:remove-background: [epoch 022]  average training loss: 3756.4061
+cellbender:remove-background: [epoch 023]  average training loss: 3750.9570
+cellbender:remove-background: [epoch 024]  average training loss: 3745.7550
+cellbender:remove-background: [epoch 025]  average training loss: 3737.5090
+cellbender:remove-background: [epoch 025] average test loss: 3771.0283
+cellbender:remove-background: [epoch 026]  average training loss: 3726.1800
+cellbender:remove-background: [epoch 027]  average training loss: 3730.9940
+cellbender:remove-background: [epoch 028]  average training loss: 3724.7591
+cellbender:remove-background: [epoch 029]  average training loss: 3711.3391
+cellbender:remove-background: [epoch 030]  average training loss: 3704.6578
+cellbender:remove-background: [epoch 030] average test loss: 3757.5999
+cellbender:remove-background: [epoch 031]  average training loss: 3682.3165
+cellbender:remove-background: [epoch 032]  average training loss: 3656.2284
+cellbender:remove-background: [epoch 033]  average training loss: 3649.9541
+cellbender:remove-background: [epoch 034]  average training loss: 3625.7962
+cellbender:remove-background: [epoch 035]  average training loss: 3607.4433
+cellbender:remove-background: [epoch 035] average test loss: 3623.8876
+cellbender:remove-background: [epoch 036]  average training loss: 3602.3140
+cellbender:remove-background: [epoch 037]  average training loss: 3589.4627
+cellbender:remove-background: [epoch 038]  average training loss: 3580.9053
+cellbender:remove-background: [epoch 039]  average training loss: 3574.9925
+cellbender:remove-background: [epoch 040]  average training loss: 3565.4906
+cellbender:remove-background: [epoch 040] average test loss: 3578.3208
+cellbender:remove-background: [epoch 041]  average training loss: 3560.6475
+cellbender:remove-background: [epoch 042]  average training loss: 3550.8880
+cellbender:remove-background: [epoch 043]  average training loss: 3545.4724
+cellbender:remove-background: [epoch 044]  average training loss: 3540.7987
+cellbender:remove-background: [epoch 045]  average training loss: 3536.7797
+cellbender:remove-background: [epoch 045] average test loss: 3558.2437
+cellbender:remove-background: [epoch 046]  average training loss: 3532.8471
+cellbender:remove-background: [epoch 047]  average training loss: 3529.0411
+cellbender:remove-background: [epoch 048]  average training loss: 3526.4150
+cellbender:remove-background: [epoch 049]  average training loss: 3520.0234
+cellbender:remove-background: [epoch 050]  average training loss: 3522.8302
+cellbender:remove-background: [epoch 050] average test loss: 3549.3434
+cellbender:remove-background: [epoch 051]  average training loss: 3516.8374
+cellbender:remove-background: [epoch 052]  average training loss: 3518.9047
+cellbender:remove-background: [epoch 053]  average training loss: 3514.7911
+cellbender:remove-background: [epoch 054]  average training loss: 3516.8244
+cellbender:remove-background: [epoch 055]  average training loss: 3510.6068
+cellbender:remove-background: [epoch 055] average test loss: 3567.0964
+cellbender:remove-background: [epoch 056]  average training loss: 3515.5219
+cellbender:remove-background: [epoch 057]  average training loss: 3513.7348
+cellbender:remove-background: [epoch 058]  average training loss: 3520.0443
+cellbender:remove-background: [epoch 059]  average training loss: 3513.9007
+cellbender:remove-background: [epoch 060]  average training loss: 3511.7004
+cellbender:remove-background: [epoch 060] average test loss: 3559.8267
+cellbender:remove-background: [epoch 061]  average training loss: 3510.8886
+cellbender:remove-background: [epoch 062]  average training loss: 3517.4907
+cellbender:remove-background: [epoch 063]  average training loss: 3510.7631
+cellbender:remove-background: [epoch 064]  average training loss: 3508.6690
+cellbender:remove-background: [epoch 065]  average training loss: 3510.1441
+cellbender:remove-background: [epoch 065] average test loss: 3523.5774
+cellbender:remove-background: [epoch 066]  average training loss: 3504.8508
+cellbender:remove-background: [epoch 067]  average training loss: 3506.2379
+cellbender:remove-background: [epoch 068]  average training loss: 3508.1191
+cellbender:remove-background: [epoch 069]  average training loss: 3510.0439
+cellbender:remove-background: [epoch 070]  average training loss: 3510.0797
+cellbender:remove-background: [epoch 070] average test loss: 3563.4859
+cellbender:remove-background: [epoch 071]  average training loss: 3504.0222
+cellbender:remove-background: [epoch 072]  average training loss: 3508.6829
+cellbender:remove-background: [epoch 073]  average training loss: 3501.6930
+cellbender:remove-background: [epoch 074]  average training loss: 3505.3916
+cellbender:remove-background: [epoch 075]  average training loss: 3507.5715
+cellbender:remove-background: [epoch 075] average test loss: 3539.9128
+cellbender:remove-background: [epoch 076]  average training loss: 3499.4595
+cellbender:remove-background: [epoch 077]  average training loss: 3497.9153
+cellbender:remove-background: [epoch 078]  average training loss: 3507.0126
+cellbender:remove-background: [epoch 079]  average training loss: 3501.9625
+cellbender:remove-background: [epoch 080]  average training loss: 3489.0565
+cellbender:remove-background: [epoch 080] average test loss: 3545.7510
+cellbender:remove-background: [epoch 081]  average training loss: 3497.7181
+cellbender:remove-background: [epoch 082]  average training loss: 3500.8570
+cellbender:remove-background: [epoch 083]  average training loss: 3492.9415
+cellbender:remove-background: [epoch 084]  average training loss: 3496.5200
+cellbender:remove-background: [epoch 085]  average training loss: 3492.3643
+cellbender:remove-background: [epoch 085] average test loss: 3539.6442
+cellbender:remove-background: [epoch 086]  average training loss: 3496.1283
+cellbender:remove-background: [epoch 087]  average training loss: 3494.1430
+cellbender:remove-background: [epoch 088]  average training loss: 3492.1652
+cellbender:remove-background: [epoch 089]  average training loss: 3490.3412
+cellbender:remove-background: [epoch 090]  average training loss: 3495.9621
+cellbender:remove-background: [epoch 090] average test loss: 3572.2980
+cellbender:remove-background: [epoch 091]  average training loss: 3492.7925
+cellbender:remove-background: [epoch 092]  average training loss: 3497.0872
+cellbender:remove-background: [epoch 093]  average training loss: 3484.8226
+cellbender:remove-background: [epoch 094]  average training loss: 3485.7959
+cellbender:remove-background: [epoch 095]  average training loss: 3486.2026
+cellbender:remove-background: [epoch 095] average test loss: 3523.5195
+cellbender:remove-background: [epoch 096]  average training loss: 3479.6605
+cellbender:remove-background: [epoch 097]  average training loss: 3488.7498
+cellbender:remove-background: [epoch 098]  average training loss: 3479.2297
+cellbender:remove-background: [epoch 099]  average training loss: 3483.0587
+cellbender:remove-background: [epoch 100]  average training loss: 3484.8962
+cellbender:remove-background: [epoch 100] average test loss: 3531.5763
+cellbender:remove-background: [epoch 101]  average training loss: 3479.1953
+cellbender:remove-background: [epoch 102]  average training loss: 3483.4035
+cellbender:remove-background: [epoch 103]  average training loss: 3483.6620
+cellbender:remove-background: [epoch 104]  average training loss: 3478.7925
+cellbender:remove-background: [epoch 105]  average training loss: 3476.9936
+cellbender:remove-background: [epoch 105] average test loss: 3529.4204
+cellbender:remove-background: [epoch 106]  average training loss: 3481.7402
+cellbender:remove-background: [epoch 107]  average training loss: 3478.7462
+cellbender:remove-background: [epoch 108]  average training loss: 3478.4149
+cellbender:remove-background: [epoch 109]  average training loss: 3475.7480
+cellbender:remove-background: [epoch 110]  average training loss: 3477.2843
+cellbender:remove-background: [epoch 110] average test loss: 3537.7168
+cellbender:remove-background: [epoch 111]  average training loss: 3477.2841
+cellbender:remove-background: [epoch 112]  average training loss: 3476.9585
+cellbender:remove-background: [epoch 113]  average training loss: 3476.1095
+cellbender:remove-background: [epoch 114]  average training loss: 3475.9097
+cellbender:remove-background: [epoch 115]  average training loss: 3469.5309
+cellbender:remove-background: [epoch 115] average test loss: 3538.4658
+cellbender:remove-background: [epoch 116]  average training loss: 3474.5389
+cellbender:remove-background: [epoch 117]  average training loss: 3472.2077
+cellbender:remove-background: [epoch 118]  average training loss: 3477.9855
+cellbender:remove-background: [epoch 119]  average training loss: 3465.0648
+cellbender:remove-background: [epoch 120]  average training loss: 3472.1839
+cellbender:remove-background: [epoch 120] average test loss: 3540.3588
+cellbender:remove-background: [epoch 121]  average training loss: 3469.0512
+cellbender:remove-background: [epoch 122]  average training loss: 3469.0513
+cellbender:remove-background: [epoch 123]  average training loss: 3470.2676
+cellbender:remove-background: [epoch 124]  average training loss: 3468.0627
+cellbender:remove-background: [epoch 125]  average training loss: 3472.9995
+cellbender:remove-background: [epoch 125] average test loss: 3555.5972
+cellbender:remove-background: [epoch 126]  average training loss: 3472.2360
+cellbender:remove-background: [epoch 127]  average training loss: 3468.2136
+cellbender:remove-background: [epoch 128]  average training loss: 3469.0184
+cellbender:remove-background: [epoch 129]  average training loss: 3468.2712
+cellbender:remove-background: [epoch 130]  average training loss: 3471.3325
+cellbender:remove-background: [epoch 130] average test loss: 3527.5985
+cellbender:remove-background: [epoch 131]  average training loss: 3469.5304
+cellbender:remove-background: [epoch 132]  average training loss: 3472.1023
+cellbender:remove-background: [epoch 133]  average training loss: 3468.1630
+cellbender:remove-background: [epoch 134]  average training loss: 3464.4889
+cellbender:remove-background: [epoch 135]  average training loss: 3465.8247
+cellbender:remove-background: [epoch 135] average test loss: 3548.9914
+cellbender:remove-background: [epoch 136]  average training loss: 3466.6116
+cellbender:remove-background: [epoch 137]  average training loss: 3470.5879
+cellbender:remove-background: [epoch 138]  average training loss: 3467.1605
+cellbender:remove-background: [epoch 139]  average training loss: 3470.7117
+cellbender:remove-background: [epoch 140]  average training loss: 3465.5084
+cellbender:remove-background: [epoch 140] average test loss: 3537.7175
+cellbender:remove-background: [epoch 141]  average training loss: 3461.4930
+cellbender:remove-background: [epoch 142]  average training loss: 3467.0137
+cellbender:remove-background: [epoch 143]  average training loss: 3469.2890
+cellbender:remove-background: [epoch 144]  average training loss: 3471.4433
+cellbender:remove-background: [epoch 145]  average training loss: 3469.8606
+cellbender:remove-background: [epoch 145] average test loss: 3538.2347
+cellbender:remove-background: Saving a checkpoint...
+cellbender:remove-background: Saved checkpoint as /weka/scratch/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/ckpt.tar.gz
+cellbender:remove-background: [epoch 146]  average training loss: 3467.7559
+cellbender:remove-background: [epoch 147]  average training loss: 3465.2070
+cellbender:remove-background: [epoch 148]  average training loss: 3467.2550
+cellbender:remove-background: [epoch 149]  average training loss: 3469.8676
+cellbender:remove-background: [epoch 150]  average training loss: 3468.0001
+cellbender:remove-background: [epoch 150] average test loss: 3540.8794
+cellbender:remove-background: Saving a checkpoint...
+cellbender:remove-background: Saved checkpoint as /weka/scratch/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/ckpt.tar.gz
+cellbender:remove-background: 2026-01-31 20:19:55
+cellbender:remove-background: Inference procedure complete.
+cellbender:remove-background: Attempting to unpack tarball "ckpt.tar.gz" to /tmp/tmp1unvgmco
+cellbender:remove-background: Successfully unpacked tarball to /tmp/tmp1unvgmco
+/tmp/tmp1unvgmco/cce5958c2b_random.pyro
+/tmp/tmp1unvgmco/cce5958c2b_random.cuda
+/tmp/tmp1unvgmco/cce5958c2b_model.torch
+/tmp/tmp1unvgmco/cce5958c2b_optim.torch
+/tmp/tmp1unvgmco/cce5958c2b_optim.pyro
+/tmp/tmp1unvgmco/cce5958c2b_params.pyro
+/tmp/tmp1unvgmco/cce5958c2b_train.loaderstate
+/tmp/tmp1unvgmco/cce5958c2b_test.loaderstate
+/tmp/tmp1unvgmco/cce5958c2b_args.npy
+cellbender:remove-background: Posterior not currently included in checkpoint.
+cellbender:remove-background: Computing posterior noise count probabilities in mini-batches.
+cellbender:remove-background: Working on chunk (1/31)
+cellbender:remove-background:     [0.04 mins per chunk]
+cellbender:remove-background: Working on chunk (2/31)
+cellbender:remove-background: Working on chunk (3/31)
+cellbender:remove-background: Working on chunk (4/31)
+cellbender:remove-background: Working on chunk (5/31)
+cellbender:remove-background: Working on chunk (6/31)
+cellbender:remove-background: Working on chunk (7/31)
+cellbender:remove-background: Working on chunk (8/31)
+cellbender:remove-background: Working on chunk (9/31)
+cellbender:remove-background: Working on chunk (10/31)
+cellbender:remove-background: Working on chunk (11/31)
+cellbender:remove-background: Working on chunk (12/31)
+cellbender:remove-background: Working on chunk (13/31)
+cellbender:remove-background: Working on chunk (14/31)
+cellbender:remove-background: Working on chunk (15/31)
+cellbender:remove-background: Working on chunk (16/31)
+cellbender:remove-background: Working on chunk (17/31)
+cellbender:remove-background: Working on chunk (18/31)
+cellbender:remove-background: Working on chunk (19/31)
+cellbender:remove-background: Working on chunk (20/31)
+cellbender:remove-background: Working on chunk (21/31)
+cellbender:remove-background: Working on chunk (22/31)
+cellbender:remove-background: Working on chunk (23/31)
+cellbender:remove-background: Working on chunk (24/31)
+cellbender:remove-background: Working on chunk (25/31)
+cellbender:remove-background: Working on chunk (26/31)
+cellbender:remove-background: Working on chunk (27/31)
+cellbender:remove-background: Working on chunk (28/31)
+cellbender:remove-background: Working on chunk (29/31)
+cellbender:remove-background: Working on chunk (30/31)
+cellbender:remove-background: Working on chunk (31/31)
+cellbender:remove-background: Writing full posterior to /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix_posterior.h5
+cellbender:remove-background: Succeeded in writing posterior to file /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix_posterior.h5
+cellbender:remove-background: Added posterior object to checkpoint file.
+cellbender:remove-background: 2026-01-31 20:22:52
+
+cellbender:remove-background: Saved summary plots as /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix.pdf
+cellbender:remove-background: Saved cell barcodes in /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix_cell_barcodes.csv
+cellbender:remove-background: Computing target noise counts per gene for MCKP estimator
+cellbender:remove-background: Using MCKP noise targets computed for FPR 0.0
+cellbender:remove-background: Computing denoised counts using mckp estimator
+cellbender:remove-background: Working on chunk (1/7)
+cellbender:remove-background:     [0.92 mins per chunk]
+cellbender:remove-background: Working on chunk (2/7)
+cellbender:remove-background: Working on chunk (3/7)
+cellbender:remove-background: Working on chunk (4/7)
+cellbender:remove-background: Working on chunk (5/7)
+cellbender:remove-background: Working on chunk (6/7)
+cellbender:remove-background: Working on chunk (7/7)
+cellbender:remove-background: 2026-01-31 20:29:36 Total MCKP estimation time = 385.03 sec
+cellbender:remove-background: Succeeded in writing CellRanger format output to file /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix.h5
+cellbender:remove-background: Succeeded in writing CellRanger format output to file /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix_filtered.h5
+cellbender:remove-background: Saved output metrics as /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix_metrics.csv
+[NbConvertApp] Converting notebook tmp.report.ipynb to notebook
+[NbConvertApp] Writing 453831 bytes to tmp.report.nbconvert.ipynb
+[NbConvertApp] Converting notebook tmp.report.nbconvert.ipynb to html
+[NbConvertApp] Writing 1028518 bytes to tmp.report.nbconvert.html
+cellbender:remove-background: Succeeded in writing report to /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/20143248/processed_feature_bc_matrix_report.html
+cellbender:remove-background: Completed remove-background.
+cellbender:remove-background: 2026-01-31 20:30:06
+

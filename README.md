@@ -5,6 +5,18 @@ This repository contains the single nucleus RNA sequencing (snRNA-seq) analysis 
 - **DeJager Dataset**: Data downloaded from Synapse, requiring sample demultiplexing via Demuxlet/Freemuxlet
 - **Tsai Dataset**: Data located on MIT Engaging cluster, with known patient assignments
 
+## Getting Started
+
+1. **Understand the project** — Read [BACKGROUND.md](BACKGROUND.md) for scientific context (ROSMAP, snRNA-seq, and why each pipeline step matters)
+2. **Set up your environment** — Follow [setup/README.md](setup/README.md) for first-time cluster setup
+3. **Run Preprocessing** — See [Preprocessing/](Preprocessing/README.md) (choose DeJager or Tsai pathway)
+4. **Run Processing** — Submit all three stages with one command:
+   ```bash
+   cd Processing/Tsai/Pipeline
+   ./submit_pipeline.sh all
+   ```
+5. **Downstream Analysis** — See [Analysis/](Analysis/README.md)
+
 ## Repository Structure
 
 ```
@@ -21,10 +33,18 @@ ROSMAP-SingleNucleusRNAseq/
 │       ├── 01_FASTQ_Location/    # FASTQ discovery and indexing
 │       ├── 02_Cellranger_Counts/ # Automated batch pipeline (CR + CellBender)
 │       └── 03_Cellbender/        # Legacy cohort notebooks
-├── Processing/              # QC and cell type annotation
+├── Processing/              # QC, doublet removal, batch correction, and annotation
 │   ├── DeJager/
+│   │   ├── Pipeline/              # 3-stage pipeline (mirrors Tsai)
+│   │   │   ├── 01_qc_filter.*
+│   │   │   ├── 02_doublet_removal.*
+│   │   │   ├── 03_integration_annotation.*
+│   │   │   ├── submit_pipeline.sh
+│   │   │   ├── Resources/
+│   │   │   └── envs/
+│   │   └── _legacy/               # Archived original scripts
 │   └── Tsai/
-│       ├── Pipeline/              # Primary 3-stage pipeline (current)
+│       ├── Pipeline/              # 3-stage pipeline (primary development target)
 │       │   ├── 01_qc_filter.*
 │       │   ├── 02_doublet_removal.*
 │       │   ├── 03_integration_annotation.*
@@ -32,15 +52,18 @@ ROSMAP-SingleNucleusRNAseq/
 │       │   ├── Resources/         # Marker gene references
 │       │   └── envs/              # Conda environment specs
 │       └── archive/               # Superseded legacy scripts
-└── Analysis/                # Downstream analysis
-    ├── DeJager/
-    │   ├── DEG_Analysis/
-    │   ├── SCENIC/
-    │   └── Transcription_Factors/
-    └── Tsai/
-        ├── DEG_Analysis/
-        ├── SCENIC/
-        └── Transcription_Factors/
+├── Data/                    # Clinical phenotype data
+│   └── Phenotypes/          # ROSMAP clinical, ACE scores, ID maps
+└── Analysis/                # Downstream analysis (organized by phenotype)
+    ├── _template/           # Template for adding new phenotype analyses
+    ├── ACE/                 # Adverse Childhood Experiences
+    │   ├── DEG/  (DeJager/, Tsai/)
+    │   ├── TF/   (DeJager/, Tsai/)
+    │   └── SCENIC/ (DeJager/, Tsai/)
+    ├── Resilient/           # Cognitive Resilience
+    │   └── (same structure)
+    └── SocIsl/              # Social Isolation
+        └── (same structure)
 ```
 
 ## Pipeline Overview
@@ -56,15 +79,22 @@ Converts raw FASTQ files into ambient RNA-corrected count matrices.
 | 3. Ambient RNA Removal | CellBender | CellBender (GPU-accelerated) |
 | 4. Sample Assignment | Demuxlet/Freemuxlet (WGS-based) | Known from metadata |
 
-### Phase 2: Processing (Tsai Pipeline)
+### Phase 2: Processing
 
-The primary processing pipeline lives in `Processing/Tsai/Pipeline/` and runs in three stages:
+Both datasets use an identical three-stage pipeline (`Processing/{Dataset}/Pipeline/`):
 
 1. **Stage 1 — QC Filtering** (`01_qc_filter.py`): Percentile-based outlier removal and mitochondrial % filtering
 2. **Stage 2 — Doublet Removal** (`02_doublet_removal.Rscript`): scDblFinder-based doublet detection
 3. **Stage 3 — Integration & Annotation** (`03_integration_annotation.py`): Normalization, HVG selection, PCA, Harmony batch correction, Leiden clustering, UMAP, and ORA-based cell type annotation with Mohammadi 2020 markers
 
-See `Processing/Tsai/Pipeline/README.md` for full details.
+Submit all stages with dependency chaining:
+
+```bash
+cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all     # Tsai (476 samples)
+cd Processing/DeJager/Pipeline && ./submit_pipeline.sh all   # DeJager
+```
+
+See `Processing/Tsai/Pipeline/README.md` or `Processing/DeJager/Pipeline/README.md` for full details.
 
 ### Phase 3: Analysis
 
@@ -94,6 +124,12 @@ Before running the pipeline, configure paths in `config/paths.sh` (or create
 ```bash
 source config/paths.sh
 check_paths
+```
+
+Validate that all pipeline prerequisites (conda environments, input files, references) are in place:
+
+```bash
+bash config/preflight.sh
 ```
 
 See `setup/README.md` for a complete first-time setup guide.
@@ -130,7 +166,7 @@ conda activate "${BATCHCORR_ENV}"   # Stage 3
 | Step | Partition | Cores | Memory | Time | GPU |
 |------|-----------|-------|--------|------|-----|
 | Cell Ranger | mit_normal | 32 | 128GB | 47h | - |
-| CellBender | mit_normal_gpu | 32 | 128-500GB | 47h | A100 |
+| CellBender | mit_normal_gpu | 32 | 128GB | 47h | A100 |
 | Demuxlet | mit_normal | 80 | 400GB | 48h | - |
 
 ### Tsai Pipeline (Updated)
@@ -139,6 +175,14 @@ conda activate "${BATCHCORR_ENV}"   # Stage 3
 |------|-----------|-------|--------|------|-----|
 | Cell Ranger | mit_preemptable | 16 | 64GB | 2 days | - |
 | CellBender | mit_normal_gpu | 4 | 64GB | 4h | 1 |
+
+### Processing Pipeline (Both Datasets)
+
+| Stage | Cores | Memory | Time | Notes |
+|-------|-------|--------|------|-------|
+| 1 — QC Filtering | 4 | 32GB | 12h | Array job (Tsai: 476 tasks, DeJager: 200 tasks, 32 concurrent) |
+| 2 — Doublet Removal | 4 | 32GB | 12h | Array job (same dimensions as Stage 1) |
+| 3 — Integration & Annotation | 32 | 500GB | 48h | Single job (loads all samples) |
 
 ## Data Locations
 
@@ -156,11 +200,11 @@ Data paths are configured in `config/paths.sh`. Update `SCRATCH_ROOT` for your c
 
 | Data Type | Variable | Default Path |
 |-----------|----------|--------------|
-| FASTQs | (from CSV) | Located on Engaging filesystem |
-| FASTQ Index | `TSAI_FASTQS_CSV` | `${REPO_ROOT}/Data/Tsai/All_ROSMAP_FASTQs.csv` |
-| Cell Ranger (temp) | `TSAI_CELLRANGER_SCRATCH` | `${SCRATCH_ROOT}/Tsai/Cellranger_Counts/` |
-| CellBender (temp) | `TSAI_CELLBENDER_SCRATCH` | `${SCRATCH_ROOT}/Tsai/Cellbender_Output/` |
-| Preprocessed | `TSAI_PREPROCESSED` | `${DATA_ROOT}/Data/Tsai/Preprocessed_Counts/` |
+| FASTQs | `TSAI_FASTQS_DIR` | `${SCRATCH_ROOT}/Tsai_Data/FASTQs` |
+| FASTQ Index | `TSAI_FASTQS_CSV` | `${DATA_ROOT}/Data/Tsai/Preprocessing/FASTQ_Transfer/New/CSVs/All_ROSMAP_FASTQs.csv` |
+| Cell Ranger | `TSAI_CELLRANGER_OUTPUT` | `${SCRATCH_ROOT}/Tsai_Data/Cellranger_Outputs` |
+| CellBender (temp) | `TSAI_CELLBENDER_SCRATCH` | `${SCRATCH_ROOT}/Tsai/Cellbender_Output` |
+| Preprocessed | `TSAI_PREPROCESSED` | `${WORKSPACE_ROOT}/Tsai_Data/Cellbender_Outputs` |
 
 **Dataset:** 480 patients, 5,197 FASTQ files, processed in 16 batches of 30 patients each.
 
@@ -168,9 +212,9 @@ Data paths are configured in `config/paths.sh`. Update `SCRATCH_ROOT` for your c
 
 See `KNOWN_ISSUES.md` for a detailed tracker. Key remaining items:
 
-1. **Demuxlet scripts**: Contains commented-out parameter tuning code that should be cleaned up
-2. **Scratch dependencies**: Intermediate data on scratch may be cleaned up before processing completes
-3. **DeJager processing scripts**: Named "TsaiPipeline" (historical artifact) — rename pending
+1. **Scratch dependencies**: Intermediate Cell Ranger/CellBender data on scratch may be cleaned before processing completes
+2. **Pipeline naming**: Legacy scripts in `Processing/DeJager/_legacy/` are named "TsaiPipeline" (historical artifact)
+3. **SocIsl preprocessing**: SocIsl cohort has batch scripts but no dedicated notebooks for Cell Ranger/CellBender script generation
 
 ## Contributing
 

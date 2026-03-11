@@ -58,7 +58,7 @@ python Scripts/generate_globus_batch.py
 python Scripts/verify_transfer.py
 ```
 
-**Output:** FASTQs in `/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/<projid>/<Library_ID>/`
+**Output:** FASTQs in `${TSAI_FASTQS_DIR}/<projid>/<Library_ID>/` (see `config/paths.sh`)
 
 ## Data Summary
 
@@ -73,7 +73,7 @@ python Scripts/verify_transfer.py
 ## Destination Structure on Openmind
 
 ```
-/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/
+${TSAI_FASTQS_DIR}/
 ├── <projid>/
 │   └── <Library_ID>/
 │       ├── [run_id/]           # For multi-source samples (e.g., 10x-4182G)
@@ -96,5 +96,5 @@ Edit `Config/config.sh` to customize paths and parameters.
 
 - GNU `parallel` for FASTQ discovery
 - Python 3 with `pandas`
-- Globus CLI (`/home/mabdel03/conda_envs/globus_env`)
+- Globus CLI (install via conda; see `setup/README.md`)
 - Access to `/nfs/picower*` filesystems

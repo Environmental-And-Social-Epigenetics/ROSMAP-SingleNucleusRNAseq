@@ -48,11 +48,12 @@ Due to the 1TB scratch space limit, patients are processed in **16 batches of 30
 ### 1. Generate batch scripts
 
 ```bash
-cd /orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts
+cd ${REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts
 
 # Activate Python environment
-source /orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/python_data_analysis
+source config/paths.sh
+init_conda
+conda activate "${PYTHON_ENV}"
 
 # Generate scripts (dry-run first)
 python Scripts/generate_batch_scripts.py --dry-run
@@ -107,7 +108,7 @@ cat Tracking/cellranger_failed.txt
 cat Tracking/cellbender_failed.txt
 
 # Check scratch usage
-du -sh /home/mabdel03/orcd/scratch/Tsai/
+du -sh ${SCRATCH_ROOT}/Tsai/
 
 # View pipeline master log (if using automated orchestrator)
 tail -f Logs/Outs/pipeline_master_*.out
@@ -122,18 +123,18 @@ Each batch follows this workflow:
 │ Batch N                                                     │
 ├─────────────────────────────────────────────────────────────┤
 │ 1. Submit 30 Cell Ranger jobs (parallel, mit_preemptable)   │
-│    └── Output: /home/mabdel03/orcd/scratch/Tsai/Cellranger/ │
+│    └── Output: ${TSAI_CELLRANGER_SCRATCH}/                  │
 │                                                             │
 │ 2. Wait for all Cell Ranger jobs to complete                │
 │                                                             │
 │ 3. Submit 30 CellBender jobs (parallel, mit_normal_gpu)     │
 │    └── Input: Cell Ranger raw_feature_bc_matrix.h5          │
-│    └── Output: /home/mabdel03/orcd/scratch/Tsai/Cellbender/ │
+│    └── Output: ${TSAI_CELLBENDER_SCRATCH}/                  │
 │                                                             │
 │ 4. Wait for all CellBender jobs to complete                 │
 │                                                             │
 │ 5. Copy final .h5 files to permanent storage                │
-│    └── /orcd/data/.../Data/Tsai/Preprocessed_Counts/        │
+│    └── ${TSAI_PREPROCESSED}/                                │
 │                                                             │
 │ 6. Delete scratch files for this batch                      │
 │    └── Frees ~750GB for next batch                          │
@@ -210,7 +211,7 @@ This CSV contains 5,197 FASTQ files across 480 patients.
 ### On Openmind (Processing)
 FASTQs are transferred via Globus to:
 ```
-/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/<projid>/<Library_ID>/
+${TSAI_FASTQS_DIR}/<projid>/<Library_ID>/
 ```
 
 **Note:** For Cell Ranger on Openmind, point `--fastqs` to the patient directory. Cell Ranger will automatically discover all FASTQs in subdirectories.
@@ -221,7 +222,7 @@ See `01_FASTQ_Location/03_Globus_Transfer/README.md` for transfer details.
 
 Final CellBender outputs are stored in:
 ```
-/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessed_Counts/
+${TSAI_PREPROCESSED}/
 ├── {projid_1}/
 │   ├── cellbender_output.h5
 │   └── cellbender_output_filtered.h5
@@ -271,7 +272,7 @@ cat Logs/Errs/cellbender_{projid}_*.err
 If scratch fills up unexpectedly:
 ```bash
 # Check what's using space
-du -sh /home/mabdel03/orcd/scratch/Tsai/*
+du -sh ${SCRATCH_ROOT}/Tsai/*
 
 # Manually run cleanup for completed batches
 ./Scripts/cleanup_batch.sh 1 --force

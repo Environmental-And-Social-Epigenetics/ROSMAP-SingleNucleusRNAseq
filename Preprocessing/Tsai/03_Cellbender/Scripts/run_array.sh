@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=cellbender_array
-#SBATCH --array=1-243%10
+#SBATCH --array=1-36%10
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32

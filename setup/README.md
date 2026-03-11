@@ -8,6 +8,8 @@ SLURM cluster, from clone to ready-to-run.
 - **SLURM** cluster access with GPU nodes (for CellBender)
 - **conda** or **mamba** installed (miniconda, miniforge, or anaconda)
 - **Git** for cloning the repository
+- **Singularity** (for DeJager Demuxlet step only): `module load openmind/singularity/3.10.4`
+- **Globus CLI** (for Tsai FASTQ transfer only): install in a dedicated conda environment
 
 ## Step 1: Clone the Repository
 
@@ -112,6 +114,18 @@ check_paths
 cd Processing/Tsai/Pipeline
 python 01_qc_filter.py --list-samples | head -2
 ```
+
+## SLURM Partitions
+
+The pipeline uses these cluster-specific partitions (configured for MIT Openmind):
+
+| Partition | Used By | Purpose |
+|-----------|---------|---------|
+| `mit_preemptable` | Cell Ranger | Lower-priority partition with shorter queue times; jobs may be preempted |
+| `mit_normal_gpu` | CellBender | GPU partition for ambient RNA removal |
+| `lhtsai` | Stage 3 Integration | Lab-specific high-memory partition |
+
+To override the default partition, set `SLURM_PARTITION` in `config/paths.sh` or `config/paths.local.sh`. If your cluster uses different partition names, update this variable.
 
 ## Directory Layout
 

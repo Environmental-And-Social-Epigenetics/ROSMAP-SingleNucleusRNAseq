@@ -43,7 +43,7 @@ Tsai/
 |-------|-------|--------|------|
 | 1 — QC Filtering | 4 | 32GB | ~1h per sample (array job) |
 | 2 — Doublet Removal | 4 | 32GB | ~1h per sample (array job) |
-| 3 — Integration | 32 | 256GB | 4-8h (single job) |
+| 3 — Integration | 32 | 500GB | 4-8h (single job) |
 
 ## Legacy Scripts
 

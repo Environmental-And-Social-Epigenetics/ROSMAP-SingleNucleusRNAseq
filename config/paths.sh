@@ -32,7 +32,7 @@ export WORKSPACE_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 export CONDA_INIT_SCRIPT="/om2/user/mabdel03/anaconda/etc/profile.d/conda.sh"
 
 # Base conda environment directory
-export CONDA_ENV_BASE="/orcd/data/lhtsai/001/om2/mabdel03/conda_envs"
+export CONDA_ENV_BASE="/om2/user/mabdel03/conda_envs"
 
 # Specific environments
 export CELLBENDER_ENV="/om2/user/mabdel03/conda_envs/Cellbender_env"
@@ -74,6 +74,28 @@ export DEJAGER_COUNTS="${SCRATCH_ROOT}/Counts"
 
 # Preprocessed counts (CellBender output) - permanent storage
 export DEJAGER_PREPROCESSED="${DATA_ROOT}/Data/DeJager/Preprocessed_Counts"
+
+# =============================================================================
+# DEJAGER DEMUXLET PATHS
+# =============================================================================
+
+# WGS data directory (filtered BAMs, pileups, demuxlet outputs)
+export DEJAGER_WGS_DIR="/om/scratch/Mon/shared_folder/WGS"
+
+# SNP VCF for demuxlet (SNP-only, concatenated, lifted to GRCh38, ~84GB)
+export DEJAGER_DEMUX_VCF="${DEJAGER_WGS_DIR}/snp_fixedconcatenated_liftedROSMAP.vcf.gz"
+
+# Demuxafy Singularity container
+export DEMUXAFY_SIF="${DEJAGER_WGS_DIR}/Demuxafy.sif"
+
+# Per-library patient ID files
+export DEJAGER_PATIENT_IDS_DIR="${DEJAGER_WGS_DIR}/individ"
+
+# Bcftools conda environment (for BAM filtering)
+export BCFTOOLS_ENV="/net/vast-storage/scratch/vast/lhtsai/mabdel03/conda_envs/bcftools_env"
+
+# Singularity module
+export SINGULARITY_MODULE="openmind/singularity/3.10.4"
 
 # =============================================================================
 # TSAI DATA PATHS
@@ -122,6 +144,39 @@ export TSAI_METADATA_CSV="${REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts/T
 
 # Marker reference for ORA annotation (tracked in repo)
 export TSAI_MARKERS_RDS="${REPO_ROOT}/Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds"
+
+# =============================================================================
+# DEJAGER PROCESSING PIPELINE PATHS
+# =============================================================================
+
+# Base output directory for the three-stage processing pipeline
+export DEJAGER_PROCESSING_OUTPUTS="${WORKSPACE_ROOT}/DeJager_Data/Processing_Outputs"
+
+# Per-stage I/O directories
+export DEJAGER_QC_FILTERED="${DEJAGER_PROCESSING_OUTPUTS}/01_QC_Filtered"
+export DEJAGER_DOUBLET_REMOVED="${DEJAGER_PROCESSING_OUTPUTS}/02_Doublet_Removed"
+export DEJAGER_INTEGRATED="${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated"
+
+# SLURM log directory
+export DEJAGER_PROCESSING_LOGS="${DEJAGER_PROCESSING_OUTPUTS}/Logs"
+
+# Patient barcode-to-ID mapping CSV (shared resource)
+export DEJAGER_PATIENT_MAP="/om/scratch/Mon/shared_folder/WGS/cell_to_patient_assignmentsFinal0.csv"
+
+# Patient ID overrides for "alone" libraries (JSON)
+export DEJAGER_PATIENT_ID_OVERRIDES="${REPO_ROOT}/Processing/DeJager/Pipeline/Resources/patient_id_overrides.json"
+
+# Marker reference for ORA annotation (shared with Tsai)
+export DEJAGER_MARKERS_RDS="${REPO_ROOT}/Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds"
+
+# =============================================================================
+# PHENOTYPE / CLINICAL DATA (tracked in repo)
+# =============================================================================
+
+export PHENOTYPE_DIR="${REPO_ROOT}/Data/Phenotypes"
+export ROSMAP_CLINICAL_CSV="${PHENOTYPE_DIR}/ROSMAP_clinical.csv"
+export ACE_SCORES_CSV="${PHENOTYPE_DIR}/TSAI_DEJAGER_all_patients_wACEscores.csv"
+export DEJAGER_ID_MAP="${PHENOTYPE_DIR}/DeJager_ID_Map.csv"
 
 # =============================================================================
 # SLURM SETTINGS

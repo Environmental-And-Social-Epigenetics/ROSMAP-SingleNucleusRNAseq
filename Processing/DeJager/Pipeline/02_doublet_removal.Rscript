@@ -1,0 +1,372 @@
+#!/usr/bin/env Rscript
+
+Sys.setenv(HDF5_USE_FILE_LOCKING = "FALSE")
+
+get_script_dir <- function() {
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- grep("^--file=", args, value = TRUE)
+  if (length(file_arg) == 0) {
+    return(normalizePath(getwd()))
+  }
+  normalizePath(dirname(sub("^--file=", "", file_arg[[1]])))
+}
+
+ensure_r_package <- function(package_name, local_lib, bioc = TRUE) {
+  if (requireNamespace(package_name, quietly = TRUE)) {
+    return(invisible(TRUE))
+  }
+
+  # Fallback: attempt to install the missing package.  This requires internet
+  # access and may fail on compute nodes.  The recommended approach is to create
+  # the conda environment from envs/stage2_doublets.yml, which includes all
+  # required R packages.
+  message(sprintf(
+    "[WARN] Package '%s' not found in conda env — attempting install to %s",
+    package_name, local_lib
+  ))
+
+  dir.create(local_lib, recursive = TRUE, showWarnings = FALSE)
+  .libPaths(unique(c(local_lib, .libPaths())))
+
+  if (bioc) {
+    if (!requireNamespace("BiocManager", quietly = TRUE)) {
+      install.packages("BiocManager", repos = "https://cloud.r-project.org", lib = local_lib)
+    }
+    BiocManager::install(package_name, ask = FALSE, update = FALSE, lib = local_lib)
+  } else {
+    install.packages(package_name, repos = "https://cloud.r-project.org", lib = local_lib)
+  }
+
+  if (!requireNamespace(package_name, quietly = TRUE)) {
+    stop(sprintf(
+      "Unable to load required package: %s. Ensure the conda environment was created from envs/stage2_doublets.yml",
+      package_name
+    ), call. = FALSE)
+  }
+}
+
+local_r_lib <- file.path(get_script_dir(), "R_libs")
+.libPaths(unique(c(local_r_lib, .libPaths())))
+
+ensure_runtime_packages <- function() {
+  ensure_r_package("BiocParallel", local_r_lib)
+  ensure_r_package("GenomeInfoDbData", local_r_lib)
+  ensure_r_package("SingleCellExperiment", local_r_lib)
+  ensure_r_package("scDblFinder", local_r_lib)
+  ensure_r_package("zellkonverter", local_r_lib)
+  ensure_r_package("ggplot2", local_r_lib, bioc = FALSE)
+
+  suppressPackageStartupMessages({
+    library(BiocParallel)
+    library(scDblFinder)
+    library(SingleCellExperiment)
+    library(zellkonverter)
+    library(ggplot2)
+  })
+}
+
+default_paths <- function() {
+  script_dir <- get_script_dir()
+  repo_root <- normalizePath(file.path(script_dir, "..", "..", ".."))
+  workspace_root <- normalizePath(file.path(repo_root, ".."))
+  list(
+    input_dir = file.path(workspace_root, "DeJager_Data", "Processing_Outputs", "01_QC_Filtered"),
+    output_dir = file.path(workspace_root, "DeJager_Data", "Processing_Outputs", "02_Doublet_Removed")
+  )
+}
+
+parse_args <- function() {
+  defaults <- default_paths()
+  args <- commandArgs(trailingOnly = TRUE)
+  parsed <- list(
+    input_dir = defaults$input_dir,
+    output_dir = defaults$output_dir,
+    sample_ids = "",
+    list_samples = FALSE,
+    overwrite = FALSE,
+    aggregate_only = FALSE,
+    threads = 4L
+  )
+
+  i <- 1L
+  while (i <= length(args)) {
+    arg <- args[[i]]
+
+    if (arg == "--list-samples") {
+      parsed$list_samples <- TRUE
+      i <- i + 1L
+      next
+    }
+
+    if (arg == "--overwrite") {
+      parsed$overwrite <- TRUE
+      i <- i + 1L
+      next
+    }
+
+    if (arg == "--aggregate-only") {
+      parsed$aggregate_only <- TRUE
+      i <- i + 1L
+      next
+    }
+
+    if (!startsWith(arg, "--")) {
+      stop(sprintf("Unexpected argument: %s", arg), call. = FALSE)
+    }
+
+    if (i == length(args)) {
+      stop(sprintf("Missing value for argument: %s", arg), call. = FALSE)
+    }
+
+    value <- args[[i + 1L]]
+    if (arg == "--input-dir") {
+      parsed$input_dir <- normalizePath(value, mustWork = FALSE)
+    } else if (arg == "--output-dir") {
+      parsed$output_dir <- normalizePath(value, mustWork = FALSE)
+    } else if (arg == "--sample-ids") {
+      parsed$sample_ids <- value
+    } else if (arg == "--threads") {
+      parsed$threads <- as.integer(value)
+    } else {
+      stop(sprintf("Unknown argument: %s", arg), call. = FALSE)
+    }
+
+    i <- i + 2L
+  }
+
+  parsed
+}
+
+discover_samples <- function(input_dir) {
+  files <- list.files(input_dir, pattern = "_qc\\.h5ad$", full.names = FALSE)
+  sort(sub("_qc\\.h5ad$", "", files))
+}
+
+parse_requested_samples <- function(raw_sample_ids, available_samples) {
+  if (!nzchar(trimws(raw_sample_ids))) {
+    return(available_samples)
+  }
+
+  requested <- trimws(unlist(strsplit(raw_sample_ids, ",")))
+  requested <- requested[nzchar(requested)]
+  missing <- setdiff(requested, available_samples)
+  if (length(missing) > 0) {
+    stop(
+      sprintf(
+        "Requested sample IDs are not available as QC-filtered inputs: %s",
+        paste(missing, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+  requested
+}
+
+append_doublet_summary <- function(summary_path, sample_id, n_before, n_after, n_doublets) {
+  header <- "sample_id,n_cells_before,n_singlets,n_doublets,pct_doublets"
+  row <- sprintf(
+    "%s,%d,%d,%d,%.1f",
+    sample_id, n_before, n_after, n_doublets,
+    100 * n_doublets / max(n_before, 1)
+  )
+
+  # Use mkdir-based lock (atomic on all filesystems, including WekaFS).
+  lock_dir <- paste0(summary_path, ".lock")
+  acquired <- FALSE
+  for (i in seq_len(300)) {
+    if (dir.create(lock_dir, showWarnings = FALSE)) {
+      acquired <- TRUE
+      break
+    }
+    Sys.sleep(0.1)
+  }
+  if (!acquired) {
+    message(sprintf("[WARN] Lock timeout for %s, proceeding without lock", summary_path))
+  }
+
+  tryCatch({
+    write_header <- !file.exists(summary_path) || file.info(summary_path)$size == 0
+    fh <- file(summary_path, open = "a")
+    if (write_header) writeLines(header, fh)
+    writeLines(row, fh)
+    close(fh)
+  }, finally = {
+    if (acquired) unlink(lock_dir, recursive = TRUE)
+  })
+}
+
+plot_doublet_persample <- function(sce, sample_id, figures_dir) {
+  dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
+  df <- data.frame(
+    score = colData(sce)$scDblFinder.score,
+    class = as.character(colData(sce)$scDblFinder.class)
+  )
+  n_singlet <- sum(df$class == "singlet")
+  n_doublet <- sum(df$class == "doublet")
+  p <- ggplot(df, aes(x = score, fill = class)) +
+    geom_histogram(bins = 50, alpha = 0.7, position = "identity") +
+    scale_fill_manual(
+      values = c(singlet = "#2166ac", doublet = "#b2182b"),
+      labels = c(
+        singlet = sprintf("Singlet (%d)", n_singlet),
+        doublet = sprintf("Doublet (%d)", n_doublet)
+      )
+    ) +
+    labs(
+      title = sprintf("%s \u2014 Doublet Scores", sample_id),
+      x = "scDblFinder Score", y = "Count", fill = NULL
+    ) +
+    theme_minimal() +
+    theme(legend.position = "top")
+  ggsave(
+    file.path(figures_dir, paste0(sample_id, "_doublet_scores.png")),
+    p, width = 6, height = 4, dpi = 150
+  )
+}
+
+plot_doublet_aggregate <- function(args) {
+  doublet_path <- file.path(args$output_dir, "doublet_summary.csv")
+  if (!file.exists(doublet_path)) {
+    message(sprintf("[WARN] %s not found, skipping aggregate plots", doublet_path))
+    return(invisible(NULL))
+  }
+
+  dbl <- read.csv(doublet_path, colClasses = c(sample_id = "character"))
+  figures_dir <- file.path(args$output_dir, "figures")
+  dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
+
+  # --- 1. Doublet rate bar plot ---
+  dbl_sorted <- dbl[order(dbl$pct_doublets), ]
+  dbl_sorted$sample_id <- factor(dbl_sorted$sample_id, levels = dbl_sorted$sample_id)
+  med_rate <- median(dbl_sorted$pct_doublets, na.rm = TRUE)
+  p1 <- ggplot(dbl_sorted, aes(x = pct_doublets, y = sample_id)) +
+    geom_col(fill = "#b2182b", alpha = 0.8) +
+    geom_vline(xintercept = med_rate, linetype = "dashed", color = "black") +
+    labs(
+      title = "Doublet Rate per Sample",
+      x = "% Doublets", y = NULL
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.y = element_text(size = 1.5),
+      plot.title = element_text(size = 12)
+    )
+  ggsave(
+    file.path(figures_dir, "aggregate_doublet_rate.png"),
+    p1, width = 8, height = max(12, nrow(dbl_sorted) * 0.06), dpi = 150,
+    limitsize = FALSE
+  )
+
+  # --- 2. Attrition waterfall (boxplots across pipeline stages) ---
+  qc_path <- file.path(args$input_dir, "qc_summary.csv")
+  if (file.exists(qc_path)) {
+    qc <- read.csv(qc_path, colClasses = c(sample_id = "character"))
+    merged <- merge(
+      qc[, c("sample_id", "n_cells_before", "n_cells_after")],
+      dbl[, c("sample_id", "n_singlets")],
+      by = "sample_id", all = TRUE
+    )
+    waterfall_df <- data.frame(
+      stage = rep(c("1. Raw", "2. Post-QC", "3. Post-Doublet"), each = nrow(merged)),
+      cells = c(merged$n_cells_before, merged$n_cells_after, merged$n_singlets)
+    )
+    waterfall_df$stage <- factor(waterfall_df$stage,
+      levels = c("1. Raw", "2. Post-QC", "3. Post-Doublet"))
+    p2 <- ggplot(waterfall_df, aes(x = stage, y = cells, fill = stage)) +
+      geom_boxplot(alpha = 0.7, outlier.size = 0.8) +
+      scale_fill_manual(values = c("#4292c6", "#2ca25f", "#feb24c")) +
+      labs(
+        title = sprintf("Pipeline Attrition (n=%d samples)", nrow(merged)),
+        x = NULL, y = "Cells per Sample"
+      ) +
+      theme_minimal() +
+      theme(legend.position = "none")
+    ggsave(
+      file.path(figures_dir, "aggregate_attrition_waterfall.png"),
+      p2, width = 7, height = 5, dpi = 150
+    )
+  } else {
+    message(sprintf("[WARN] %s not found, skipping attrition waterfall plot", qc_path))
+  }
+
+  cat(sprintf("[done] Aggregate doublet plots saved to %s\n", figures_dir))
+}
+
+process_sample <- function(sample_id, args) {
+  input_path <- file.path(args$input_dir, paste0(sample_id, "_qc.h5ad"))
+  output_path <- file.path(args$output_dir, paste0(sample_id, "_singlets.h5ad"))
+
+  if (file.exists(output_path) && !args$overwrite) {
+    cat(sprintf("[skip] %s: %s already exists\n", sample_id, output_path))
+    return(invisible(output_path))
+  }
+
+  sce <- readH5AD(input_path)
+  if (!"counts" %in% assayNames(sce)) {
+    assay(sce, "counts") <- assay(sce, "X")
+  }
+
+  set.seed(123)
+  bpparam <- if (isTRUE(args$threads > 1L)) {
+    MulticoreParam(workers = args$threads)
+  } else {
+    SerialParam()
+  }
+
+  sce_dbl <- scDblFinder(sce, BPPARAM = bpparam)
+  colData(sce)$scDblFinder.score <- sce_dbl$scDblFinder.score
+  colData(sce)$scDblFinder.class <- sce_dbl$scDblFinder.class
+
+  figures_dir <- file.path(args$output_dir, "figures")
+  plot_doublet_persample(sce, sample_id, figures_dir)
+
+  n_before <- ncol(sce)
+  filtered_sce <- sce[, colData(sce)$scDblFinder.class == "singlet"]
+  n_after <- ncol(filtered_sce)
+  dir.create(args$output_dir, recursive = TRUE, showWarnings = FALSE)
+  writeH5AD(filtered_sce, output_path)
+
+  summary_path <- file.path(args$output_dir, "doublet_summary.csv")
+  append_doublet_summary(summary_path, sample_id, n_before, n_after, n_before - n_after)
+
+  cat(
+    sprintf(
+      "[done] %s: kept %d/%d cells -> %s\n",
+      sample_id,
+      n_after,
+      n_before,
+      output_path
+    )
+  )
+  invisible(output_path)
+}
+
+main <- function() {
+  args <- parse_args()
+  dir.create(args$output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  if (isTRUE(args$aggregate_only)) {
+    ensure_r_package("ggplot2", local_r_lib, bioc = FALSE)
+    suppressPackageStartupMessages(library(ggplot2))
+    plot_doublet_aggregate(args)
+    return(invisible(NULL))
+  }
+
+  available_samples <- discover_samples(args$input_dir)
+  if (isTRUE(args$list_samples)) {
+    writeLines(available_samples)
+    return(invisible(NULL))
+  }
+
+  selected_samples <- parse_requested_samples(args$sample_ids, available_samples)
+  if (length(selected_samples) == 0) {
+    stop("No QC-filtered samples were found to process.", call. = FALSE)
+  }
+
+  ensure_runtime_packages()
+  for (sample_id in selected_samples) {
+    process_sample(sample_id, args)
+  }
+}
+
+main()

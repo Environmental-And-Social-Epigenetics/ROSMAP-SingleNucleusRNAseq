@@ -2,19 +2,20 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import os
 from pathlib import Path
+
+os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
 
 import anndata as ad
 import decoupler as dc
 import harmonypy as hm
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
 from rpy2.robjects import r
-
-
-os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
 sc.settings.verbosity = 0
 sc.set_figure_params(figsize=(6, 6), frameon=False)
 
@@ -59,8 +60,11 @@ def parse_args() -> argparse.Namespace:
         default="leiden_res0_5",
         help="Cluster key used for ORA-based cell type annotation.",
     )
-    parser.add_argument("--n-pcs", type=int, default=50)
-    parser.add_argument("--n-neighbors", type=int, default=15)
+    parser.add_argument("--n-pcs", type=int, default=30)
+    parser.add_argument("--n-neighbors", type=int, default=30)
+    parser.add_argument("--n-hvgs", type=int, default=3000, help="Number of highly variable genes.")
+    parser.add_argument("--neighbor-metric", type=str, default="cosine", help="Distance metric for neighbor graph.")
+    parser.add_argument("--umap-min-dist", type=float, default=0.15, help="UMAP minimum distance.")
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -170,6 +174,9 @@ def load_adatas(
             skipped.append(sample_id)
             continue
         adata = ad.read_h5ad(input_path)
+        adata.layers.clear()  # Drop redundant counts layer to halve memory
+        if hasattr(adata.X, "astype"):
+            adata.X = adata.X.astype(np.float32)
         adata.obs_names_make_unique()
         adata.var_names_make_unique()
         adata = attach_metadata_columns(adata, sample_id, metadata)
@@ -191,7 +198,7 @@ def run_annotation(
     if "ora_estimate" in adata.obsm:
         del adata.obsm["ora_estimate"]
 
-    dc.run_ora(adata, markers_df, source="source", target="target", use_raw=True)
+    dc.run_ora(adata, markers_df, source="source", target="target", use_raw=False)
     acts = dc.get_acts(adata, obsm_key="ora_estimate")
 
     acts_values = np.asarray(acts.X)
@@ -224,13 +231,138 @@ def run_annotation(
     return adata
 
 
-def save_figures(adata: ad.AnnData, output_dir: Path, cluster_key: str) -> None:
+def save_figures(
+    adata: ad.AnnData,
+    output_dir: Path,
+    cluster_key: str,
+    markers_df: pd.DataFrame,
+) -> None:
     figures_dir = output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     sc.settings.figdir = str(figures_dir)
 
+    # --- 1. PCA elbow plot ---
+    if "pca" in adata.uns:
+        variance_ratio = adata.uns["pca"]["variance_ratio"]
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.plot(range(1, len(variance_ratio) + 1), variance_ratio, "o-", markersize=3)
+        ax.set_xlabel("Principal Component")
+        ax.set_ylabel("Variance Ratio")
+        ax.set_title("PCA Elbow Plot")
+        ax.axvline(30, color="red", linestyle="--", alpha=0.5, label="n_pcs=30")
+        ax.legend()
+        fig.savefig(figures_dir / "pca_elbow.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+    # --- 2. Pre/post Harmony comparison ---
+    if "X_umap_pca" in adata.obsm:
+        batch_values = adata.obs["batch"].astype(str)
+        unique_batches = sorted(batch_values.unique())
+        cmap = plt.cm.get_cmap("tab20", len(unique_batches))
+        batch_colors = {b: cmap(i) for i, b in enumerate(unique_batches)}
+        colors = [batch_colors[b] for b in batch_values]
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+        ax1.scatter(
+            adata.obsm["X_umap_pca"][:, 0], adata.obsm["X_umap_pca"][:, 1],
+            c=colors, s=1, alpha=0.3, rasterized=True,
+        )
+        ax1.set_title("Before Harmony (PCA)")
+        ax1.set_xlabel("UMAP1")
+        ax1.set_ylabel("UMAP2")
+        ax1.set_aspect("equal")
+
+        ax2.scatter(
+            adata.obsm["X_umap"][:, 0], adata.obsm["X_umap"][:, 1],
+            c=colors, s=1, alpha=0.3, rasterized=True,
+        )
+        ax2.set_title("After Harmony")
+        ax2.set_xlabel("UMAP1")
+        ax2.set_ylabel("UMAP2")
+        ax2.set_aspect("equal")
+
+        fig.suptitle("Batch Integration Comparison", fontsize=13)
+        fig.tight_layout()
+        fig.savefig(figures_dir / "harmony_comparison.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+    # --- 3. QC metrics on UMAP ---
+    qc_cols = [c for c in ["total_counts", "n_genes_by_counts", "pct_counts_mt"] if c in adata.obs.columns]
+    if qc_cols:
+        sc.pl.umap(adata, color=qc_cols, show=False, save="_qc_metrics.png")
+
+    # --- 4. Multi-resolution clustering ---
+    res_keys = [k for k in ["leiden_res0_2", "leiden_res0_5", "leiden_res1"] if k in adata.obs.columns]
+    if res_keys:
+        sc.pl.umap(adata, color=res_keys, show=False, save="_multi_resolution.png")
+
+    # --- 5 & 6. Existing integration + cell type UMAPs ---
     sc.pl.umap(adata, color=["batch", cluster_key], show=False, save="_tsai_integration.png")
-    sc.pl.umap(adata, color=["cell_type"], legend_loc="on data", show=False, save="_tsai_celltypes.png")
+    if "cell_type" in adata.obs.columns:
+        sc.pl.umap(adata, color=["cell_type"], legend_loc="on data", show=False, save="_tsai_celltypes.png")
+
+    # --- 7. Cluster-batch composition ---
+    if "batch" in adata.obs.columns and cluster_key in adata.obs.columns:
+        ct = pd.crosstab(adata.obs[cluster_key], adata.obs["batch"], normalize="index")
+        fig, ax = plt.subplots(figsize=(max(8, len(ct) * 0.5), 6))
+        ct.plot(kind="bar", stacked=True, ax=ax, width=0.85)
+        ax.set_xlabel("Cluster")
+        ax.set_ylabel("Proportion")
+        ax.set_title("Batch Composition per Cluster")
+        ax.legend(title="Batch", bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=6)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+        fig.savefig(figures_dir / "cluster_batch_composition.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+    # --- 8. ORA enrichment heatmap ---
+    if "ora_estimate" in adata.obsm:
+        ora_scores = pd.DataFrame(
+            adata.obsm["ora_estimate"],
+            index=adata.obs_names,
+            columns=adata.obsm["ora_estimate"].columns
+            if hasattr(adata.obsm["ora_estimate"], "columns")
+            else [f"CT{i}" for i in range(adata.obsm["ora_estimate"].shape[1])],
+        )
+        ora_scores[cluster_key] = adata.obs[cluster_key].values
+        mean_scores = ora_scores.groupby(cluster_key).mean()
+        fig, ax = plt.subplots(figsize=(max(8, len(mean_scores.columns) * 0.6), max(6, len(mean_scores) * 0.4)))
+        im = ax.imshow(mean_scores.values, aspect="auto", cmap="RdBu_r")
+        ax.set_xticks(range(len(mean_scores.columns)))
+        ax.set_xticklabels(mean_scores.columns, rotation=45, ha="right", fontsize=8)
+        ax.set_yticks(range(len(mean_scores.index)))
+        ax.set_yticklabels(mean_scores.index, fontsize=8)
+        ax.set_xlabel("Cell Type (marker set)")
+        ax.set_ylabel("Cluster")
+        ax.set_title("ORA Enrichment Scores")
+        fig.colorbar(im, ax=ax, shrink=0.8, label="Mean ORA Score")
+        fig.savefig(figures_dir / "ora_enrichment_heatmap.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+    # --- 9. Marker dot plot ---
+    if adata.raw is not None and not markers_df.empty and "cell_type" in adata.obs.columns:
+        raw_genes = set(adata.raw.var_names)
+        top_markers = markers_df.groupby("source").head(5)
+        top_markers = top_markers[top_markers["target"].isin(raw_genes)]
+        if not top_markers.empty:
+            marker_genes = top_markers["target"].unique().tolist()
+            sc.pl.dotplot(
+                adata, var_names=marker_genes, groupby="cell_type",
+                use_raw=True, show=False, save="_markers.png",
+            )
+
+    # --- 10. Cell type proportions ---
+    if "cell_type" in adata.obs.columns:
+        counts = adata.obs["cell_type"].value_counts().sort_values(ascending=True)
+        fig, ax = plt.subplots(figsize=(8, max(4, len(counts) * 0.35)))
+        ax.barh(range(len(counts)), counts.values, color="#4292c6", edgecolor="none")
+        ax.set_yticks(range(len(counts)))
+        ax.set_yticklabels(counts.index, fontsize=9)
+        ax.set_xlabel("Number of Cells")
+        ax.set_title("Cell Type Proportions")
+        for i, v in enumerate(counts.values):
+            ax.text(v + counts.max() * 0.01, i, f"{v:,}", va="center", fontsize=8)
+        fig.savefig(figures_dir / "cell_type_proportions.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
 
 
 def main() -> None:
@@ -270,35 +402,63 @@ def main() -> None:
             keys=loaded_sample_ids,
             index_unique="-",
         )
+        del adatas
+        gc.collect()
+
         combined.obs["sample_id"] = combined.obs["sample_id"].astype(str)
         combined.obs["batch"] = combined.obs["batch"].astype(str).astype("category")
 
         print(f"[concat] {combined.n_obs} cells x {combined.n_vars} genes")
 
+        combined.layers["counts"] = combined.X.copy()
         sc.pp.normalize_total(combined)
         sc.pp.log1p(combined)
-        combined.raw = combined.copy()
+        combined.X = combined.X.astype(np.float32)
 
-        sc.pp.highly_variable_genes(combined, flavor="seurat")
+        # Save normalized full-gene data to disk for later ORA annotation,
+        # instead of keeping it in memory as .raw through PCA/Harmony.
+        raw_path = args.output_dir / "_raw_normalized.h5ad"
+        combined.write_h5ad(raw_path)
+
+        sc.pp.highly_variable_genes(combined, flavor="seurat_v3", n_top_genes=args.n_hvgs, layer="counts")
         combined = combined[:, combined.var["highly_variable"]].copy()
-        sc.pp.scale(combined)
-        sc.tl.pca(combined, svd_solver="arpack", n_comps=args.n_pcs)
+        sc.tl.pca(combined, svd_solver="arpack", n_comps=args.n_pcs, use_highly_variable=True)
+        if "counts" in combined.layers:
+            del combined.layers["counts"]
 
-        harmony_result = hm.run_harmony(combined.obsm["X_pca"], combined.obs, "batch")
+        # Compute pre-Harmony UMAP for batch-effect comparison visualization.
+        sc.pp.neighbors(combined, use_rep="X_pca", n_neighbors=args.n_neighbors,
+                         n_pcs=args.n_pcs, metric=args.neighbor_metric, key_added="pca_neighbors")
+        sc.tl.umap(combined, neighbors_key="pca_neighbors", min_dist=args.umap_min_dist, random_state=0)
+        combined.obsm["X_umap_pca"] = combined.obsm["X_umap"].copy()
+        del combined.obsp["pca_neighbors_distances"], combined.obsp["pca_neighbors_connectivities"]
+        combined.uns.pop("pca_neighbors", None)
+
+        harmony_result = hm.run_harmony(combined.obsm["X_pca"], combined.obs, "projid")
         combined.obsm["X_harmony"] = harmony_result.Z_corr.T
 
         sc.pp.neighbors(
             combined,
             use_rep="X_harmony",
             n_neighbors=args.n_neighbors,
+            n_pcs=args.n_pcs,
+            metric=args.neighbor_metric,
         )
         sc.tl.leiden(combined, key_added="leiden_res0_2", resolution=0.2)
         sc.tl.leiden(combined, key_added="leiden_res0_5", resolution=0.5)
         sc.tl.leiden(combined, key_added="leiden_res1", resolution=1.0)
-        sc.tl.umap(combined)
+        sc.tl.umap(combined, min_dist=args.umap_min_dist, random_state=0)
+
+        # Reload full-gene normalized data as .raw (needed for ORA annotation
+        # and preserved in the integrated checkpoint for resume support).
+        raw_adata = ad.read_h5ad(raw_path)
+        combined.raw = raw_adata
+        del raw_adata
+        gc.collect()
 
         combined.write_h5ad(integrated_path)
         print(f"[write] integrated object -> {integrated_path}")
+        raw_path.unlink(missing_ok=True)
 
     markers_df = load_markers(args.markers_rds)
     combined = run_annotation(
@@ -307,7 +467,15 @@ def main() -> None:
         cluster_key=args.annotation_cluster_key,
         output_dir=args.output_dir,
     )
-    save_figures(combined, args.output_dir, args.annotation_cluster_key)
+    save_figures(combined, args.output_dir, args.annotation_cluster_key, markers_df)
+
+    # Sanitize obsm column names: '/' is HDF5's path separator and breaks write.
+    for key in list(combined.obsm.keys()):
+        elem = combined.obsm[key]
+        if hasattr(elem, "columns") and elem.columns.str.contains("/").any():
+            elem.columns = elem.columns.str.replace("/", "|", regex=False)
+            combined.obsm[key] = elem
+
     combined.write_h5ad(annotated_path)
     print(f"[write] annotated object -> {annotated_path}")
 

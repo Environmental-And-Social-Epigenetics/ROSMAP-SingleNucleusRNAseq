@@ -26,7 +26,9 @@ This step downloads raw FASTQ files from Synapse (syn21438684) using the Synapse
 ### Environment
 
 ```bash
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/synapse_env
+source config/paths.sh
+init_conda
+conda activate "${SYNAPSE_ENV}"
 ```
 
 ## Usage
@@ -52,13 +54,13 @@ squeue -u $USER
 ## Input
 
 - `Synapse_FASTQ_IDs.csv`: CSV mapping Synapse IDs to library IDs
-  - Located at: `/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/FASTQs_Download/FASTQ_Download_CSVs/`
+  - Located at: `${DATA_ROOT}/Data/DeJager/FASTQs_Download/FASTQ_Download_CSVs/` (see `config/paths.sh`)
 
 ## Output
 
 FASTQs organized by library ID:
 ```
-/om/scratch/Mon/mabdel03/FASTQs/
+${DEJAGER_FASTQS}/
 ├── 190403-B4-A/
 │   ├── 190403-B4-A_Broad_S1_L001_R1_001.fastq.gz
 │   ├── 190403-B4-A_Broad_S1_L001_R2_001.fastq.gz
@@ -81,5 +83,5 @@ FASTQs organized by library ID:
 
 > **⚠️ Network Timeouts**: Use the rerun script if downloads fail.
 
-> **⚠️ Hardcoded Paths**: Update paths in scripts for your environment.
+> **⚠️ Path Configuration**: All paths are configured in `config/paths.sh`. Run `source config/paths.sh && check_paths` to verify.
 

@@ -19,21 +19,21 @@ instead).
 
 ### 2. Demuxlet Script Cleanup Needed
 
-**Severity**: Medium  
-**Affected File**: `Preprocessing/DeJager/04_Demuxlet_Freemuxlet/demuxTest.sh`
+**Severity**: Medium
+**Status**: Resolved
 
-This script contains extensive commented-out parameter tuning experiments spanning ~120 lines. The active commands are only at:
-- Lines 53-54 (pileup generation)
-- Line 69 (demuxlet execution)
+The experimental scripts have been archived to `archive/` and replaced with
+clean, production-ready scripts following the pattern of Steps 01-03:
+- `Demuxlet_DeJager.py`: Batch script generator (like `Count_DeJager.py`)
+- `Demuxlet_DeJager.sh`: SLURM wrapper
+- `example_demuxlet.sh`: Single-library example
+- `postprocess_assignments.py`: Aggregates demux results into CSV
+- `validate_demuxlet.py`: Parameterized validation script
 
-**Issues:**
-- Lines 1-52: Commented setup and early experiments
-- Lines 70-151: Commented parameter variations with accuracy notes
-
-**Recommendation**: 
-1. Extract active commands to a clean production script
-2. Move parameter experiments to a separate documentation file
-3. Keep the original as a reference in an `archive/` directory
+Parameter tuning experiments extracted to `docs/PARAMETER_TUNING.md`.
+VCF preparation documented in `docs/VCF_PREPARATION.md`.
+BAM/VCF helper tools bundled in `popscle_helper_tools/`.
+Demuxlet-specific path variables added to `config/paths.sh`.
 
 ---
 
@@ -100,7 +100,7 @@ SocIsl cohort has batch scripts but no dedicated notebooks for script generation
 ### 7. Large Resource Requirements
 
 Some steps require significant resources:
-- CellBender (Tsai): 500GB RAM
+- Stage 3 Integration: 500GB RAM
 - Demuxlet: 400GB RAM, 80 cores
 - Batch Correction: 256GB RAM
 
@@ -163,13 +163,25 @@ to reflect the current Pipeline.
 
 ---
 
+### 14. README Hardcoded Paths — RESOLVED
+
+**Severity**: Medium
+**Status**: Fixed
+
+README documentation files contained hardcoded paths to
+`/orcd/data/lhtsai/001/om2/mabdel03/` and `/om/scratch/Mon/mabdel03/`
+despite the migration to `config/paths.sh`. All READMEs have been updated
+to reference config variables instead.
+
+---
+
 ## Resolution Tracking
 
 | Issue | Status | Date Fixed |
 |-------|--------|------------|
 | 1. Hardcoded paths (pipeline) | Resolved | 2026-03-08 |
 | 1. Hardcoded paths (preprocessing) | Resolved | 2026-03-08 |
-| 2. Demuxlet cleanup | Open | - |
+| 2. Demuxlet cleanup | Resolved | 2026-03-11 |
 | 3. Scratch dependencies | Open | - |
 | 4. Pipeline naming | Open | - |
 | 5. Conda paths | Resolved | 2026-03-08 |
@@ -178,6 +190,7 @@ to reflect the current Pipeline.
 | 11. Hemoglobin regex bug | Resolved | 2026-03-08 |
 | 12. No QC summary tracking | Resolved | 2026-03-08 |
 | 13. Stale parent READMEs | Resolved | 2026-03-08 |
+| 14. README hardcoded paths | Resolved | 2026-03-10 |
 
 ---
 

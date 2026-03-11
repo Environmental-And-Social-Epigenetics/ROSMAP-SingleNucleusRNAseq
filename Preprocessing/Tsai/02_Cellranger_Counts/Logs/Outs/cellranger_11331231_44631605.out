@@ -1,0 +1,10 @@
+Martian Runtime - v4.0.12
+
+RuntimeError: pipestance '11331231' already exists and is locked by another Martian instance. If you are sure no other Martian instance is running, delete the _lock file in /om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/11331231 and start Martian again.
+
+2026-01-28 19:24:17 Shutting down.
+Saving pipestance info to "/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/11331231/11331231.mri.tgz"
+For assistance, upload this file to 10x Genomics by running:
+
+cellranger upload <your_email> "/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/11331231/11331231.mri.tgz"
+

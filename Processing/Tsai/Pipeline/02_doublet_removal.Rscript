@@ -54,12 +54,14 @@ ensure_runtime_packages <- function() {
   ensure_r_package("SingleCellExperiment", local_r_lib)
   ensure_r_package("scDblFinder", local_r_lib)
   ensure_r_package("zellkonverter", local_r_lib)
+  ensure_r_package("ggplot2", local_r_lib, bioc = FALSE)
 
   suppressPackageStartupMessages({
     library(BiocParallel)
     library(scDblFinder)
     library(SingleCellExperiment)
     library(zellkonverter)
+    library(ggplot2)
   })
 }
 
@@ -91,6 +93,7 @@ parse_args <- function() {
     sample_ids = "",
     list_samples = FALSE,
     overwrite = FALSE,
+    aggregate_only = FALSE,
     threads = 4L
   )
 
@@ -106,6 +109,12 @@ parse_args <- function() {
 
     if (arg == "--overwrite") {
       parsed$overwrite <- TRUE
+      i <- i + 1L
+      next
+    }
+
+    if (arg == "--aggregate-only") {
+      parsed$aggregate_only <- TRUE
       i <- i + 1L
       next
     }
@@ -181,26 +190,126 @@ append_doublet_summary <- function(summary_path, sample_id, n_before, n_after, n
     100 * n_doublets / max(n_before, 1)
   )
 
-  # Write row to a temporary file, then use flock + bash to safely append.
-  # This avoids interleaved writes when 32 SLURM array tasks run concurrently.
-  tmp <- tempfile(fileext = ".csv")
-  writeLines(row, tmp)
+  # Use mkdir-based lock (atomic on all filesystems, including WekaFS).
+  lock_dir <- paste0(summary_path, ".lock")
+  acquired <- FALSE
+  for (i in seq_len(300)) {
+    if (dir.create(lock_dir, showWarnings = FALSE)) {
+      acquired <- TRUE
+      break
+    }
+    Sys.sleep(0.1)
+  }
+  if (!acquired) {
+    message(sprintf("[WARN] Lock timeout for %s, proceeding without lock", summary_path))
+  }
 
-  lock_path <- paste0(summary_path, ".lock")
-  cmd <- sprintf(
-    'flock -x %s bash -c %s',
-    shQuote(lock_path),
-    shQuote(sprintf(
-      '[ ! -s %s ] && echo %s > %s; cat %s >> %s',
-      shQuote(summary_path),
-      shQuote(header),
-      shQuote(summary_path),
-      shQuote(tmp),
-      shQuote(summary_path)
-    ))
+  tryCatch({
+    write_header <- !file.exists(summary_path) || file.info(summary_path)$size == 0
+    fh <- file(summary_path, open = "a")
+    if (write_header) writeLines(header, fh)
+    writeLines(row, fh)
+    close(fh)
+  }, finally = {
+    if (acquired) unlink(lock_dir, recursive = TRUE)
+  })
+}
+
+plot_doublet_persample <- function(sce, sample_id, figures_dir) {
+  dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
+  df <- data.frame(
+    score = colData(sce)$scDblFinder.score,
+    class = as.character(colData(sce)$scDblFinder.class)
   )
-  system(cmd)
-  unlink(tmp)
+  n_singlet <- sum(df$class == "singlet")
+  n_doublet <- sum(df$class == "doublet")
+  p <- ggplot(df, aes(x = score, fill = class)) +
+    geom_histogram(bins = 50, alpha = 0.7, position = "identity") +
+    scale_fill_manual(
+      values = c(singlet = "#2166ac", doublet = "#b2182b"),
+      labels = c(
+        singlet = sprintf("Singlet (%d)", n_singlet),
+        doublet = sprintf("Doublet (%d)", n_doublet)
+      )
+    ) +
+    labs(
+      title = sprintf("%s \u2014 Doublet Scores", sample_id),
+      x = "scDblFinder Score", y = "Count", fill = NULL
+    ) +
+    theme_minimal() +
+    theme(legend.position = "top")
+  ggsave(
+    file.path(figures_dir, paste0(sample_id, "_doublet_scores.png")),
+    p, width = 6, height = 4, dpi = 150
+  )
+}
+
+plot_doublet_aggregate <- function(args) {
+  doublet_path <- file.path(args$output_dir, "doublet_summary.csv")
+  if (!file.exists(doublet_path)) {
+    message(sprintf("[WARN] %s not found, skipping aggregate plots", doublet_path))
+    return(invisible(NULL))
+  }
+
+  dbl <- read.csv(doublet_path, colClasses = c(sample_id = "character"))
+  figures_dir <- file.path(args$output_dir, "figures")
+  dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
+
+  # --- 1. Doublet rate bar plot ---
+  dbl_sorted <- dbl[order(dbl$pct_doublets), ]
+  dbl_sorted$sample_id <- factor(dbl_sorted$sample_id, levels = dbl_sorted$sample_id)
+  med_rate <- median(dbl_sorted$pct_doublets, na.rm = TRUE)
+  p1 <- ggplot(dbl_sorted, aes(x = pct_doublets, y = sample_id)) +
+    geom_col(fill = "#b2182b", alpha = 0.8) +
+    geom_vline(xintercept = med_rate, linetype = "dashed", color = "black") +
+    labs(
+      title = "Doublet Rate per Sample",
+      x = "% Doublets", y = NULL
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.y = element_text(size = 1.5),
+      plot.title = element_text(size = 12)
+    )
+  ggsave(
+    file.path(figures_dir, "aggregate_doublet_rate.png"),
+    p1, width = 8, height = max(12, nrow(dbl_sorted) * 0.06), dpi = 150,
+    limitsize = FALSE
+  )
+
+  # --- 2. Attrition waterfall (boxplots across pipeline stages) ---
+  qc_path <- file.path(args$input_dir, "qc_summary.csv")
+  if (file.exists(qc_path)) {
+    qc <- read.csv(qc_path, colClasses = c(sample_id = "character"))
+    merged <- merge(
+      qc[, c("sample_id", "n_cells_before", "n_cells_after")],
+      dbl[, c("sample_id", "n_singlets")],
+      by = "sample_id", all = TRUE
+    )
+    waterfall_df <- data.frame(
+      stage = rep(c("1. Raw", "2. Post-QC", "3. Post-Doublet"), each = nrow(merged)),
+      cells = c(merged$n_cells_before, merged$n_cells_after, merged$n_singlets)
+    )
+    waterfall_df$stage <- factor(waterfall_df$stage,
+      levels = c("1. Raw", "2. Post-QC", "3. Post-Doublet"))
+    p2 <- ggplot(waterfall_df, aes(x = stage, y = cells, fill = stage)) +
+      geom_boxplot(alpha = 0.7, outlier.size = 0.8) +
+      scale_fill_manual(values = c("#4292c6", "#2ca25f", "#feb24c")) +
+      labs(
+        title = sprintf("Pipeline Attrition (n=%d samples)", nrow(merged)),
+        x = NULL, y = "Cells per Sample"
+      ) +
+      theme_minimal() +
+      theme(legend.position = "none")
+    ggsave(
+      file.path(figures_dir, "aggregate_attrition_waterfall.png"),
+      p2, width = 7, height = 5, dpi = 150
+    )
+  } else {
+    message(sprintf("[WARN] %s not found, skipping attrition waterfall plot", qc_path))
+  }
+
+  cat(sprintf("[done] Aggregate doublet plots saved to %s\n", figures_dir))
 }
 
 process_sample <- function(sample_id, args) {
@@ -228,6 +337,9 @@ process_sample <- function(sample_id, args) {
   colData(sce)$scDblFinder.score <- sce_dbl$scDblFinder.score
   colData(sce)$scDblFinder.class <- sce_dbl$scDblFinder.class
 
+  figures_dir <- file.path(args$output_dir, "figures")
+  plot_doublet_persample(sce, sample_id, figures_dir)
+
   n_before <- ncol(sce)
   filtered_sce <- sce[, colData(sce)$scDblFinder.class == "singlet"]
   n_after <- ncol(filtered_sce)
@@ -252,6 +364,13 @@ process_sample <- function(sample_id, args) {
 main <- function() {
   args <- parse_args()
   dir.create(args$output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  if (isTRUE(args$aggregate_only)) {
+    ensure_r_package("ggplot2", local_r_lib, bioc = FALSE)
+    suppressPackageStartupMessages(library(ggplot2))
+    plot_doublet_aggregate(args)
+    return(invisible(NULL))
+  }
 
   available_samples <- discover_samples(args$input_dir, args$metadata_csv)
   if (isTRUE(args$list_samples)) {

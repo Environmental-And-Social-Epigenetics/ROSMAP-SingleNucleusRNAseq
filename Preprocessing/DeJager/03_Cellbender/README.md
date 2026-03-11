@@ -18,8 +18,9 @@ CellBender uses a deep generative model to distinguish true cell-associated RNA 
 ### CellBender Environment
 
 ```bash
-source /orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/Cellbender_env
+source config/paths.sh
+init_conda
+conda activate "${CELLBENDER_ENV}"
 ```
 
 ### GPU Access
@@ -61,14 +62,14 @@ cellbender remove-background \
 
 Cell Ranger raw counts:
 ```
-/om/scratch/Sun/mabdel03/ROSMAP_SC/DeJager/Counts/{LibraryID}/outs/raw_feature_bc_matrix.h5
+${DEJAGER_COUNTS}/{LibraryID}/outs/raw_feature_bc_matrix.h5
 ```
 
 ## Output
 
 CellBender-corrected counts:
 ```
-/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts/{LibraryID}/
+${DEJAGER_PREPROCESSED}/{LibraryID}/
 ├── processed_feature_bc_matrix.h5           # Corrected counts
 ├── processed_feature_bc_matrix_filtered.h5  # Filtered version
 └── processed_feature_bc_matrix.pdf          # QC plots
@@ -89,7 +90,7 @@ CellBender-corrected counts:
 
 > **⚠️ Output Directory**: The script changes to the output directory before running. Ensure directory exists.
 
-> **⚠️ Hardcoded Paths**: Update input/output paths in scripts for your environment.
+> **⚠️ Path Configuration**: All paths are configured in `config/paths.sh`. Run `source config/paths.sh && check_paths` to verify.
 
 ## Troubleshooting
 

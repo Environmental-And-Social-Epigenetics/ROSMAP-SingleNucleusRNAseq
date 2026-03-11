@@ -90,7 +90,7 @@ ROSMAP-SingleNucleusRNAseq/Data/Tsai/All_ROSMAP_FASTQs.csv
 ### Scratch Space (Temporary)
 
 ```
-/home/mabdel03/orcd/scratch/Tsai/
+${SCRATCH_ROOT}/Tsai/
     Cellranger_Counts/    # Cell Ranger outputs (temporary)
     Cellbender_Output/    # CellBender outputs (temporary)
 ```
@@ -98,7 +98,7 @@ ROSMAP-SingleNucleusRNAseq/Data/Tsai/All_ROSMAP_FASTQs.csv
 ### Permanent Storage
 
 ```
-/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessed_Counts/
+${TSAI_PREPROCESSED}/
     {projid}/
         cellbender_output.h5
         cellbender_output_filtered.h5
@@ -108,7 +108,7 @@ ROSMAP-SingleNucleusRNAseq/Data/Tsai/All_ROSMAP_FASTQs.csv
 
 ### Hardcoded Paths
 
-Scripts reference `/orcd/data/lhtsai/001/om2/mabdel03/` paths. Update `config/paths.sh` for your environment.
+All paths are configured in `config/paths.sh`. Run `source config/paths.sh && check_paths` to verify your setup.
 
 ### Problematic FASTQ Directories
 
@@ -147,12 +147,12 @@ tail -f Logs/Outs/pipeline_master_*.out
 ### Conda Environments
 
 ```bash
-# Initialize conda
-source /orcd/data/lhtsai/001/om2/mabdel03/miniforge3/etc/profile.d/conda.sh
+source config/paths.sh
+init_conda
 
 # Python data analysis (for scripts)
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/python_data_analysis
+conda activate "${PYTHON_ENV}"
 
 # CellBender
-conda activate /orcd/data/lhtsai/001/om2/mabdel03/conda_envs/Cellbender_env
+conda activate "${CELLBENDER_ENV}"
 ```

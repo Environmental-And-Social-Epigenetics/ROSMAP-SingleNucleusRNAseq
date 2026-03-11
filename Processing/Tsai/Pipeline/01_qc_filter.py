@@ -2,17 +2,18 @@
 from __future__ import annotations
 
 import argparse
-import fcntl
 import os
+import time
 from pathlib import Path
 
+os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from scipy.stats import median_abs_deviation
-
-
-os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
 sc.settings.verbosity = 0
 
 
@@ -74,34 +75,33 @@ def parse_args() -> argparse.Namespace:
         help="Overwrite existing outputs instead of skipping them.",
     )
     parser.add_argument(
-        "--counts-nmads",
-        type=int,
-        default=4,
-        help="Number of MADs for log1p_total_counts outlier detection.",
+        "--counts-low-pct",
+        type=float,
+        default=4.5,
+        help="Lower percentile threshold for log1p_total_counts outlier detection.",
     )
     parser.add_argument(
-        "--genes-nmads",
-        type=int,
-        default=4,
-        help="Number of MADs for log1p_n_genes_by_counts outlier detection.",
+        "--counts-high-pct",
+        type=float,
+        default=96.0,
+        help="Upper percentile threshold for log1p_total_counts outlier detection.",
     )
     parser.add_argument(
-        "--top20-nmads",
-        type=int,
-        default=4,
-        help="Number of MADs for pct_counts_in_top_20_genes outlier detection.",
-    )
-    parser.add_argument(
-        "--mt-nmads",
-        type=int,
-        default=3,
-        help="Number of MADs for pct_counts_mt outlier detection.",
+        "--genes-low-pct",
+        type=float,
+        default=5.0,
+        help="Lower percentile threshold for log1p_n_genes_by_counts outlier detection.",
     )
     parser.add_argument(
         "--mt-pct-threshold",
         type=float,
-        default=7.5,
+        default=10.0,
         help="Hard upper threshold for mitochondrial percentage.",
+    )
+    parser.add_argument(
+        "--aggregate-only",
+        action="store_true",
+        help="Skip per-sample processing; generate aggregate plots from qc_summary.csv.",
     )
     return parser.parse_args()
 
@@ -135,11 +135,16 @@ def parse_requested_samples(raw_sample_ids: str, available_samples: list[str]) -
     return requested
 
 
-def is_outlier_mad(adata: sc.AnnData, metric: str, nmads: int) -> pd.Series:
+def is_outlier_percentile(
+    adata: sc.AnnData, metric: str, lower_pct: float | None, upper_pct: float | None
+) -> pd.Series:
     values = adata.obs[metric]
-    deviation = median_abs_deviation(values)
-    median_value = np.median(values)
-    return (values < median_value - nmads * deviation) | (values > median_value + nmads * deviation)
+    mask = pd.Series(False, index=adata.obs.index)
+    if lower_pct is not None:
+        mask = mask | (values < np.percentile(values, lower_pct))
+    if upper_pct is not None:
+        mask = mask | (values > np.percentile(values, upper_pct))
+    return mask
 
 
 def append_qc_summary(
@@ -153,19 +158,193 @@ def append_qc_summary(
     median_counts: float,
     median_pct_mt: float,
 ) -> None:
-    """Append a single row to the shared QC summary CSV (file-lock safe)."""
+    """Append a single row to the shared QC summary CSV (mkdir-lock safe)."""
     header = "sample_id,n_cells_before,n_cells_after,n_removed,pct_retained,n_outlier,n_mt_outlier,median_genes,median_counts,median_pct_mt\n"
     row = (
         f"{sample_id},{n_cells_before},{n_cells_after},{n_cells_before - n_cells_after},"
         f"{100 * n_cells_after / max(n_cells_before, 1):.1f},"
         f"{n_outlier},{n_mt_outlier},{median_genes:.1f},{median_counts:.1f},{median_pct_mt:.2f}\n"
     )
-    with open(summary_path, "a") as fh:
-        fcntl.flock(fh, fcntl.LOCK_EX)
-        if fh.tell() == 0:
-            fh.write(header)
-        fh.write(row)
-        fcntl.flock(fh, fcntl.LOCK_UN)
+    lock_dir = str(summary_path) + ".lock"
+    acquired = False
+    for _ in range(300):
+        try:
+            os.mkdir(lock_dir)
+            acquired = True
+            break
+        except FileExistsError:
+            time.sleep(0.1)
+    if not acquired:
+        print(f"[WARN] Lock timeout for {summary_path}, proceeding without lock")
+    try:
+        write_header = not summary_path.exists() or summary_path.stat().st_size == 0
+        with open(summary_path, "a") as fh:
+            if write_header:
+                fh.write(header)
+            fh.write(row)
+    finally:
+        if acquired:
+            try:
+                os.rmdir(lock_dir)
+            except OSError:
+                pass
+
+
+def plot_qc_persample(
+    adata: sc.AnnData,
+    sample_id: str,
+    figures_dir: Path,
+    args: argparse.Namespace,
+) -> None:
+    """Generate per-sample QC visualizations (3 PNGs)."""
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- 1. QC metric violins with percentile threshold lines ---
+    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+    metric_specs = [
+        ("total_counts", "Total Counts"),
+        ("n_genes_by_counts", "Genes Detected"),
+        ("pct_counts_mt", "MT %"),
+    ]
+    for ax, (metric, label) in zip(axes, metric_specs):
+        values = adata.obs[metric].values
+        ax.violinplot(values, showmedians=True)
+        if metric == "pct_counts_mt":
+            ax.axhline(args.mt_pct_threshold, color="red", linestyle="--", alpha=0.7,
+                        label=f"threshold ({args.mt_pct_threshold}%)")
+        elif metric == "total_counts":
+            log_metric = "log1p_total_counts"
+            if log_metric in adata.obs.columns:
+                log_vals = adata.obs[log_metric].values
+                lo_log = np.percentile(log_vals, args.counts_low_pct)
+                hi_log = np.percentile(log_vals, args.counts_high_pct)
+                lo_orig = np.expm1(lo_log)
+                hi_orig = np.expm1(hi_log)
+                ax.axhline(lo_orig, color="red", linestyle="--", alpha=0.7, label=f"P{args.counts_low_pct} ({lo_orig:.0f})")
+                ax.axhline(hi_orig, color="red", linestyle="--", alpha=0.7, label=f"P{args.counts_high_pct} ({hi_orig:.0f})")
+        elif metric == "n_genes_by_counts":
+            log_metric = "log1p_n_genes_by_counts"
+            if log_metric in adata.obs.columns:
+                log_vals = adata.obs[log_metric].values
+                lo_log = np.percentile(log_vals, args.genes_low_pct)
+                lo_orig = np.expm1(lo_log)
+                ax.axhline(lo_orig, color="red", linestyle="--", alpha=0.7, label=f"P{args.genes_low_pct} ({lo_orig:.0f})")
+        ax.set_title(label)
+        ax.set_xticks([])
+        ax.legend(fontsize=7, loc="upper right")
+    fig.suptitle(f"{sample_id} — QC Metrics (n={adata.n_obs})", fontsize=12)
+    fig.tight_layout()
+    fig.savefig(figures_dir / f"{sample_id}_qc_violins.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    # --- 2. Genes vs counts scatter, colored by MT% ---
+    fig, ax = plt.subplots(figsize=(7, 6))
+    sc_plot = ax.scatter(
+        adata.obs["total_counts"],
+        adata.obs["n_genes_by_counts"],
+        c=adata.obs["pct_counts_mt"],
+        cmap="viridis",
+        s=3,
+        alpha=0.5,
+        rasterized=True,
+    )
+    fig.colorbar(sc_plot, ax=ax, label="MT %")
+    ax.set_xlabel("Total Counts")
+    ax.set_ylabel("Genes Detected")
+    ax.set_title(f"{sample_id} — Genes vs Counts")
+    fig.savefig(figures_dir / f"{sample_id}_genes_vs_counts.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    # --- 3. Filter overlay — kept vs removed cells ---
+    kept = (~adata.obs["outlier"]) & (~adata.obs["mt_outlier"])
+    outlier_only = adata.obs["outlier"] & (~adata.obs["mt_outlier"])
+    mt_only = adata.obs["mt_outlier"] & (~adata.obs["outlier"])
+    both = adata.obs["outlier"] & adata.obs["mt_outlier"]
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    groups = [
+        (kept, "Kept", "#999999", 0.3),
+        (outlier_only, "Outlier", "#e41a1c", 0.6),
+        (mt_only, "MT outlier", "#ff7f00", 0.6),
+        (both, "Both", "#800000", 0.7),
+    ]
+    for mask, label, color, alpha in groups:
+        if mask.sum() == 0:
+            continue
+        ax.scatter(
+            adata.obs.loc[mask, "total_counts"],
+            adata.obs.loc[mask, "n_genes_by_counts"],
+            c=color, s=3, alpha=alpha, label=f"{label} ({mask.sum()})",
+            rasterized=True,
+        )
+    ax.set_xlabel("Total Counts")
+    ax.set_ylabel("Genes Detected")
+    ax.set_title(f"{sample_id} — Filtering Overlay")
+    ax.legend(fontsize=8, markerscale=3)
+    fig.savefig(figures_dir / f"{sample_id}_filter_overlay.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_qc_aggregate(args: argparse.Namespace) -> None:
+    """Generate aggregate QC plots from qc_summary.csv."""
+    summary_path = args.output_dir / "qc_summary.csv"
+    if not summary_path.exists():
+        print(f"[WARN] {summary_path} not found, skipping aggregate plots")
+        return
+
+    df = pd.read_csv(summary_path, dtype={"sample_id": str})
+    figures_dir = args.output_dir / "figures"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- 1. Cells retained bar plot ---
+    df_sorted = df.sort_values("pct_retained")
+    fig, ax = plt.subplots(figsize=(8, max(12, len(df_sorted) * 0.06)))
+    colors = plt.cm.RdYlGn(df_sorted["pct_retained"].values / 100)
+    ax.barh(range(len(df_sorted)), df_sorted["pct_retained"], color=colors, edgecolor="none")
+    ax.axvline(df_sorted["pct_retained"].median(), color="black", linestyle="--", alpha=0.7,
+               label=f"Median ({df_sorted['pct_retained'].median():.1f}%)")
+    ax.set_yticks(range(len(df_sorted)))
+    ax.set_yticklabels(df_sorted["sample_id"], fontsize=3)
+    ax.set_xlabel("% Cells Retained")
+    ax.set_title("QC: Cells Retained per Sample")
+    ax.legend(fontsize=9)
+    fig.savefig(figures_dir / "aggregate_cells_retained.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    # --- 2. QC metric distributions across samples ---
+    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+    for ax, (col, label) in zip(axes, [
+        ("median_genes", "Median Genes per Cell"),
+        ("median_counts", "Median Counts per Cell"),
+        ("median_pct_mt", "Median MT %"),
+    ]):
+        bp = ax.boxplot(df[col].dropna(), vert=True, patch_artist=True)
+        bp["boxes"][0].set_facecolor("#4292c6")
+        ax.set_title(label)
+        ax.set_xticks([])
+        median_val = df[col].median()
+        ax.axhline(median_val, color="red", linestyle="--", alpha=0.5)
+        ax.text(1.15, median_val, f"{median_val:.1f}", va="center", fontsize=8, color="red")
+    fig.suptitle(f"QC Metric Distributions (n={len(df)} samples)", fontsize=12)
+    fig.tight_layout()
+    fig.savefig(figures_dir / "aggregate_qc_distributions.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    # --- 3. Attrition breakdown ---
+    df_sorted = df.sort_values("n_removed", ascending=True)
+    fig, ax = plt.subplots(figsize=(8, max(12, len(df_sorted) * 0.06)))
+    ax.barh(range(len(df_sorted)), df_sorted["n_outlier"], color="#e41a1c", alpha=0.8, label="Outlier")
+    ax.barh(range(len(df_sorted)), df_sorted["n_mt_outlier"], left=df_sorted["n_outlier"],
+            color="#ff7f00", alpha=0.8, label="MT outlier")
+    ax.set_yticks(range(len(df_sorted)))
+    ax.set_yticklabels(df_sorted["sample_id"], fontsize=3)
+    ax.set_xlabel("Cells Removed")
+    ax.set_title("QC: Attrition Breakdown per Sample")
+    ax.legend(fontsize=9)
+    fig.savefig(figures_dir / "aggregate_attrition_breakdown.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"[done] Aggregate QC plots saved to {figures_dir}")
 
 
 def run_qc_filter(sample_id: str, args: argparse.Namespace) -> Path:
@@ -194,14 +373,13 @@ def run_qc_filter(sample_id: str, args: argparse.Namespace) -> Path:
     )
 
     adata.obs["outlier"] = (
-        is_outlier_mad(adata, "log1p_total_counts", args.counts_nmads)
-        | is_outlier_mad(adata, "log1p_n_genes_by_counts", args.genes_nmads)
-        | is_outlier_mad(adata, "pct_counts_in_top_20_genes", args.top20_nmads)
+        is_outlier_percentile(adata, "log1p_total_counts", args.counts_low_pct, args.counts_high_pct)
+        | is_outlier_percentile(adata, "log1p_n_genes_by_counts", args.genes_low_pct, None)
     )
-    adata.obs["mt_outlier"] = (
-        is_outlier_mad(adata, "pct_counts_mt", args.mt_nmads)
-        | (adata.obs["pct_counts_mt"] > args.mt_pct_threshold)
-    )
+    adata.obs["mt_outlier"] = adata.obs["pct_counts_mt"] > args.mt_pct_threshold
+
+    figures_dir = args.output_dir / "figures"
+    plot_qc_persample(adata, sample_id, figures_dir, args)
 
     pre_filter_n_cells = adata.n_obs
     filtered = adata[
@@ -209,10 +387,10 @@ def run_qc_filter(sample_id: str, args: argparse.Namespace) -> Path:
         & (~adata.obs["mt_outlier"])
     ].copy()
     filtered.uns["qc_filtering"] = {
-        "counts_nmads": args.counts_nmads,
-        "genes_nmads": args.genes_nmads,
-        "top20_nmads": args.top20_nmads,
-        "mt_nmads": args.mt_nmads,
+        "method": "percentile",
+        "counts_low_pct": args.counts_low_pct,
+        "counts_high_pct": args.counts_high_pct,
+        "genes_low_pct": args.genes_low_pct,
         "mt_pct_threshold": args.mt_pct_threshold,
         "input_path": str(input_path),
     }
@@ -243,6 +421,10 @@ def main() -> None:
     args.metadata_csv = args.metadata_csv.resolve()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.aggregate_only:
+        plot_qc_aggregate(args)
+        return
 
     available_samples = discover_complete_samples(args.input_dir, args.metadata_csv)
     if args.list_samples:

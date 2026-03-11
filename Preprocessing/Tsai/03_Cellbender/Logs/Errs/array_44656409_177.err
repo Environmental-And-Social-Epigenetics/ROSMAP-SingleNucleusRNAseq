@@ -1,0 +1,46 @@
+cellbender:remove-background: Command:
+cellbender remove-background --cuda --input /om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/60848460/outs/raw_feature_bc_matrix.h5 --fpr 0 --output /om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/60848460/processed_feature_bc_matrix.h5
+cellbender:remove-background: CellBender 0.3.0
+cellbender:remove-background: (Workflow hash 1926dd446d)
+cellbender:remove-background: 2026-02-02 01:08:48
+cellbender:remove-background: Running remove-background
+cellbender:remove-background: Loading data from /om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/60848460/outs/raw_feature_bc_matrix.h5
+cellbender:remove-background: CellRanger v3 format
+cellbender:remove-background: Features in dataset: 36601 Gene Expression
+cellbender:remove-background: Trimming features for inference.
+cellbender:remove-background: 31153 features have nonzero counts.
+cellbender:remove-background: Prior on counts for cells is 7930
+cellbender:remove-background: Prior on counts for empty droplets is 98
+cellbender:remove-background: Excluding 9551 features that are estimated to have <= 0.1 background counts in cells.
+cellbender:remove-background: Including 21602 features in the analysis.
+cellbender:remove-background: Trimming barcodes for inference.
+cellbender:remove-background: Excluding barcodes with counts below 49
+cellbender:remove-background: Using 2472 probable cell barcodes, plus an additional 11820 barcodes, and 71895 empty droplets.
+cellbender:remove-background: Largest surely-empty droplet has 126 UMI counts.
+cellbender:remove-background: Attempting to unpack tarball "ckpt.tar.gz" to /tmp/tmpruo__n_i
+cellbender:remove-background: No saved checkpoint.
+cellbender:remove-background: No checkpoint loaded.
+cellbender:remove-background: Running inference...
+cellbender:remove-background: [epoch 001]  average training loss: 9314.9397
+cellbender:remove-background: [epoch 002]  average training loss: 7491.3126  (7.0 seconds per epoch)
+cellbender:remove-background: Will checkpoint every 60 epochs
+cellbender:remove-background: [epoch 003]  average training loss: 5862.4360
+cellbender:remove-background: [epoch 004]  average training loss: 5260.8070
+cellbender:remove-background: [epoch 005]  average training loss: 4850.7584
+cellbender:remove-background: [epoch 005] average test loss: 4773.2331
+cellbender:remove-background: [epoch 006]  average training loss: 4615.2574
+cellbender:remove-background: [epoch 007]  average training loss: 4641.9675
+cellbender:remove-background: [epoch 008]  average training loss: 4579.3960
+cellbender:remove-background: [epoch 009]  average training loss: 4523.0153
+cellbender:remove-background: [epoch 010]  average training loss: 4565.1808
+cellbender:remove-background: [epoch 010] average test loss: 4404.0031
+cellbender:remove-background: [epoch 011]  average training loss: 4485.2854
+cellbender:remove-background: [epoch 012]  average training loss: 4469.1136
+cellbender:remove-background: [epoch 013]  average training loss: 4295.3337
+cellbender:remove-background: [epoch 014]  average training loss: 4228.8460
+cellbender:remove-background: [epoch 015]  average training loss: 4221.5615
+cellbender:remove-background: [epoch 015] average test loss: 4136.6681
+cellbender:remove-background: [epoch 016]  average training loss: 4187.6203
+cellbender:remove-background: [epoch 017]  average training loss: 4177.5619
+slurmstepd: error: *** JOB 44660441 ON node064 CANCELLED AT 2026-02-02T01:11:10 DUE TO PREEMPTION ***
+cellbender:remove-background: [epoch 018]  average training loss: 4149.3663

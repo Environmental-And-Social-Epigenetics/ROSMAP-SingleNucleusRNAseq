@@ -6,71 +6,106 @@ This directory contains scripts for quality control, normalization, batch correc
 
 The Processing phase takes CellBender-corrected count matrices and prepares them for downstream analysis through:
 
-1. Quality control (doublet removal, outlier filtering)
-2. Normalization and feature selection
-3. Batch correction (Harmony)
-4. Dimensionality reduction and clustering
-5. Cell type annotation
+1. Quality control (percentile-based outlier filtering)
+2. Doublet removal (scDblFinder)
+3. Normalization and feature selection (seurat_v3 HVGs)
+4. Batch correction (Harmony)
+5. Dimensionality reduction and clustering (PCA, UMAP, Leiden)
+6. Cell type annotation (ORA with Mohammadi 2020 markers)
 
 ## Directory Structure
 
 ```
 Processing/
 ├── DeJager/
-│   ├── firstStageTsaiPipeline.py    # Initial QC and processing
-│   ├── secondStageTsaiPipeline.Rscript  # R-based processing
-│   ├── thirdStageTsaiPipeline.py    # Final processing steps
-│   ├── doublets.Rscript             # DoubletFinder
-│   ├── batchCorrect.py              # Batch correction
-│   └── onePatientScript.py          # Per-patient processing
+│   ├── Pipeline/                    # Primary 3-stage pipeline (SLURM-automated)
+│   │   ├── 01_qc_filter.*          # Stage 1: QC filtering + patient ID assignment
+│   │   ├── 02_doublet_removal.*    # Stage 2: scDblFinder doublet removal
+│   │   ├── 03_integration_annotation.*  # Stage 3: Harmony + annotation
+│   │   ├── submit_pipeline.sh      # SLURM orchestrator
+│   │   ├── Resources/              # Patient ID overrides, marker references
+│   │   └── envs/                   # Conda environment specs
+│   └── _legacy/                    # Archived original scripts
 └── Tsai/
-    ├── Pipeline/                    # Primary 3-stage pipeline (current)
-    │   ├── 01_qc_filter.*           # Stage 1: QC filtering
-    │   ├── 02_doublet_removal.*     # Stage 2: scDblFinder doublet removal
+    ├── Pipeline/                    # Primary 3-stage pipeline (SLURM-automated)
+    │   ├── 01_qc_filter.*          # Stage 1: QC filtering
+    │   ├── 02_doublet_removal.*    # Stage 2: scDblFinder doublet removal
     │   ├── 03_integration_annotation.*  # Stage 3: Harmony + annotation
-    │   ├── Resources/               # Marker gene references
-    │   └── envs/                    # Conda environment specs
+    │   ├── submit_pipeline.sh      # SLURM orchestrator
+    │   ├── Resources/              # Marker gene references
+    │   └── envs/                   # Conda environment specs
     ├── QC/                          # Legacy per-sample scripts
     ├── Batch_Correction/            # Legacy batch correction scripts
     └── *.ipynb                      # Prototyping notebooks
 ```
 
-## Tsai Pipeline (Primary Workflow)
+## Unified Processing Methods
 
-The current Tsai processing pipeline is in `Tsai/Pipeline/`.  See
-[Tsai/Pipeline/README.md](Tsai/Pipeline/README.md) for full documentation.
+Both pipelines use **identical processing methods**. The only data-specific differences are:
 
-### Stages
+| Parameter | Tsai | DeJager |
+|-----------|------|---------|
+| Harmony batch variable | `projid` | `patient_id` |
+| Patient ID source | From `patient_metadata.csv` | From barcode mapping CSV + overrides JSON |
+| Output file prefix | `tsai_` | `dejager_` |
 
-| Stage | Script | Method |
-|-------|--------|--------|
-| 1 — QC Filtering | `01_qc_filter.py` | Percentile-based outlier removal, MT% filter |
-| 2 — Doublet Removal | `02_doublet_removal.Rscript` | scDblFinder |
-| 3 — Integration & Annotation | `03_integration_annotation.py` | Harmony, Leiden, ORA annotation |
+### Shared Parameters
+
+#### Stage 1: QC Filtering
+
+| Metric | Threshold |
+|--------|-----------|
+| `log1p_total_counts` | Below 4.5th or above 96th percentile |
+| `log1p_n_genes_by_counts` | Below 5th percentile |
+| `pct_counts_mt` | Above 10% |
+
+#### Stage 2: Doublet Removal
+
+| Parameter | Value |
+|-----------|-------|
+| Method | `scDblFinder` |
+| Random seed | 123 |
+| Parallelism | MulticoreParam, 4 workers |
+| Filter | Retain `scDblFinder.class == "singlet"` |
+
+#### Stage 3: Integration & Annotation
+
+| Step | Function | Key Parameters |
+|------|----------|----------------|
+| Normalization | `sc.pp.normalize_total` + `sc.pp.log1p` | Median-based, no scaling |
+| HVG selection | `sc.pp.highly_variable_genes` | `flavor="seurat_v3"`, `n_top_genes=3000`, `layer="counts"` |
+| PCA | `sc.tl.pca` | `n_comps=30`, `svd_solver="arpack"` |
+| Batch correction | `harmonypy.run_harmony` | Input: `X_pca` |
+| Neighbors | `sc.pp.neighbors` | `n_neighbors=30`, `n_pcs=30`, `metric="cosine"` |
+| Clustering | `sc.tl.leiden` | Resolutions: 0.2, 0.5, 1.0 |
+| UMAP | `sc.tl.umap` | `min_dist=0.15`, `random_state=0` |
+| Annotation | `decoupler.run_ora` | Mohammadi 2020 PFC markers, `use_raw=False` |
 
 ### Resource Requirements
 
-| Stage | Cores | Memory | Time |
-|-------|-------|--------|------|
-| 1 | 4 | 32GB | ~1h/sample |
-| 2 | 4 | 32GB | ~1h/sample |
-| 3 | 32 | 256GB | 4-8h |
+| Stage | Cores | Memory | Time | Job Type |
+|-------|-------|--------|------|----------|
+| 1 | 4 | 32GB | ~1h/sample | SLURM array |
+| 2 | 4 | 32GB | ~1h/sample | SLURM array |
+| 3 | 32 | 500GB | 4-8h | Single job |
 
-### Outputs
+## Quick Start
 
-| Stage | Output |
-|-------|--------|
-| 1 | `{projid}_qc.h5ad`, `qc_summary.csv` |
-| 2 | `{projid}_singlets.h5ad`, `doublet_summary.csv` |
-| 3 | `tsai_integrated.h5ad`, `tsai_annotated.h5ad`, annotation CSVs, UMAP figures |
+```bash
+# Run the Tsai pipeline
+cd <REPO_ROOT>/Processing/Tsai/Pipeline
+./submit_pipeline.sh all
 
-## DeJager Pipeline
+# Run the DeJager pipeline
+cd <REPO_ROOT>/Processing/DeJager/Pipeline
+./submit_pipeline.sh all
+```
 
-The DeJager scripts in `DeJager/` follow a similar workflow but are named
-`*TsaiPipeline.*` because the pipeline was originally developed on Tsai data.
+See each pipeline's README for detailed instructions:
+- [Tsai/Pipeline/README.md](Tsai/Pipeline/README.md)
+- [DeJager/Pipeline/README.md](DeJager/Pipeline/README.md)
 
 ## Next Steps
 
 After processing, proceed to the `Analysis/` directory for differential
 expression and downstream analyses.
-
