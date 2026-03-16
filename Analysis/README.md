@@ -25,6 +25,63 @@ Analysis/
     └── (same structure)
 ```
 
+## Quick Start: From Processing Output to Analysis
+
+### What the Processing Pipeline Produces
+
+The Processing pipeline (`Processing/Tsai/Pipeline/` or `Processing/DeJager/Pipeline/`) outputs
+an annotated AnnData object with these key fields in `obs`:
+
+| Field | Description | Source |
+|-------|-------------|--------|
+| `cell_type` | ORA-annotated cell type (Ast, Exc, Inh, Mic, Oli, OPC) | Stage 3 annotation |
+| `projid` | Patient identifier | Metadata CSV |
+| `leiden_res0_2`, `leiden_res0_5`, `leiden_res1` | Leiden clusters at multiple resolutions | Stage 3 clustering |
+| Clinical columns (e.g., `msex`, `age_death`, `pmi`) | From `patient_metadata.csv` | Attached in Stage 3 |
+
+The final files are:
+- **Tsai**: `${TSAI_PROCESSING_OUTPUTS}/03_Integrated/tsai_annotated.h5ad` (~83 GB)
+- **DeJager**: `${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/dejager_annotated.h5ad` (not yet generated)
+
+### Loading Data for Analysis
+
+```python
+import scanpy as sc
+import pandas as pd
+
+# Load the annotated object from Processing
+adata = sc.read_h5ad("Tsai_Data/Processing_Outputs/03_Integrated/tsai_annotated.h5ad")
+
+# Attach phenotype data (e.g., social isolation scores)
+pheno = pd.read_csv("Data/Phenotypes/dataset_652_basic_12-23-2021.csv")
+adata.obs = adata.obs.merge(pheno[['projid', 'social_isolation_avg']], on='projid', how='left')
+```
+
+### Running Your First Analysis (DEG Example)
+
+```bash
+source config/paths.sh
+init_conda
+conda activate "${CONDA_ENV_BASE}/deg_analysis"
+
+# Run Social Isolation DEG on Tsai dataset
+cd Analysis/SocIsl/DEG/Tsai
+sbatch socIslDegT.sh
+```
+
+### Conda Environments for Analysis
+
+Install with `bash setup/install_envs.sh --analysis`. See [Analysis/envs/README.md](envs/README.md) for details.
+
+| Environment | Variable | Used For |
+|-------------|----------|----------|
+| `deg_analysis` | `${CONDA_ENV_BASE}/deg_analysis` | DEG (limma, DESeq2, edgeR) |
+| `scenic_analysis` | `${CONDA_ENV_BASE}/scenic_analysis` | pySCENIC regulatory networks |
+| `compass_analysis` | `${CONDA_ENV_BASE}/compass_analysis` | COMPASS metabolic flux |
+| `gsea_analysis` | `${CONDA_ENV_BASE}/gsea_analysis` | WebGestaltR gene set enrichment |
+
+---
+
 ## Adding a New Phenotype Analysis
 
 1. Copy the template: `cp -r _template/ NewPhenotype/`

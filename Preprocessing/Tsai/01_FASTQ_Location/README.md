@@ -4,7 +4,7 @@ This directory contains scripts to locate, index, organize, and transfer FASTQ f
 
 ## Overview
 
-The pipeline discovers FASTQs scattered across the Engaging filesystem, builds a comprehensive index, and transfers them to Openmind for Cell Ranger processing.
+The pipeline discovers FASTQs scattered across the Engaging filesystem, builds a comprehensive index, and organizes them for Cell Ranger processing on the cluster.
 
 ## Directory Structure
 
@@ -12,7 +12,7 @@ The pipeline discovers FASTQs scattered across the Engaging filesystem, builds a
 01_FASTQ_Location/
 ├── 01_Build_Master_CSV/     # Discover and index FASTQs
 ├── 02_Organize_FASTQs/      # Create organized symlink structure
-├── 03_Globus_Transfer/      # Transfer to Openmind via Globus
+├── 03_Globus_Transfer/      # Transfer between clusters (historical)
 ├── Config/                   # Configuration files
 └── README.md                 # This file
 ```
@@ -41,9 +41,14 @@ sbatch run_organize_fastqs.sh
 
 **Output:** Organized symlinks in `FASTQs_By_Patient/`
 
-### Step 3: Transfer to Openmind
+### Step 3: Transfer Between Clusters (Historical)
 
-Transfer FASTQs to Openmind for Cell Ranger processing.
+> **Note (March 2026):** This step was used when Cell Ranger processing happened
+> on Openmind. Openmind has been decommissioned. For Engaging users, FASTQs are
+> already local and this step can be **skipped entirely**. Proceed directly to
+> `02_Cellranger_Counts/`.
+
+If you ever need to transfer FASTQs between clusters via Globus:
 
 ```bash
 cd 03_Globus_Transfer
@@ -54,7 +59,7 @@ python Scripts/generate_globus_batch.py
 # Submit transfer
 ./Scripts/submit_globus_transfer.sh
 
-# Verify transfer (run on Openmind after completion)
+# Verify transfer on the destination cluster
 python Scripts/verify_transfer.py
 ```
 
@@ -70,7 +75,7 @@ python Scripts/verify_transfer.py
 | Total data size | ~9 TB |
 | Multi-source samples | 272 (sequenced on multiple flow cells) |
 
-## Destination Structure on Openmind
+## FASTQ Directory Structure (Processing Cluster)
 
 ```
 ${TSAI_FASTQS_DIR}/
@@ -83,10 +88,10 @@ ${TSAI_FASTQS_DIR}/
 
 ## Globus Endpoints
 
-| Cluster | Endpoint ID | Name |
-|---------|-------------|------|
-| Engaging | `ec54b570-cac5-47f7-b2a1-100c2078686f` | MIT ORCD Engaging Collection |
-| Openmind | `cbc6f8da-d37e-11eb-bde9-5111456017d9` | mithpc#openmind |
+| Cluster | Endpoint ID | Name | Status |
+|---------|-------------|------|--------|
+| Engaging | `ec54b570-cac5-47f7-b2a1-100c2078686f` | MIT ORCD Engaging Collection | **Active** |
+| Openmind | `cbc6f8da-d37e-11eb-bde9-5111456017d9` | mithpc#openmind | Decommissioned March 2026 |
 
 ## Configuration
 

@@ -61,6 +61,7 @@ export PYTHON_ENV="${PYTHON_ENV:-${CONDA_ENV_BASE}/python_env}"
 export SINGLECELL_ENV="${SINGLECELL_ENV:-${CONDA_ENV_BASE}/single_cell_BP}"
 export BATCHCORR_ENV="${BATCHCORR_ENV:-${CONDA_ENV_BASE}/BatchCorrection_SingleCell}"
 export QC_ENV="${QC_ENV:-${CONDA_ENV_BASE}/qcEnv}"
+export NEBULA_ENV="${NEBULA_ENV:-${CONDA_ENV_BASE}/nebulaAnalysis7}"
 export GLOBUS_ENV="${GLOBUS_ENV:-${CONDA_ENV_BASE}/globus_env}"
 
 # =============================================================================
@@ -117,7 +118,8 @@ export DEJAGER_PATIENT_IDS_DIR="${DEJAGER_PATIENT_IDS_DIR:-${DEJAGER_WGS_DIR}/in
 export BCFTOOLS_ENV="${BCFTOOLS_ENV:-${CONDA_ENV_BASE}/bcftools_env}"
 
 # Singularity module (cluster-specific; override in paths.local.sh if needed)
-export SINGULARITY_MODULE="${SINGULARITY_MODULE:-openmind/singularity/3.10.4}"
+# Default is generic; on Engaging use "singularity/3.x" (check `module avail singularity`)
+export SINGULARITY_MODULE="${SINGULARITY_MODULE:-singularity/3.10.4}"
 
 # =============================================================================
 # CANONICAL DATA PATHS (under repo Data/Transcriptomics/)
@@ -183,6 +185,13 @@ export TSAI_PROCESSING_OUTPUTS="${TSAI_PROCESSING_OUTPUTS:-${WORKSPACE_ROOT}/Tsa
 export TSAI_QC_FILTERED="${TSAI_QC_FILTERED:-${TSAI_PROCESSING_OUTPUTS}/01_QC_Filtered}"
 export TSAI_DOUBLET_REMOVED="${TSAI_DOUBLET_REMOVED:-${TSAI_PROCESSING_OUTPUTS}/02_Doublet_Removed}"
 export TSAI_INTEGRATED="${TSAI_INTEGRATED:-${TSAI_PROCESSING_OUTPUTS}/03_Integrated}"
+export TSAI_INTEGRATED_PROJID="${TSAI_INTEGRATED_PROJID:-${TSAI_PROCESSING_OUTPUTS}/03_Integrated_projid}"
+
+# Derived batches mapping (tracked in repo)
+export TSAI_DERIVED_BATCHES_CSV="${TSAI_DERIVED_BATCHES_CSV:-${REPO_ROOT}/Processing/Tsai/Pipeline/Resources/derived_batches.csv}"
+
+# DEG preprocessing outputs (per-cell-type raw count h5ad files)
+export TSAI_DEG_READY="${TSAI_DEG_READY:-${TSAI_PROCESSING_OUTPUTS}/DEG_Ready}"
 
 # SLURM log directory
 export TSAI_PROCESSING_LOGS="${TSAI_PROCESSING_LOGS:-${TSAI_PROCESSING_OUTPUTS}/Logs}"

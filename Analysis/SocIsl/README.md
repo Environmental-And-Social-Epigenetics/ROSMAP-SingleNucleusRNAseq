@@ -77,8 +77,78 @@ SocIsl/
 - **Pathways**: KEGG, Reactome, Panther, Wikipathway, GO (BP, CC, MF)
 - **Results**: `plotGsea{Sex}{Pathway}.csv`
 
+## Reproducing This Analysis on Engaging
+
+### Prerequisites
+
+1. Complete the Processing pipeline first (`Processing/Tsai/Pipeline/submit_pipeline.sh all`)
+   to generate `tsai_annotated.h5ad`
+2. Install Analysis conda environments: `bash setup/install_envs.sh --analysis`
+3. Ensure phenotype data is in `Data/Phenotypes/dataset_652_basic_12-23-2021.csv`
+
+### Step-by-Step
+
+```bash
+source config/paths.sh
+
+# --- DEG Analysis (simplest starting point) ---
+init_conda && conda activate "${CONDA_ENV_BASE}/deg_analysis"
+cd Analysis/SocIsl/DEG/Tsai
+# Edit socIslDegT.sh: update SLURM headers for Engaging partitions
+sbatch socIslDegT.sh
+# Output: limma_SIA_results{Sex}{CellType}.csv
+
+# --- GSEA (requires DEG results) ---
+conda activate "${CONDA_ENV_BASE}/gsea_analysis"
+cd Analysis/SocIsl/GSEA/DeJager
+# Edit gsea.sh: update SLURM headers
+sbatch gsea.sh
+# Output: plotGsea{Sex}{Pathway}.csv
+
+# --- SCENIC (requires annotated h5ad, long-running) ---
+conda activate "${CONDA_ENV_BASE}/scenic_analysis"
+# Download reference files first (~3.5 GB):
+#   wget https://resources.aertslab.org/cistarget/databases/homo_sapiens/hg38/refseq_r80/mc_v10_clust/gene_based/hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+#   wget https://resources.aertslab.org/cistarget/databases/homo_sapiens/hg38/refseq_r80/mc_v10_clust/gene_based/hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+#   wget https://resources.aertslab.org/cistarget/motif2tf/motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl
+cd Analysis/SocIsl/SCENIC/Tsai
+sbatch tsaiAdataScenic.sh
+
+# --- COMPASS / TF (requires CPLEX license) ---
+conda activate "${CONDA_ENV_BASE}/compass_analysis"
+# Install CPLEX: https://www.ibm.com/academic/ (free academic license)
+cd Analysis/SocIsl/TF/Tsai
+sbatch compassRunAstTsai.sh   # one cell type at a time
+```
+
+### About `_data_prep/`
+
+The `_data_prep/` scripts are **NOT needed** if you have the annotated h5ad from
+the Processing pipeline. They were the original ad-hoc preprocessing workflow
+used before the standardized Processing pipeline existed. They are preserved
+for historical reference only.
+
+## Updating Hardcoded Paths
+
+Legacy scripts contain hardcoded Openmind paths. Before running any script,
+update these path patterns:
+
+| Old Path (Openmind) | Replacement (Engaging) |
+|---------------------|------------------------|
+| `/om2/user/mabdel03/anaconda/etc/profile.d/conda.sh` | `source config/paths.sh && init_conda` (or your `$CONDA_INIT_SCRIPT`) |
+| `/om2/user/mabdel03/conda_envs/<env>` | `${CONDA_ENV_BASE}/<env>` |
+| `/om/scratch/Mon/mabdel03/SocialIsolation/` | Your working directory on Engaging |
+| `/om/scratch/Sun/mabdel03/SocialIsolation/` | Your working directory on Engaging |
+| `/net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/` | `${DATA_ROOT}/` |
+| `/om/scratch/Mon/mabdel03/SocialIsolation/opt/ibm/ILOG/CPLEX_Studio2211` | Your CPLEX install path on Engaging |
+
+To do a bulk find-and-replace preview across all scripts:
+
+```bash
+grep -rn "/om2/\|/om/scratch\|/net/vast" Analysis/SocIsl/ --include="*.sh" --include="*.py" --include="*.Rscript"
+```
+
 ## Important Notes
 
-- These scripts contain **hardcoded paths from the Openmind cluster** and are preserved for reference. They will need path updates to run on Engaging.
-- Large data outputs (pseudobulk .tsv matrices, .rds objects, .h5ad files, COMPASS output directories) are **not included** in this repo — they are backed up on the Tsai Lab NAS.
-- The `_data_prep/` scripts show the original data preparation workflow but are superseded by the current Processing pipeline.
+- Large data outputs (pseudobulk .tsv matrices, .rds objects, .h5ad files, COMPASS output directories ~507GB) are **not included** in this repo — they are backed up on the Tsai Lab NAS.
+- DeJager COMPASS outputs are on Engaging at `/home/nkhera/orcd/pool/Subfolder/` (507GB).

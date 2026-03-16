@@ -23,7 +23,7 @@ This repository contains the single nucleus RNA sequencing (snRNA-seq) analysis 
 2. Clone this repo to your workspace
 3. Copy `config/paths.local.sh.template` to `config/paths.local.sh` and fill in your paths
 4. Run `bash setup/install_envs.sh` to create conda environments
-5. Download data from the Tsai Lab NAS (see [Data_Access/](Data_Access/README.md))
+5. Verify your data is in place (on Engaging, most data is already available — see [Data_Access/](Data_Access/README.md))
 6. Run the pipeline: `cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all`
 
 ## Data Provenance (March 2026)

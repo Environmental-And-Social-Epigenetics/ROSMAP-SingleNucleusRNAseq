@@ -208,15 +208,17 @@ ROSMAP-SingleNucleusRNAseq/Data/Tsai/All_ROSMAP_FASTQs.csv
 
 This CSV contains 5,197 FASTQ files across 480 patients.
 
-### On Openmind (Processing)
-FASTQs are transferred via Globus to:
+### On Processing Cluster (Engaging)
+FASTQs are organized at:
 ```
 ${TSAI_FASTQS_DIR}/<projid>/<Library_ID>/
 ```
 
-**Note:** For Cell Ranger on Openmind, point `--fastqs` to the patient directory. Cell Ranger will automatically discover all FASTQs in subdirectories.
+**Note:** Point Cell Ranger's `--fastqs` to the patient directory. Cell Ranger will automatically discover all FASTQs in subdirectories.
 
-See `01_FASTQ_Location/03_Globus_Transfer/README.md` for transfer details.
+> **Historical note:** FASTQs were originally transferred from Engaging to
+> Openmind via Globus. Since Openmind's decommissioning (March 2026), all
+> processing happens directly on Engaging where the FASTQs already reside.
 
 ## Output
 
