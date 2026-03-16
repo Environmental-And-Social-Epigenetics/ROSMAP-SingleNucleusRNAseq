@@ -31,7 +31,15 @@ __pycache__/
 
 # Whitelist small metadata/resource files required by the pipeline
 !Preprocessing/Tsai/02_Cellranger_Counts/Tracking/patient_metadata.csv
+!Preprocessing/Tsai/02_Cellranger_Counts/Tracking/batch_assignments.csv
 !Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds
+!Processing/Tsai/Pipeline/Resources/derived_batches.csv
+
+# Phenotype CSVs (small, required for Analysis phase)
+!Data/Phenotypes/ROSMAP_clinical.csv
+!Data/Phenotypes/dataset_652_basic_12-23-2021.csv
+!Data/Phenotypes/TSAI_DEJAGER_all_patients_wACEscores.csv
+!Data/Phenotypes/DeJager_ID_Map.csv
 
 # FASTQ/BAM files
 *.fastq

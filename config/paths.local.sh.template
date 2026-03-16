@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# Local Path Overrides for ROSMAP snRNA-seq Pipeline
+#
+# Copy this file to config/paths.local.sh and fill in your cluster-specific
+# paths.  paths.local.sh is gitignored and will never be committed.
+#
+#   cp config/paths.local.sh.template config/paths.local.sh
+#   # Edit paths below, then verify:
+#   source config/paths.sh && check_paths
+#
+
+# =============================================================================
+# REQUIRED — must be set for the pipeline to work
+# =============================================================================
+
+# Conda initialization script — path to your conda/mamba installation
+#   miniconda:  ${HOME}/miniconda3/etc/profile.d/conda.sh
+#   miniforge:  ${HOME}/miniforge3/etc/profile.d/conda.sh
+#   anaconda:   ${HOME}/anaconda3/etc/profile.d/conda.sh
+export CONDA_INIT_SCRIPT="${HOME}/miniforge3/etc/profile.d/conda.sh"
+
+# Base directory where conda environments are (or will be) created
+export CONDA_ENV_BASE="${HOME}/conda_envs"
+
+# Permanent storage — project/group directory for persistent data
+export DATA_ROOT="/path/to/permanent/storage"
+
+# Scratch storage — fast temporary storage for intermediate pipeline outputs
+export SCRATCH_ROOT="/path/to/scratch/storage"
+
+# Cell Ranger 8.0.0 installation directory
+# Download from: https://www.10xgenomics.com/support/software/cell-ranger
+export CELLRANGER_PATH="/path/to/cellranger-8.0.0"
+
+# Cell Ranger reference transcriptome (GRCh38-2020-A)
+# Download from: https://cf.10xgenomics.com/supp/cell-exp/refdata-gex-GRCh38-2020-A.tar.gz
+export CELLRANGER_REF="/path/to/refdata-gex-GRCh38-2020-A"
+
+# Email for SLURM job notifications (leave empty to disable)
+export SLURM_MAIL_USER="you@university.edu"
+
+# =============================================================================
+# REQUIRED only for DeJager preprocessing (Demuxlet step)
+# =============================================================================
+
+# WGS data directory containing filtered BAMs, pileups, VCF, and Demuxafy SIF
+# See Processing/DeJager/Pipeline/README.md for details on obtaining these files
+# export DEJAGER_WGS_DIR="/path/to/WGS/data"
+
+# =============================================================================
+# OPTIONAL — have safe defaults, override only if needed
+# =============================================================================
+
+# SLURM partitions (leave empty for cluster default)
+# export SLURM_PARTITION=""
+# export SLURM_PARTITION_GPU=""
+
+# NAS SFTP username (defaults to $USER)
+# export NAS_SFTP_USER="your_nas_username"
+
+# Singularity module name (default: openmind/singularity/3.10.4)
+# export SINGULARITY_MODULE="your_cluster/singularity/version"
+
+# =============================================================================
+# MIT Engaging / Openmind Example
+# =============================================================================
+# If you are on MIT Engaging (ssh <Kerberos ID>@orcd-login003.mit.edu),
+# typical paths might look like:
+#
+#   export CONDA_INIT_SCRIPT="${HOME}/anaconda3/etc/profile.d/conda.sh"
+#   export CONDA_ENV_BASE="/om2/user/${USER}/conda_envs"
+#   export DATA_ROOT="/orcd/data/lhtsai/001/om2/${USER}/files/ACE_Analysis"
+#   export SCRATCH_ROOT="/om/scratch/Mon/${USER}"
+#   export CELLRANGER_PATH="/om2/user/${USER}/apps/cellranger-8.0.0"
+#   export CELLRANGER_REF="/om2/user/${USER}/references/refdata-gex-GRCh38-2020-A"
+#   export DEJAGER_WGS_DIR="/om/scratch/Mon/shared_folder/WGS"
+#   export SLURM_PARTITION_GPU="mit_normal_gpu"

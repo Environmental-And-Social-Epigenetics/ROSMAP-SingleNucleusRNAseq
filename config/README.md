@@ -27,26 +27,31 @@ conda activate $QC_ENV
 check_paths
 ```
 
-### `paths.local.sh` (optional, gitignored)
+### `paths.local.sh.template`
 
-Create this file to override any variable from `paths.sh` without modifying the
-tracked file.  It is automatically sourced at the end of `paths.sh` if it
-exists.
+Template for creating your local path overrides. Copy and edit:
 
 ```bash
-# Example paths.local.sh
-export CONDA_INIT_SCRIPT="$HOME/miniforge3/etc/profile.d/conda.sh"
-export SCRATCH_ROOT="/scratch/$USER"
-export QC_ENV="$HOME/conda_envs/qcEnv"
+cp config/paths.local.sh.template config/paths.local.sh
+# Edit config/paths.local.sh with your cluster-specific paths
 ```
+
+### `paths.local.sh` (gitignored, created by you)
+
+Your local overrides.  Automatically sourced by `paths.sh` if it exists.
+Variables set here take precedence over the defaults in `paths.sh`.
 
 ## Setup Instructions
 
-1. **Update paths** — edit `paths.sh` (or create `paths.local.sh`) and set at
-   minimum:
+1. **Create local overrides** — copy the template and fill in your paths:
+   ```bash
+   cp config/paths.local.sh.template config/paths.local.sh
+   ```
+   At minimum, set:
    - `CONDA_INIT_SCRIPT` — path to your conda/mamba init script
-   - `SCRATCH_ROOT` — your cluster's scratch filesystem
+   - `CONDA_ENV_BASE` — base directory for conda environments
    - `DATA_ROOT` — permanent storage location
+   - `SCRATCH_ROOT` — your cluster's scratch filesystem
    - `CELLRANGER_PATH` — directory containing the `cellranger` executable
    - `CELLRANGER_REF` — Cell Ranger reference transcriptome directory
 
