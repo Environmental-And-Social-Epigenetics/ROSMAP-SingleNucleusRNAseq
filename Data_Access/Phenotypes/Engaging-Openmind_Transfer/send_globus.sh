@@ -28,7 +28,7 @@ source "${REPO_ROOT}/config/paths.sh"
 # =============================================================================
 
 OPENMIND_ENDPOINT="cbc6f8da-d37e-11eb-bde9-5111456017d9"
-ENGAGING_ENDPOINT="c52fcff2-761c-11eb-8cfc-cd623f92e1c0"
+ENGAGING_ENDPOINT="ec54b570-cac5-47f7-b2a1-100c2078686f"
 
 # =============================================================================
 # Auto-detect cluster

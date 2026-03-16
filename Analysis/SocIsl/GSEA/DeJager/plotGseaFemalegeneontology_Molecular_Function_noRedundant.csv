@@ -1,0 +1,8 @@
+"","description","FDR","enrich","cellType","logFDR"
+"1","structural constituent of ribosome",0.0037351114803647,-1.91081429855715,"Exc",2.42769643144304
+"2","unfolded protein binding",0.00426869883470252,-1.92982517281598,"Exc",2.36970448446535
+"3","transcription corepressor activity",0.0391297393181064,-1.76459043913859,"Exc",1.40749304535475
+"4","structural constituent of ribosome",1e-07,-2.58063867762721,"Inh",7
+"5","rRNA binding",0.000951346618510006,-2.01316087832369,"Inh",3.0216612211492
+"6","structural constituent of ribosome",1e-07,-2.35974966467711,"Opc",7
+"7","rRNA binding",0.000541676361098185,-1.99152829157132,"Opc",3.26626011672704

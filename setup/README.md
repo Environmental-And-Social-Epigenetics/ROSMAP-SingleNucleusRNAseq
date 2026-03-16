@@ -68,28 +68,39 @@ Run the automated installer:
 
 ```bash
 source config/paths.sh
-bash setup/install_envs.sh
+bash setup/install_envs.sh              # Processing environments only (required)
+bash setup/install_envs.sh --analysis   # Also install Analysis environments
+bash setup/install_envs.sh --preprocessing  # Also install Preprocessing environments
+bash setup/install_envs.sh --all        # Install everything
 ```
 
-This creates three environments for the Processing pipeline stages:
+This creates environments from YAML specs in the repo:
+
+**Processing (always installed):**
 
 | Environment | YAML spec | paths.sh variable | Purpose |
 |-------------|-----------|-------------------|---------|
-| `qcEnv` | `envs/stage1_qc.yml` | `QC_ENV` | Stage 1: QC filtering |
-| `single_cell_BP` | `envs/stage2_doublets.yml` | `SINGLECELL_ENV` | Stage 2: Doublet removal |
-| `BatchCorrection_SingleCell` | `envs/stage3_integration.yml` | `BATCHCORR_ENV` | Stage 3: Integration |
+| `qcEnv` | `Processing/.../envs/stage1_qc.yml` | `QC_ENV` | Stage 1: QC filtering |
+| `single_cell_BP` | `Processing/.../envs/stage2_doublets.yml` | `SINGLECELL_ENV` | Stage 2: Doublet removal |
+| `BatchCorrection_SingleCell` | `Processing/.../envs/stage3_integration.yml` | `BATCHCORR_ENV` | Stage 3: Integration |
 
-For CellBender (Preprocessing), create the environment separately since it
-requires GPU/CUDA support:
+**Preprocessing (`--preprocessing`):**
 
-```bash
-# Install CellBender in a dedicated environment
-conda create -n cellbender_env python=3.10
-conda activate cellbender_env
-pip install cellbender
-```
+| Environment | YAML spec | paths.sh variable | Purpose |
+|-------------|-----------|-------------------|---------|
+| `Cellbender_env` | `Preprocessing/envs/cellbender.yml` | `CELLBENDER_ENV` | Ambient RNA removal (GPU) |
+| `synapse_env` | `Preprocessing/envs/synapse.yml` | `SYNAPSE_ENV` | Synapse downloads |
+| `bcftools_env` | `Preprocessing/envs/bcftools.yml` | `BCFTOOLS_ENV` | BAM/VCF filtering |
+| `globus_env` | `Preprocessing/envs/globus.yml` | `GLOBUS_ENV` | Data transfers |
 
-Set `CELLBENDER_ENV` in your config to the environment path.
+**Analysis (`--analysis`):**
+
+| Environment | YAML spec | Purpose |
+|-------------|-----------|---------|
+| `deg_analysis` | `Analysis/envs/deg.yml` | DEG (DESeq2, limma, edgeR) |
+| `scenic_analysis` | `Analysis/envs/scenic.yml` | pySCENIC regulatory networks |
+| `compass_analysis` | `Analysis/envs/compass.yml` | COMPASS metabolic analysis |
+| `gsea_analysis` | `Analysis/envs/gsea.yml` | GSEA/pathway analysis |
 
 ## Step 6: DeJager Patient Map (DeJager only)
 

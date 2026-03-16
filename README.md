@@ -28,18 +28,20 @@ This repository contains the single nucleus RNA sequencing (snRNA-seq) analysis 
 
 ## Data Provenance (March 2026)
 
-The processed data from Mahmoud Abdelmoneum, Nina Khera, and Ravikiran Raju's March 2026 analysis is available at these locations:
+The processed data from Mahmoud Abdelmoneum, Nina Khera, and Ravikiran Raju's March 2026 analysis is available at these locations. **Openmind was decommissioned March 17, 2026 — all data now lives on Engaging.**
 
-| Data | Location | Access Method |
-|------|----------|---------------|
-| Tsai raw FASTQs | MIT Engaging cluster | Globus transfer (CSV mapping in repo) |
-| DeJager raw FASTQs | Synapse ([syn21438684](https://www.synapse.org/#!Synapse:syn21438684)) | Synapse download |
-| CellBender outputs (both datasets) | Tsai Lab Server NAS | SFTP download |
-| Cell-type annotated objects (both datasets) | Tsai Lab Server NAS | SFTP download |
-| Phenotype CSVs | In repo (`Data/Phenotypes/`) | Already included |
-| DeJager WGS VCF + Demuxafy SIF | Shared cluster storage | Contact lab |
+| Data | Primary Location | Backup | Access Method |
+|------|-----------------|--------|---------------|
+| Tsai raw FASTQs | Engaging cluster | NAS | Already on Engaging (CSV mapping in repo) |
+| DeJager raw FASTQs | Synapse ([syn21438684](https://www.synapse.org/#!Synapse:syn21438684)) | Engaging, NAS | Synapse download or Engaging |
+| Tsai CellBender outputs (478 samples) | Engaging | NAS | Already on Engaging |
+| DeJager CellBender outputs (131 dirs) | Engaging | NAS | Already on Engaging |
+| Tsai cell-type annotated object | Engaging (`tsai_annotated.h5ad`, 83GB) | NAS | Already on Engaging |
+| **DeJager processing outputs** | **Not yet generated** | — | **Run pipeline on Engaging** |
+| Phenotype CSVs | In repo (`Data/Phenotypes/`) | Engaging, NAS | Already included |
+| DeJager WGS VCF + Demuxafy SIF | Engaging (`/home/nkhera/orcd/pool/WGS/`) | — | Already on Engaging |
 
-See [Data_Access/README.md](Data_Access/README.md) for transfer scripts and detailed instructions.
+See [Data_Access/README.md](Data_Access/README.md) for the full Engaging data layout, transfer scripts, and Globus audit trail.
 
 ## Repository Structure
 
@@ -116,7 +118,7 @@ Both datasets use an identical three-stage pipeline (`Processing/{Dataset}/Pipel
 Submit all stages with dependency chaining:
 
 ```bash
-cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all     # Tsai (476 samples)
+cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all     # Tsai (478 samples with CellBender outputs)
 cd Processing/DeJager/Pipeline && ./submit_pipeline.sh all   # DeJager
 ```
 
@@ -207,7 +209,7 @@ conda activate "${BATCHCORR_ENV}"   # Stage 3
 
 | Stage | Cores | Memory | Time | Notes |
 |-------|-------|--------|------|-------|
-| 1 — QC Filtering | 4 | 32GB | 12h | Array job (Tsai: 476 tasks, DeJager: 200 tasks, 32 concurrent) |
+| 1 — QC Filtering | 4 | 32GB | 12h | Array job (Tsai: 478 tasks, DeJager: 200 tasks, 32 concurrent) |
 | 2 — Doublet Removal | 4 | 32GB | 12h | Array job (same dimensions as Stage 1) |
 | 3 — Integration & Annotation | 32 | 500GB | 48h | Single job (loads all samples) |
 

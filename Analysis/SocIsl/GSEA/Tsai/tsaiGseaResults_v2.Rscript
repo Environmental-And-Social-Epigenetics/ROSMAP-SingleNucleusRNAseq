@@ -1,0 +1,164 @@
+#!/usr/bin/env Rscript
+
+require(WebGestaltR)
+setwd("/om/scratch/Mon/mabdel03/SocialIsolation/Tsai")
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tibble)
+library(parallel)
+
+cell_types <- c("Exc","Ast","Inh","Mic","Oli","Opc")
+
+types <- c("geneontology_Biological_Process_noRedundant","geneontology_Cellular_Component_noRedundant","geneontology_Molecular_Function_noRedundant","pathway_KEGG","pathway_Panther","pathway_Reactome","pathway_Wikipathway")
+
+for (ct in cell_types) {
+	load(paste0("tsai_deseqAnalysisSocIsl",ct,"Fem.rda"))
+	re2 <- resF
+	re2$gene <- rownames(re2)
+	diff.analysis <- re2
+	#VERSION TO GENERATE DATAFRAME. 
+	master.webgestaltR <- vector(mode = "list")
+	GSEA.list <- c("geneontology_Biological_Process_noRedundant","geneontology_Cellular_Component_noRedundant","geneontology_Molecular_Function_noRedundant","pathway_KEGG","pathway_Panther","pathway_Reactome","pathway_Wikipathway","network_Transcription_Factor_target")
+	diff.analysis@listData$rank <- sign(diff.analysis@listData$log2FoldChange)*-log10(diff.analysis@listData$pvalue)
+	gsea.rank <- data.frame(gene = diff.analysis@listData$gene,rank = diff.analysis@listData$rank)
+	gsea.rank <- gsea.rank[order(-gsea.rank$rank),]
+	for (j in 1:length(GSEA.list)){
+	    listname <- paste0(ct,"_",GSEA.list[j])
+	    master.webgestaltR <- mclapply(GSEA.list, function(db) {
+    WebGestaltR(enrichMethod="GSEA", 
+                organism="hsapiens",
+                minNum=10,
+                fdrThr=0.2,
+                enrichDatabase=db,
+                enrichDatabaseType="genesymbol",
+                interestGene=gsea.rank,
+                interestGeneType="genesymbol",
+                sigMethod="fdr",
+                is.output=FALSE)
+}, mc.cores=10)  
+names(master.webgestaltR) <- paste0(ct, "_", GSEA.list)
+	 }
+	saveRDS(master.webgestaltR,paste0("overallWebGestaltRResultFem",ct,".rds"))
+}
+
+
+for (ct in cell_types) {
+	load(paste0("tsai_deseqAnalysisSocIsl",ct,"Male.rda"))
+	re2 <- resM
+	re2$gene <- rownames(re2)
+	diff.analysis <- re2
+	#VERSION TO GENERATE DATAFRAME. 
+	master.webgestaltR <- vector(mode = "list")
+	GSEA.list <- c("geneontology_Biological_Process_noRedundant","geneontology_Cellular_Component_noRedundant","geneontology_Molecular_Function_noRedundant","pathway_KEGG","pathway_Panther","pathway_Reactome","pathway_Wikipathway","network_Transcription_Factor_target")
+	diff.analysis@listData$rank <- sign(diff.analysis@listData$log2FoldChange)*-log10(diff.analysis@listData$pvalue)
+	gsea.rank <- data.frame(gene = diff.analysis@listData$gene,rank = diff.analysis@listData$rank)
+	gsea.rank <- gsea.rank[order(-gsea.rank$rank),]
+	for (j in 1:length(GSEA.list)){
+	    listname <- paste0(ct,"_",GSEA.list[j])
+	    master.webgestaltR <- mclapply(GSEA.list, function(db) {
+    WebGestaltR(enrichMethod="GSEA", 
+                organism="hsapiens",
+                minNum=10,
+                fdrThr=0.2,
+                enrichDatabase=db,
+                enrichDatabaseType="genesymbol",
+                interestGene=gsea.rank,
+                interestGeneType="genesymbol",
+                sigMethod="fdr",
+                is.output=FALSE)
+}, mc.cores=10)  
+names(master.webgestaltR) <- paste0(ct, "_", GSEA.list)
+	 }
+	saveRDS(master.webgestaltR,paste0("overallWebGestaltRResultMale",ct,".rds"))
+}
+
+
+for(type in types){
+	all_results <- data.frame()
+	for(ct in cell_types){
+	  # assuming files are in a directory
+	  files <- list.files(path="/om/scratch/Mon/mabdel03/SocialIsolation/Tsai/", 
+	                      pattern=paste0("overallWebGestaltRResultFem",ct,".rds"), full.names=TRUE)
+	  print(ct)
+	  for(f in files){
+	    gsea <- readRDS(f)
+	    strO <- paste0(ct,"_",type)
+		    if (strO %in% names(gsea)) {
+			    gsea <- gsea[[strO]]
+			    # select relevant columns: gene set, numGenes, pValue
+			    print(str(gsea))
+			    gsea <- gsea %>% 
+				  select(description, FDR, normalizedEnrichmentScore) %>% 
+				  mutate(
+				    cellType = ct,
+				    FDR = ifelse(FDR == 0, 0.0000001, FDR)
+				  ) %>%
+				  filter(FDR <= 0.05)
+			    all_results <- rbind(all_results, gsea)
+			}  
+		}
+	}
+
+	plot_df <- all_results %>%
+	  mutate(logFDR = -log10(FDR)) %>%
+	  rename(enrich = normalizedEnrichmentScore)
+	write.csv(plot_df,paste0("tsaiPlotGseaFemale",type,".csv"))
+	p <- ggplot(plot_df, aes(x = cellType, y = description)) +
+	  geom_point(aes(size = logFDR, color = enrich)) +
+	  scale_color_gradient(low = "blue", high = "red") +
+	  theme_bw() +
+	  theme(axis.text.y = element_text(size = 8)) +
+	  labs(x = "Cell Type", y = "GO Term", color = "enrichment score", size = "-log10(FDR)")
+	ggsave(paste0("tsaiFemaleHeatmap",type,".svg"), plot = p, width = 10, height = 10)
+
+	print("okee")
+}
+print("okr")
+# go thru all 7, see what changes stand out
+#scenic
+#m20 look to see whcih are significant
+
+
+for(type in types){
+	print("MALE")
+	print(type)
+	all_results <- data.frame()
+	for(ct in cell_types){
+	  # assuming files are in a directory
+	  files <- list.files(path="/om/scratch/Mon/mabdel03/SocialIsolation/Tsai/", 
+	                      pattern=paste0("overallWebGestaltRResultMale",ct,".rds"), full.names=TRUE)
+	  print(ct)
+	  for(f in files){
+	    gsea <- readRDS(f)
+	    print(str(gsea))
+	    strO <- paste0("ct_",type)
+		    if (strO %in% names(gsea)) {
+			    gsea <- gsea[[strO]]
+			    # select relevant columns: gene set, numGenes, pValue
+			    print(str(gsea))
+			    gsea <- gsea %>% 
+				  select(description, FDR, normalizedEnrichmentScore) %>% 
+				  mutate(
+				    cellType = ct,
+				    FDR = ifelse(FDR == 0, 0.0000001, FDR)
+				  ) %>%
+				  filter(FDR <= 0.05)
+			    all_results <- rbind(all_results, gsea)
+			} 
+		}
+	}
+
+	plot_df <- all_results %>%
+	  mutate(logFDR = -log10(FDR)) %>%
+	  rename(enrich = normalizedEnrichmentScore)
+	write.csv(plot_df,paste0("tsaiPlotGseaMale",type,".csv"))
+	p <- ggplot(plot_df, aes(x = cellType, y = description)) +
+	  geom_point(aes(size = logFDR, color = enrich)) +
+	  scale_color_gradient(low = "blue", high = "red") +
+	  theme_bw() +
+	  theme(axis.text.y = element_text(size = 8)) +
+	  labs(x = "Cell Type", y = "GO Term", color = "enrichment score", size = "-log10(FDR)")
+	ggsave(paste0("tsaiMaleHeatmap",type,".svg"), plot = p, width = 10, height = 10)
+
+}

@@ -1,0 +1,392 @@
+library(edgeR)
+library(zellkonverter)
+library(SingleCellExperiment)
+library(magrittr)
+library(data.table) 
+library(ruvIIInb)
+library(scran)
+library(igraph)
+library(Seurat)
+
+
+#loading in SCE object
+
+cell_types <- c("Exc")
+#"Ast","Inh","Oli","Opc","Inh",
+for (ct in cell_types) {
+	#subsetting for cell type
+	if (ct == "Exc"){
+		exc3 <- readRDS("Excitatory_neurons_set3.rds")
+		exc2 <- readRDS("Excitatory_neurons_set2.rds")
+		exc1 <- readRDS("Excitatory_neurons_set1.rds")
+		library(dplyr)
+		sceNew1 <- exc1
+		sceNew2 <- exc2
+		sceNew3 <- exc3
+		rm(exc1)
+		rm(exc2)
+		rm(exc3)
+		sceNew1[["counts"]] <- CreateAssayObject(counts = GetAssayData(sceNew1, slot = "counts"))
+		DefaultAssay(sceNew1) <- "counts"
+		sceNew1[["RNA"]] <- NULL
+		sceNew2[["counts"]] <- CreateAssayObject(counts = GetAssayData(sceNew2, slot = "counts"))
+		DefaultAssay(sceNew2) <- "counts"
+		sceNew2[["RNA"]] <- NULL
+		sceNew3[["counts"]] <- CreateAssayObject(counts = GetAssayData(sceNew3, slot = "counts"))
+		DefaultAssay(sceNew3) <- "counts"
+		sceNew3[["RNA"]] <- NULL
+
+		data <- read.csv("scPFC_432_withACEandSIvariables.csv")
+		batch <- read.delim("batch_mapping_deidentified.tsv",header=TRUE, sep = "\t")
+		subject_vector1 <- sceNew1@meta.data[["subject"]]
+		subject_vector2 <- sceNew2@meta.data[["subject"]]
+		subject_vector3 <- sceNew3@meta.data[["subject"]]
+		idx01 <- match(subject_vector1, batch$subject)
+		idx02 <- match(subject_vector2, batch$subject)
+		idx03 <- match(subject_vector3, batch$subject)
+		dataset_vector1 <- batch$dataset[idx01]
+		dataset_vector2 <- batch$dataset[idx02]
+		dataset_vector3 <- batch$dataset[idx03]
+		batch2 <- read.delim("full_batch_mapping.tsv",header=TRUE, sep = "\t")
+		idx21 <- match(dataset_vector1, batch2$dataset)
+		idx22 <- match(dataset_vector2, batch2$dataset)
+		idx23 <- match(dataset_vector3, batch2$dataset)
+
+		projid_vector1 <- batch2$projid[idx21]
+		projid_vector2 <- batch2$projid[idx22]
+		projid_vector3 <- batch2$projid[idx23]
+
+		sceNew1@meta.data$projid <- projid_vector1
+		sceNew2@meta.data$projid <- projid_vector2
+		sceNew3@meta.data$projid <- projid_vector3
+
+		meta_df1 <- as.data.frame(sceNew1@meta.data)
+		meta_df2 <- as.data.frame(sceNew2@meta.data)
+		meta_df3 <- as.data.frame(sceNew3@meta.data)
+
+		data <- data[!duplicated(data$projid), ]
+		meta_df1 <- merge(meta_df1, data, by = "projid", all.x = FALSE)
+		meta_df2 <- merge(meta_df2, data, by = "projid", all.x = FALSE)
+		meta_df3 <- merge(meta_df3, data, by = "projid", all.x = FALSE)
+
+		rownames(meta_df1) <- sceNew1@assays$counts@counts@Dimnames[[2]]
+		rownames(meta_df2) <- sceNew2@assays$counts@counts@Dimnames[[2]]
+		rownames(meta_df3) <- sceNew3@assays$counts@counts@Dimnames[[2]]
+
+		sceNew1@meta.data <- as.data.frame(meta_df1)
+		sceNew2@meta.data <- as.data.frame(meta_df2)
+		sceNew3@meta.data <- as.data.frame(meta_df3)
+
+		#subset for females and males
+		DefaultAssay(sceNew1) <- "counts"
+		sceNew1[["RNA"]] <- NULL
+
+		DefaultAssay(sceNew2) <- "counts"
+		sceNew2[["RNA"]] <- NULL
+
+		DefaultAssay(sceNew3) <- "counts"
+		sceNew3[["RNA"]] <- NULL
+
+		cellsF1 <- colnames(sceNew1)[sceNew1$msex == 0]
+		cellsM1 <- colnames(sceNew1)[sceNew1$msex == 1]
+		cellsF2 <- colnames(sceNew2)[sceNew2$msex == 0]
+		cellsM2 <- colnames(sceNew2)[sceNew2$msex == 1]
+		cellsF3 <- colnames(sceNew3)[sceNew3$msex == 0]
+		cellsM3 <- colnames(sceNew3)[sceNew3$msex == 1]
+
+		sceF1 <- subset(sceNew1, cells = cellsF1)
+		sceM1 <- subset(sceNew1, cells = cellsM1)
+		sceF2 <- subset(sceNew2, cells = cellsF2)
+		sceM2 <- subset(sceNew2, cells = cellsM2)
+		sceF3 <- subset(sceNew3, cells = cellsF3)
+		sceM3 <- subset(sceNew3, cells = cellsM3)
+
+		#raw counts!
+		raw_exp1 <- as.SingleCellExperiment(sceF1)
+		raw_exp2 <- as.SingleCellExperiment(sceF2)
+		raw_exp3 <- as.SingleCellExperiment(sceF3)
+		writeH5AD(raw_exp1, "sceF1.h5ad")
+		writeH5AD(raw_exp2, "sceF2.h5ad")
+		writeH5AD(raw_exp3, "sceF3.h5ad")
+
+		raw_exp1 <- as.SingleCellExperiment(sceM1)
+		raw_exp2 <- as.SingleCellExperiment(sceM2)
+		raw_exp3 <- as.SingleCellExperiment(sceM3)
+		writeH5AD(raw_exp1, "sceM1.h5ad")
+		writeH5AD(raw_exp2, "sceM2.h5ad")
+		writeH5AD(raw_exp3, "sceM3.h5ad")
+	} else {
+			if (ct == "Inh"){
+				inh <- readRDS("Inhibitory_neurons.rds")
+				sceNew <- inh
+				rm(inh)
+			} else if (ct == "Opc"){
+				opc <- readRDS("OPCs.rds")
+				sceNew <- opc
+				rm(opc)
+			} else if (ct == "Ast"){
+				ast <- readRDS("Astrocytes.rds")
+				sceNew <- ast
+				rm(ast)
+			} else if (ct == "Oli"){
+				oli <- readRDS("Oligodendrocytes.rds")
+				sceNew <- oli
+				rm(oli)
+			} 
+			sceNew[["counts"]] <- CreateAssayObject(counts = GetAssayData(sceNew, slot = "counts"))
+			DefaultAssay(sceNew) <- "counts"
+			sceNew[["RNA"]] <- NULL
+
+			#subsetting patients based on cognitive status, merging metadata attributes with sce patient IDs
+			library(dplyr)
+
+			data <- read.csv("scPFC_432_withACEandSIvariables.csv")
+
+			batch <- read.delim("batch_mapping_deidentified.tsv",header=TRUE, sep = "\t")
+			subject_vector <- sceNew@meta.data[["subject"]]
+			idx <- match(subject_vector, batch$subject)
+			dataset_vector <- batch$dataset[idx]
+
+			batch2 <- read.delim("full_batch_mapping.tsv",header=TRUE, sep = "\t")
+			idx2 <- match(dataset_vector, batch2$dataset)
+			projid_vector <- batch2$projid[idx2]
+			sceNew@meta.data$projid <- projid_vector
+			meta_df <- as.data.frame(sceNew@meta.data)
+			data <- data[!duplicated(data$projid), ]
+			meta_df <- merge(meta_df, data, by = "projid", all.x = FALSE)
+			rownames(meta_df) <- sceNew@assays$counts@counts@Dimnames[[2]]
+
+			sceNew@meta.data <- as.data.frame(meta_df)
+
+			#subset for females and males
+
+			cellsF <- colnames(sceNew)[sceNew$msex == 0]
+			cellsM <- colnames(sceNew)[sceNew$msex == 1]
+
+			sceF <- subset(sceNew, cells = cellsF)
+			sceM <- subset(sceNew, cells = cellsM)
+
+			#raw counts!
+			raw_exp <- as.SingleCellExperiment(sceF)
+		outpath <- paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Tsai/tsaisingleCell", ct, "Female.h5ad")
+		print(outpath)
+		writeH5AD(raw_exp, paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Tsai/tsaisingleCell",ct,"Female.h5ad"))
+			assayNames(raw_exp)[assayNames(raw_exp) == "RNA"] <- "counts"
+
+	keep_cells <- !is.na(colData(raw_exp)$social_isolation_avg)
+
+	raw_exp <- raw_exp[, keep_cells]
+		#pseudobulking
+		pseudo_countsF <- aggregateAcrossCells(raw_exp, ids = colData(raw_exp)$projid)
+
+	counts_mat <- assay(pseudo_countsF, "counts")
+
+	frac_expressed <- rowSums(counts_mat > 0) / ncol(counts_mat)
+
+	genes_keep <- frac_expressed >= 0.2   # 20%
+
+	pseudo_countsF <- pseudo_countsF[genes_keep, ]
+		colData(pseudo_countsF)$age_death <- scale(colData(pseudo_countsF)$age_death)
+		colData(pseudo_countsF)$pmi <- scale(colData(pseudo_countsF)$pmi)
+		saveRDS(pseudo_countsF, file = paste0("tsai_pseudobulk_female_",ct,".rds"))
+		
+		library(DESeq2)
+		#running DESeq2
+		ddsF <- DESeqDataSetFromMatrix(
+		  countData = assay(pseudo_countsF),  # or `counts_matrix`
+		  colData = colData(pseudo_countsF),
+		  design = ~ age_death + pmi + social_isolation_avg + niareagansc
+		)
+		#niareagansc
+		ddsF <- DESeq(ddsF)
+		resF <- results(ddsF, name = "social_isolation_avg")
+		#save(resF, file = paste0("./", "tsai_deseqAnalysisSocIsl",ct,"Fem", ".rda"))
+
+		#raw counts!
+
+		raw_exp <- as.SingleCellExperiment(sceM)
+
+		outpath <- paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Tsai/tsaisingleCell", ct, "Male.h5ad")
+		print(outpath)
+		writeH5AD(raw_exp, paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Tsai/tsaisingleCell",ct,"Male.h5ad"))
+		assayNames(raw_exp)[assayNames(raw_exp) == "RNA"] <- "counts"
+
+	keep_cells <- !is.na(colData(raw_exp)$social_isolation_avg)
+
+	raw_exp <- raw_exp[, keep_cells]
+
+		#pseudobulking
+		#pseudobulking
+		pseudo_countsM <- aggregateAcrossCells(raw_exp, ids = colData(raw_exp)$projid)
+
+	counts_mat <- assay(pseudo_countsM, "counts")
+
+	frac_expressed <- rowSums(counts_mat > 0) / ncol(counts_mat)
+
+	genes_keep <- frac_expressed >= 0.2   # 20%
+
+	pseudo_countsM <- pseudo_countsM[genes_keep, ]
+		colData(pseudo_countsM)$age_death <- scale(colData(pseudo_countsM)$age_death)
+		colData(pseudo_countsM)$pmi <- scale(colData(pseudo_countsM)$pmi)
+		saveRDS(pseudo_countsM, file = paste0("tsai_pseudobulk_male_",ct,".rds"))
+
+		library(edgeR)
+
+		#running DESeq2
+		ddsM <- DESeqDataSetFromMatrix(
+		  countData = assay(pseudo_countsM),  # or `counts_matrix`
+		  colData = colData(pseudo_countsM),
+		  design = ~ age_death + pmi + niareagansc + social_isolation_avg
+		)
+		#age_death + pmi +  
+		ddsM <- DESeq(ddsM)
+		resM <- results(ddsM, name = "social_isolation_avg")
+		#save(resM, file = paste0("./", "tsai_deseqAnalysisSocIsl",ct,"Male", ".rda"))
+
+
+		norm_countsM <- counts(ddsM, normalized = TRUE)
+		norm_countsF <- counts(ddsF, normalized = TRUE)
+
+		gene_list <- c("SCD", "LDLR", "STARD4", "ACAT2", "FDFT1", "LSS", "MMAB", "MVK", 
+					   "DHCR24", "SREBF2", "INSIG1", "FDPS", "HMGCR", "MSMO1", "SQLE", 
+					   "MVD", "IDI1", "HSD17B7", "HMGCS1", "ZNF730", "SC5D")
+		avg_exprM <- colMeans(norm_countsM[gene_list, , drop = FALSE])
+		avg_exprF <- colMeans(norm_countsF[gene_list, , drop = FALSE])
+		yM <- colData(pseudo_countsM)$social_isolation_avg
+		yF <- colData(pseudo_countsF)$social_isolation_avg
+		png(paste0("tsai_avgExpr_vs_socialIsolation_Stacked_", ct, ".png"), width = 800, height = 1200)
+		par(mfrow = c(2, 1)) 
+
+		exprM <- as.numeric(norm_countsM["SREBF2", , drop = FALSE])
+		exprF <- as.numeric(norm_countsF["SREBF2", , drop = FALSE])
+		data_to_saveF <- rbind("SREBF2 expression" = exprF,"M20 Expression" = avg_exprF,"Social Isolation Avg" = yF)
+		data_to_saveM <- rbind("SREBF2 expression" = exprM,"M20 Expression" = avg_exprM,"Social Isolation Avg" = yM)
+		write.csv(data_to_saveF, file = paste0("tsaiDataF",ct,".csv"), row.names = TRUE)
+		write.csv(data_to_saveM, file = paste0("tsaiDataM",ct,".csv"), row.names = TRUE)
+
+
+		model <- lm(avg_exprM ~ yM)
+		r2 <- summary(model)$r.squared
+		p_val <- summary(model)$coefficients[2, 4]
+
+		plot(yM, avg_exprM,
+		     xlab = "Social Isolation Avg",
+		     ylab = "Average Expression",
+		     main = paste("Male -", ct),
+		     pch = 16, col = "blue")
+		abline(lm(avg_exprM ~ yM), col = "red", lwd = 2)  # Fit line
+
+		text(x = min(yM), y = max(avg_exprM),
+	     labels = paste0("R² = ", round(r2, 3), 
+	                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+	     adj = c(0, 1), cex = 0.9)
+
+		model <- lm(avg_exprF ~ yF)
+		r2 <- summary(model)$r.squared
+		p_val <- summary(model)$coefficients[2, 4]
+
+		plot(yF, avg_exprF,
+		     xlab = "Social Isolation Avg",
+		     ylab = "Average Expression",
+		     main = paste("Female -", ct),
+		     pch = 16, col = "purple")
+		abline(lm(avg_exprF ~ yF), col = "red", lwd = 2)  # Fit line
+		text(x = min(yF), y = max(avg_exprF),
+	     labels = paste0("R² = ", round(r2, 3), 
+	                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+	     adj = c(0, 1), cex = 0.9)
+		dev.off()
+
+		png(paste0("tsai_SrebF2Pic_", ct, ".png"), width = 800, height = 1200)
+		par(mfrow = c(2, 1)) 
+
+		model <- lm(exprM ~ yM)
+		r2 <- summary(model)$r.squared
+		p_val <- summary(model)$coefficients[2, 4]
+
+		plot(yM, exprM,
+		     xlab = "Social Isolation Avg",
+		     ylab = "SREBF2 Expression",
+		     main = paste("Male -", ct),
+		     pch = 16, col = "blue")
+		abline(model, col = "red", lwd = 2)
+		text(x = min(yM), y = max(exprM),
+	     labels = paste0("R² = ", round(r2, 3), 
+	                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+	     adj = c(0, 1), cex = 0.9)
+
+		model <- lm(exprF ~ yF)
+		r2 <- summary(model)$r.squared
+		p_val <- summary(model)$coefficients[2, 4]
+
+		plot(yF, exprF,
+		     xlab = "Social Isolation Avg",
+		     ylab = "SREBF2 Expression",
+		     main = paste("Female -", ct),
+		     pch = 16, col = "blue")
+		abline(model, col = "red", lwd = 2)
+		text(x = min(yF), y = max(exprF),
+	     labels = paste0("R² = ", round(r2, 3), 
+	                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+	     adj = c(0, 1), cex = 0.9)
+		dev.off()
+
+		library(RRHO)
+		library(RRHO2)
+		dfMale <- read.csv(paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.male.tsv"), sep = "\t")
+		dfFemale <- read.csv(paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.female.tsv"), sep = "\t")
+
+		print(str(resF))
+		print(str(dfFemale))
+		dfFemale$signed_stat <- sign(dfFemale$log2FoldChange) * (-log10(dfFemale$pvalue))
+		genes1 <- setNames(dfFemale$signed_stat, dfFemale$gene)
+		genes1 <- sort(genes1, decreasing = TRUE)
+		resF$signed_stat <- sign(resF@listData$log2FoldChange) * (-log10(resF@listData$pvalue))
+		genes2 <- setNames(resF@listData$signed_stat, resF@rownames)
+		genes2 <- sort(genes2, decreasing = TRUE)
+
+		common_genes <- intersect(names(genes1), names(genes2))
+		genes1_sub <- genes1[common_genes]
+		genes2_sub <- genes2[common_genes]
+
+		str(genes2)
+		genes1_df <- data.frame(Gene = names(genes1_sub), logFC = genes1_sub)
+		genes2_df <- data.frame(Gene = names(genes2_sub), logFC = genes2_sub)
+		genes1_df$logFC <- as.numeric(genes1_df$logFC)
+		genes2_df$logFC <- as.numeric(genes2_df$logFC)
+
+
+		RRHO_obj <-  RRHO2_initialize(genes1_df, genes2_df, labels = c("tsai", "tsai 2"), log10.ind=FALSE)
+
+		print(RRHO_obj$genelist_dd$gene_list_overlap_dd)
+		print(RRHO_obj$genelist_uu$gene_list_overlap_uu)
+
+		png(paste0("RRHO_heatmap",ct,".png"), width=800, height=800)
+		RRHO2_heatmap(RRHO_obj)
+		dev.off()
+
+		dfMale$signed_stat <- sign(dfMale$log2FoldChange) * (-log10(dfMale$pvalue))
+		genes1M <- setNames(dfMale$signed_stat, dfMale$gene)
+		genes1M <- sort(genes1M, decreasing = TRUE)
+		resM$signed_stat <- sign(resM@listData$log2FoldChange) * (-log10(resM@listData$pvalue))
+		genes2M <- setNames(resM@listData$signed_stat, resM@rownames)
+		genes2M <- sort(genes2M, decreasing = TRUE)
+
+		common_genes <- intersect(names(genes1M), names(genes2M))
+		genes1_subM <- genes1M[common_genes]
+		genes2_subM <- genes2M[common_genes]
+
+		# Example
+
+		genes1_dfM <- data.frame(Gene = names(genes1_subM), logFC = genes1_subM)
+		genes2_dfM <- data.frame(Gene = names(genes2_subM), logFC = genes2_subM)
+
+		RRHO_objM <-  RRHO2_initialize(genes1_dfM, genes2_dfM, labels = c("tsai", "tsai 2"), log10.ind=FALSE)
+
+		png(paste0("RRHO_heatmap",ct,"M.png"), width=800, height=800)
+		RRHO2_heatmap(RRHO_objM)
+		dev.off()
+	} 
+
+	
+}

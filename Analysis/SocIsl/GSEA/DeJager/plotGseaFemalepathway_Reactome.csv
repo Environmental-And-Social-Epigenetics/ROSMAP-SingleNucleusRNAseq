@@ -1,0 +1,152 @@
+"","description","FDR","enrich","cellType","logFDR"
+"1","L13a-mediated translational silencing of Ceruloplasmin expression",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"2","Formation of a pool of free 40S subunits",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"3","GTP hydrolysis and joining of the 60S ribosomal subunit",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"4","Nonsense-Mediated Decay (NMD)",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"5","Nonsense Mediated Decay (NMD) enhanced by the Exon Junction Complex (EJC)",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"6","SRP-dependent cotranslational protein targeting to membrane",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"7","Viral mRNA Translation",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"8","Eukaryotic Translation Termination",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"9","Nonsense Mediated Decay (NMD) independent of the Exon Junction Complex (EJC)",0.00155279118637137,-1.90470604214116,"Exc",2.80888694266422
+"10","Eukaryotic Translation Initiation",0.0015984615153823,-1.89513405612472,"Exc",2.7962978153562
+"11","Cap-dependent Translation Initiation",0.0015984615153823,-1.89513405612472,"Exc",2.7962978153562
+"12","Translation",0.00166666254003861,-1.89731599787766,"Exc",2.77815232568805
+"13","Infectious disease",0.00235506663266325,-1.87533577974989,"Exc",2.62799680072677
+"14","Major pathway of rRNA processing in the nucleolus and cytosol",0.00271738457614991,-1.86790131469883,"Exc",2.56584889397793
+"15","rRNA processing",0.00271738457614991,-1.86790131469883,"Exc",2.56584889397793
+"16","rRNA processing in the nucleus and cytosol",0.00271738457614991,-1.86790131469883,"Exc",2.56584889397793
+"17","Metabolism of RNA",0.0027459886243199,-1.87189309991741,"Exc",2.5613012662272
+"18","Eukaryotic Translation Elongation",0.00434781532183985,-1.90750236306853,"Exc",2.361728911322
+"19","Peptide chain elongation",0.00434781532183985,-1.90750236306853,"Exc",2.361728911322
+"20","Influenza Life Cycle",0.00489129223706983,-1.94430771515887,"Exc",2.31057638887462
+"21","Influenza Viral RNA Transcription and Replication",0.00579708709578646,-1.92396296708154,"Exc",2.2367901747137
+"22","Cellular response to heat stress",0.00973532561194575,-1.81596090270605,"Exc",2.0116495182984
+"23","Influenza Infection",0.00978258447413966,-1.95152328736631,"Exc",2.00954639321064
+"24","Selenocysteine synthesis",0.013179315194327,-1.79465920134497,"Exc",1.88010715537566
+"25","Cellular responses to stress",0.0147825720942555,-1.78264766839816,"Exc",1.83024999427975
+"26","Regulation of HSF1-mediated heat shock response",0.0183527973681509,-1.76449667722738,"Exc",1.73629773037866
+"27","O-linked glycosylation of mucins",0.0224857982204387,2.07684915251206,"Exc",1.64809169085883
+"28","Interleukin-4 and Interleukin-13 signaling",0.025805089086105,-1.74387130137116,"Exc",1.58829463729013
+"29","Cellular responses to external stimuli",0.0307840852698125,-1.72989619853177,"Exc",1.51167374667458
+"30","Regulation of expression of SLITs and ROBOs",0.0333332508007722,-1.7204529053516,"Exc",1.47712233002407
+"31","Regulation of mRNA stability by proteins that bind AU-rich elements",0.0344451920756105,-1.72059488776341,"Exc",1.46287138916281
+"32","Selenoamino acid metabolism",0.0378680689321535,-1.70998415145874,"Exc",1.42172684099729
+"33","RHO GTPases activate PKNs",0.0404550628774317,-1.70241013051171,"Exc",1.39302711948709
+"34","Signaling by ROBO receptors",0.041719845551478,-1.69573574256661,"Exc",1.37965730801792
+"35","The citric acid (TCA) cycle and respiratory electron transport",0.0420947574341767,-1.6975006563052,"Exc",1.37577198870547
+"36","Plasma lipoprotein remodeling",0.0433065289293785,-1.68405858302356,"Exc",1.36344662410272
+"37","Translation initiation complex formation",0.0433900218267396,-1.68597587713941,"Exc",1.36261013140501
+"38","Formation of the ternary complex, and subsequently, the 43S complex",0.0433900218267396,-1.68597587713941,"Exc",1.36261013140501
+"39","Ribosomal scanning and start codon recognition",0.0433900218267396,-1.68597587713941,"Exc",1.36261013140501
+"40","Activation of the mRNA upon binding of the cap-binding complex and eIFs, and subsequent binding to 43S",0.0467668853208158,-1.67633266756929,"Exc",1.33006155318378
+"41","Amino acid transport across the plasma membrane",0.0479618377690458,-1.67255984135648,"Exc",1.31910418425408
+"42","Netrin-1 signaling",0.0117043837749322,-1.95152872508394,"Ast",1.9316514465715
+"43","Major pathway of rRNA processing in the nucleolus and cytosol",0.0485402582527492,-1.70212168295186,"Ast",1.3138979173851
+"44","rRNA processing",0.0485402582527492,-1.70212168295186,"Ast",1.3138979173851
+"45","rRNA processing in the nucleus and cytosol",0.0485402582527492,-1.70212168295186,"Ast",1.3138979173851
+"46","Translation initiation complex formation",1e-07,-2.18952103753099,"Inh",7
+"47","Formation of the ternary complex, and subsequently, the 43S complex",1e-07,-2.18952103753099,"Inh",7
+"48","Ribosomal scanning and start codon recognition",1e-07,-2.18952103753099,"Inh",7
+"49","Activation of the mRNA upon binding of the cap-binding complex and eIFs, and subsequent binding to 43S",1e-07,-2.19834843137753,"Inh",7
+"50","Signaling by ROBO receptors",1e-07,-2.35736021513862,"Inh",7
+"51","Regulation of expression of SLITs and ROBOs",1e-07,-2.406955084874,"Inh",7
+"52","Metabolism of amino acids and derivatives",1e-07,-2.41351150154706,"Inh",7
+"53","Metabolism of RNA",1e-07,-2.45696581532934,"Inh",7
+"54","Selenoamino acid metabolism",1e-07,-2.48290098862767,"Inh",7
+"55","Selenocysteine synthesis",1e-07,-2.48674263262022,"Inh",7
+"56","Infectious disease",1e-07,-2.49873435309835,"Inh",7
+"57","Major pathway of rRNA processing in the nucleolus and cytosol",1e-07,-2.49996025996738,"Inh",7
+"58","rRNA processing",1e-07,-2.49996025996738,"Inh",7
+"59","rRNA processing in the nucleus and cytosol",1e-07,-2.49996025996738,"Inh",7
+"60","Eukaryotic Translation Elongation",1e-07,-2.5401570706975,"Inh",7
+"61","Peptide chain elongation",1e-07,-2.5401570706975,"Inh",7
+"62","Influenza Viral RNA Transcription and Replication",1e-07,-2.54301180426485,"Inh",7
+"63","Translation",1e-07,-2.54328064790653,"Inh",7
+"64","L13a-mediated translational silencing of Ceruloplasmin expression",1e-07,-2.54678713208225,"Inh",7
+"65","Formation of a pool of free 40S subunits",1e-07,-2.54678713208225,"Inh",7
+"66","GTP hydrolysis and joining of the 60S ribosomal subunit",1e-07,-2.54678713208225,"Inh",7
+"67","Nonsense-Mediated Decay (NMD)",1e-07,-2.54678713208225,"Inh",7
+"68","Nonsense Mediated Decay (NMD) enhanced by the Exon Junction Complex (EJC)",1e-07,-2.54678713208225,"Inh",7
+"69","SRP-dependent cotranslational protein targeting to membrane",1e-07,-2.54678713208225,"Inh",7
+"70","Viral mRNA Translation",1e-07,-2.54678713208225,"Inh",7
+"71","Eukaryotic Translation Termination",1e-07,-2.54678713208225,"Inh",7
+"72","Nonsense Mediated Decay (NMD) independent of the Exon Junction Complex (EJC)",1e-07,-2.54678713208225,"Inh",7
+"73","Eukaryotic Translation Initiation",1e-07,-2.54753187730002,"Inh",7
+"74","Cap-dependent Translation Initiation",1e-07,-2.54753187730002,"Inh",7
+"75","Influenza Life Cycle",1e-07,-2.57061585530233,"Inh",7
+"76","Influenza Infection",1e-07,-2.58158402258908,"Inh",7
+"77","Post-translational protein phosphorylation",3.76147611896681e-05,-2.09694933850721,"Inh",4.42464169110489
+"78","Regulation of Insulin-like Growth Factor (IGF) transport and uptake by Insulin-like Growth Factor Binding Proteins (IGFBPs)",0.000109424759824489,-2.04208891822579,"Inh",3.96088439794321
+"79","Cellular responses to stress",0.001593095768033,-1.91460637869409,"Inh",2.7977581160519
+"80","Disease",0.00182270385650506,-1.90780164303725,"Inh",2.73928388753447
+"81","Cellular responses to external stimuli",0.00635271522314395,-1.83745542892764,"Inh",2.19704061259944
+"82","Platelet degranulation",0.00998722740344052,-1.81114881387837,"Inh",2.00055506137479
+"83","Interleukin-4 and Interleukin-13 signaling",0.0114982385783996,-1.79922324725395,"Inh",1.93936868436568
+"84","Axon guidance",0.0129317620007967,-1.78997174914269,"Inh",1.88834229684519
+"85","Response to elevated platelet cytosolic Ca2+",0.0226892239496078,-1.74940224527864,"Inh",1.64418035824317
+"86","Binding and Uptake of Ligands by Scavenger Receptors",0.0292110730799764,-1.72813387477879,"Inh",1.534452488759
+"87","Senescence-Associated Secretory Phenotype (SASP)",0.0323272004738633,-1.71715265812177,"Inh",1.49043190353556
+"88","Metabolism",0.0351864221882142,-1.70928454778415,"Inh",1.45362489067861
+"89","Peptide ligand-binding receptors",0.0363837326416426,-1.70411107441682,"Inh",1.43909274830409
+"90","Amyloid fiber formation",0.0423960152786659,-1.68937190093395,"Inh",1.37267496000656
+"91","Cholesterol biosynthesis",0.0351407718662849,-1.7807610243088,"Mic",1.45418870346717
+"92","HDACs deacetylate histones",1e-07,2.20235364987637,"Oli",7
+"93","Meiotic synapsis",0.00322773218929283,2.13454787584295,"Oli",2.49110250664432
+"94","Meiosis",0.00352116238831945,2.16650186819955,"Oli",2.45331394575491
+"95","Transcriptional regulation by small RNAs",0.00391240265368828,2.14465292866916,"Oli",2.40755645519424
+"96","Gene Silencing by RNA",0.00492962734364724,2.09873038151271,"Oli",2.30718591007668
+"97","RNA Polymerase I Promoter Clearance",0.00570092958108864,2.08067885609618,"Oli",2.24405432344658
+"98","ERCC6 (CSB) and EHMT2 (G9a) positively regulate rRNA expression",0.00586860398053242,2.08539458859489,"Oli",2.23146519613856
+"99","Meiotic recombination",0.00680758061741761,2.00110103521255,"Oli",2.16700720691164
+"100","SIRT1 negatively regulates rRNA expression",0.0071261619763608,2.00561375834188,"Oli",2.14714431043852
+"101","Activated PKN1 stimulates transcription of AR (androgen receptor) regulated genes KLK2 and KLK3",0.0071261619763608,2.00561375834188,"Oli",2.14714431043852
+"102","RNA Polymerase I Promoter Opening",0.0071261619763608,2.00561375834188,"Oli",2.14714431043852
+"103","NoRC negatively regulates rRNA expression",0.00821604557274539,2.01580907605694,"Oli",2.08533716046032
+"104","Negative epigenetic regulation of rRNA expression",0.00821604557274539,2.01580907605694,"Oli",2.08533716046032
+"105","DNA methylation",0.0100418334777999,2.0173005138631,"Oli",1.99818698474142
+"106","RNA Polymerase I Chain Elongation",0.0105634871649584,2.02483902031867,"Oli",1.97619269103525
+"107","Condensation of Prophase Chromosomes",0.0124707834586314,1.95199510503432,"Oli",1.90410626175223
+"108","Packaging Of Telomere Ends",0.0201603807331232,1.88914596945683,"Oli",1.69550127040443
+"109","Deposition of new CENPA-containing nucleosomes at the centromere",0.0258218575143427,1.83300118694263,"Oli",1.58801251965237
+"110","Nucleosome assembly",0.0258218575143427,1.83300118694263,"Oli",1.58801251965237
+"111","Positive epigenetic regulation of rRNA expression",0.0282310738852981,1.83427159889784,"Oli",1.54927260135756
+"112","HATs acetylate histones",0.0297994668789257,1.83432777924235,"Oli",1.52579150550803
+"113","G2/M DNA damage checkpoint",0.0350515710473618,1.7884920379098,"Oli",1.455292511737
+"114","B-WICH complex positively regulates rRNA expression",0.0475612079117932,1.742008848647,"Oli",1.32274712413819
+"115","Axon guidance",1e-07,-1.95447338005511,"Opc",7
+"116","Activation of the mRNA upon binding of the cap-binding complex and eIFs, and subsequent binding to 43S",1e-07,-2.01593655012293,"Opc",7
+"117","Translation initiation complex formation",1e-07,-2.03062765662248,"Opc",7
+"118","Formation of the ternary complex, and subsequently, the 43S complex",1e-07,-2.03062765662248,"Opc",7
+"119","Ribosomal scanning and start codon recognition",1e-07,-2.03062765662248,"Opc",7
+"120","Metabolism of amino acids and derivatives",1e-07,-2.11035869494224,"Opc",7
+"121","Signaling by ROBO receptors",1e-07,-2.15473195516242,"Opc",7
+"122","Metabolism of RNA",1e-07,-2.22776758557139,"Opc",7
+"123","Infectious disease",1e-07,-2.26856325996987,"Opc",7
+"124","Selenoamino acid metabolism",1e-07,-2.28163248112778,"Opc",7
+"125","Regulation of expression of SLITs and ROBOs",1e-07,-2.28618889434742,"Opc",7
+"126","Eukaryotic Translation Initiation",1e-07,-2.30128070175255,"Opc",7
+"127","Cap-dependent Translation Initiation",1e-07,-2.30128070175255,"Opc",7
+"128","Influenza Viral RNA Transcription and Replication",1e-07,-2.30651424267972,"Opc",7
+"129","Translation",1e-07,-2.30746304047469,"Opc",7
+"130","L13a-mediated translational silencing of Ceruloplasmin expression",1e-07,-2.30940892191145,"Opc",7
+"131","Formation of a pool of free 40S subunits",1e-07,-2.30940892191145,"Opc",7
+"132","GTP hydrolysis and joining of the 60S ribosomal subunit",1e-07,-2.30940892191145,"Opc",7
+"133","Nonsense-Mediated Decay (NMD)",1e-07,-2.30940892191145,"Opc",7
+"134","Nonsense Mediated Decay (NMD) enhanced by the Exon Junction Complex (EJC)",1e-07,-2.30940892191145,"Opc",7
+"135","SRP-dependent cotranslational protein targeting to membrane",1e-07,-2.30940892191145,"Opc",7
+"136","Viral mRNA Translation",1e-07,-2.30940892191145,"Opc",7
+"137","Eukaryotic Translation Termination",1e-07,-2.30940892191145,"Opc",7
+"138","Nonsense Mediated Decay (NMD) independent of the Exon Junction Complex (EJC)",1e-07,-2.30940892191145,"Opc",7
+"139","Major pathway of rRNA processing in the nucleolus and cytosol",1e-07,-2.31571907415434,"Opc",7
+"140","rRNA processing",1e-07,-2.31571907415434,"Opc",7
+"141","rRNA processing in the nucleus and cytosol",1e-07,-2.31571907415434,"Opc",7
+"142","Eukaryotic Translation Elongation",1e-07,-2.31767409800512,"Opc",7
+"143","Peptide chain elongation",1e-07,-2.31767409800512,"Opc",7
+"144","Selenocysteine synthesis",1e-07,-2.3187335425247,"Opc",7
+"145","Influenza Life Cycle",1e-07,-2.32816596104169,"Opc",7
+"146","Influenza Infection",1e-07,-2.33184656665274,"Opc",7
+"147","Developmental Biology",0.00143193340025061,-1.83211118132395,"Opc",2.84407718075461
+"148","Transport of inorganic cations/anions and amino acids/oligopeptides",0.00733694466571634,-1.74613943371058,"Opc",2.13448475630545
+"149","Amino acid transport across the plasma membrane",0.0211621678992518,-1.68644133177233,"Opc",1.67443984427127
+"150","Disease",0.0225279754713845,-1.68144161365389,"Opc",1.64727783540056
+"151","Basigin interactions",0.0370070632001913,-1.64803068205609,"Opc",1.43171537820016

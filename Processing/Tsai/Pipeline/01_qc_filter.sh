@@ -3,7 +3,7 @@
 #SBATCH -t 12:00:00
 #SBATCH -n 4
 #SBATCH --mem=32G
-#SBATCH --array=1-476%32
+#SBATCH --array=1-478%32
 #SBATCH --mail-type=FAIL
 
 set -euo pipefail

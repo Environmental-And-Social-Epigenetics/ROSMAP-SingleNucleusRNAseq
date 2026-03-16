@@ -1,0 +1,152 @@
+#!/usr/bin/env Rscript
+
+require(WebGestaltR)
+setwd("/om/scratch/Tue/mabdel03/SocialIsolation")
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tibble)
+require(WebGestaltR)
+
+cell_types <- c("Exc","Ast","Inh","Mic","Oli","Opc")
+for (ct in cell_types) {
+	load(paste0("deseqAnalysisSocIsl",ct,"Fem.rda"))
+	re2 <- resF
+	re2$gene <- rownames(re2)
+	diff.analysis <- re2
+	#VERSION TO GENERATE DATAFRAME. 
+	master.webgestaltR <- vector(mode = "list")
+	GSEA.list <- c("geneontology_Biological_Process_noRedundant","geneontology_Cellular_Component_noRedundant","geneontology_Molecular_Function_noRedundant","pathway_KEGG","pathway_Panther","pathway_Reactome","pathway_Wikipathway","network_Transcription_Factor_target")
+	diff.analysis@listData$rank <- sign(diff.analysis@listData$log2FoldChange)*-log10(diff.analysis@listData$pvalue)
+	gsea.rank <- data.frame(gene = diff.analysis@listData$gene,rank = diff.analysis@listData$rank)
+	gsea.rank <- gsea.rank[order(-gsea.rank$rank),]
+	for (j in 1:length(GSEA.list)){
+	    listname <- paste0(ct,"_",GSEA.list[j])
+	    master.webgestaltR[[listname]] <- WebGestaltR(enrichMethod = "GSEA", 
+	        organism = "hsapiens",
+	        minNum = 10,
+	        fdrThr = 0.2,
+	        enrichDatabase= GSEA.list[j],  
+	        enrichDatabaseType="genesymbol",
+	        interestGene =  gsea.rank,
+	        interestGeneType="genesymbol",
+	        sigMethod = "fdr",
+	        is.output = FALSE)
+	        saveRDS(master.webgestaltR,paste0("overallWebGestaltRResultFem",ct,".rds"))
+	 }
+	saveRDS(master.webgestaltR,paste0("overallWebGestaltRResultFem",ct,".rds"))
+}
+
+all_results <- data.frame()
+
+for(ct in cell_types){
+  # assuming files are in a directory
+  files <- list.files(path="/om/scratch/Tue/mabdel03/SocialIsolation/", 
+                      pattern=paste0("overallWebGestaltRResultFem",ct,".rds"), full.names=TRUE)
+  print(ct)
+  for(f in files){
+    gsea <- readRDS(f)
+    strO <- paste0(ct,"_geneontology_Biological_Process_noRedundant")
+    gsea <- gsea[[strO]]
+    # select relevant columns: gene set, numGenes, pValue
+    gsea <- gsea %>% 
+	  select(description, leadingEdgeNum, pValue) %>% 
+	  mutate(
+	    cellType = ct,
+	    pValue = ifelse(pValue == 0, 0.0000001, pValue)
+	  )
+    all_results <- rbind(all_results, gsea)
+  }
+}
+
+plot_df <- all_results %>%
+  mutate(logpValue = -log10(pValue)) %>%
+  rename(numGenes = leadingEdgeNum)
+
+p <- ggplot(plot_df, aes(x = cellType, y = description)) +
+  geom_point(aes(size = numGenes, color = logpValue)) +
+  scale_color_gradient(low = "blue", high = "red") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8)) +
+  labs(x = "Cell Type", y = "GO Term", color = "-log10(pValue)", size = "number of genes")
+ggsave("tsaiFemaleHeatmap.png", plot = p, width = 10, height = 10, dpi = 300)
+
+
+library(ggplot2)
+
+# Add -log10 of adjusted p-value
+df$logAdjP <- -log10(df$Adj.P.Val)
+
+# Make the dot plot
+ggplot(df, aes(x = Subclass, y = Pathway)) +
+  geom_point(aes(size = GeneCount, color = logAdjP)) +
+  scale_color_gradient(low = "purple", high = "yellow") +
+  scale_size_continuous(range = c(2, 10)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(color = "-log10(Adj.P.Val)", size = "#genes")
+ggsave("tsaiMaleHeatmap.png", plot = p, width = 8, height = 10, dpi = 300)
+
+
+for (ct in cell_types) {
+	load("tsai_deseqAnalysisSocIslOpcFemale.rda")
+
+	GSEA.list <- c("geneontology_Biological_Process_noRedundant","geneontology_Cellular_Component_noRedundant","geneontology_Molecular_Function_noRedundant","pathway_KEGG","pathway_Panther","pathway_Reactome","pathway_Wikipathway","network_Transcription_Factor_target")
+	res <- resF
+	res$gene <- rownames(res)
+	for (i in 1:length(resF@listData$gene)){
+		res@listData$rank[i] <- sign(res@listData$log2FoldChange[i])*-log10(res@listData$pvalue[i])
+		gsea.rank <- data.frame(gene = res@listData$gene,rank = res@listData$rank)
+		gsea.rank <- gsea.rank[order(-gsea.rank$rank),]
+		write.csv(gsea.rank,file = paste0(ct,"_tsai_female_SI_simple_celltype_ranklist.csv"), row.names = FALSE)
+		for (j in 1:length(GSEA.list)){
+			filename <- paste0(ct,"_tsai_female_SI_simple_celltype_",GSEA.list[j])
+			WebGestaltR(enrichMethod = "GSEA", 
+				organism = "hsapiens",
+				minNum = 10,
+				fdrThr = 0.2,
+				enrichDatabase= GSEA.list[j],  
+				enrichDatabaseType="genesymbol",
+				interestGene = 	gsea.rank,
+				interestGeneType="genesymbol",
+				outputDirectory="/om/scratch/Tue/mabdel03/SocialIsolation/GSEA",
+				projectName=filename)
+		}
+	}
+
+}
+
+all_results <- data.frame()
+# cell_types <- c("Exc","Ast","Inh","Mic","Opc")
+
+for(ct in cell_types){
+  # assuming files are in a directory
+  files <- list.files(path="/om/scratch/Tue/mabdel03/SocialIsolation/", 
+                      pattern=paste0("overallWebGestaltRResult",ct,".rds"), full.names=TRUE)
+  print(ct)
+  for(f in files){
+    gsea <- readRDS(f)
+    strO <- "log2FoldChange_geneontology_Biological_Process_noRedundant"
+    gsea <- gsea[[strO]]
+    # select relevant columns: gene set, numGenes, pValue
+    gsea <- gsea %>% 
+	  select(description, leadingEdgeNum, pValue) %>% 
+	  mutate(
+	    cellType = ct,
+	    pValue = ifelse(pValue == 0, 0.0000001, pValue)
+	  )
+    all_results <- rbind(all_results, gsea)
+  }
+}
+
+plot_df <- all_results %>%
+  mutate(logpValue = -log10(pValue)) %>%
+  rename(numGenes = leadingEdgeNum)
+
+p <- ggplot(plot_df, aes(x = cellType, y = description)) +
+  geom_point(aes(size = numGenes, color = logpValue)) +
+  scale_color_gradient(low = "blue", high = "red") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8)) +
+  labs(x = "Cell Type", y = "GO Term", color = "-log10(pValue)", size = "number of genes")
+ggsave("tsaiMaleHeatmap.png", plot = p, width = 10, height = 10, dpi = 300)

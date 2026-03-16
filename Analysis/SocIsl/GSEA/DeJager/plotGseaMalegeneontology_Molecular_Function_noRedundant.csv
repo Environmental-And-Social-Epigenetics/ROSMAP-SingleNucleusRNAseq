@@ -1,0 +1,31 @@
+"","description","FDR","enrich","cellType","logFDR"
+"1","structural constituent of ribosome",1e-07,0.912703149317049,"Exc",7
+"2","rRNA binding",1e-07,0.924883346669296,"Exc",7
+"3","unfolded protein binding",0.00478555936472399,0.871760665057466,"Exc",2.3200672919906
+"4","mRNA binding",0.00496280230415821,0.730282682034892,"Exc",2.30427302480736
+"5","isomerase activity",0.0165899391310432,0.725756469264133,"Exc",1.78015520741148
+"6","heat shock protein binding",0.0232188250658831,0.728918577110392,"Exc",1.63415976049382
+"7","scaffold protein binding",0.0464469307529483,-0.673308556405635,"Exc",1.33304297921821
+"8","transcription corepressor activity",1e-07,0.719817452721617,"Ast",7
+"9","hormone receptor binding",0.0106712032168265,0.713030347406693,"Ast",1.97178660953828
+"10","structural constituent of ribosome",0.0112640478399835,0.625902022568509,"Ast",1.94830551368876
+"11","DNA-binding transcription activator activity, RNA polymerase II-specific",0.0192081657902877,0.563897839294723,"Ast",1.71651410443498
+"12","transcription factor activity, direct ligand regulated sequence-specific DNA binding",0.0228245179915455,0.806125462202588,"Ast",1.64159838513309
+"13","steroid hormone receptor activity",0.0260851634189092,0.792133781044869,"Ast",1.5836064381554
+"14","structural constituent of ribosome",1e-07,0.851678224574029,"Inh",7
+"15","rRNA binding",1e-07,0.857929899869344,"Inh",7
+"16","mRNA binding",0.00785147541890034,0.696881180350534,"Inh",2.10504872464609
+"17","transferase activity, transferring acyl groups",0.0173981557577905,0.636993637196672,"Inh",1.75949678543374
+"18","hijacked molecular function",0.0289077049514058,0.650151048051416,"Inh",1.53898638658964
+"19","structural constituent of ribosome",1e-07,0.831440010791584,"Mic",7
+"20","ubiquitin-like protein ligase binding",0.00561355824296239,0.654598539094955,"Mic",2.25076176701196
+"21","antigen binding",0.00751815836111035,0.7778127477175,"Mic",2.12388853062646
+"22","rRNA binding",0.00781888469555476,0.807639693459452,"Mic",2.10685519132768
+"23","organic acid binding",0.0110667291075544,0.643718069741766,"Mic",1.95598072062498
+"24","transcription factor activity, direct ligand regulated sequence-specific DNA binding",0.0120290533777766,0.848755684413954,"Mic",1.91976854797053
+"25","DNA-binding transcription activator activity, RNA polymerase II-specific",0.0353997856545996,0.571200012544725,"Mic",1.45099936761564
+"26","isomerase activity",0.03688689509218,-0.7408851775352,"Mic",1.43312789942441
+"27","steroid hormone receptor activity",0.0445074974977732,0.805260679127492,"Mic",1.35156682390354
+"28","carbohydrate transmembrane transporter activity",0.0446411536464152,0.837188640732352,"Mic",1.35026459059829
+"29","hormone receptor binding",0.0477553419097729,0.67033129425661,"Mic",1.32097804120742
+"30","structural constituent of ribosome",1e-07,-0.683415987340616,"Opc",7

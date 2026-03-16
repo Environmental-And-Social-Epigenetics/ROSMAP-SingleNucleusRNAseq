@@ -1,0 +1,348 @@
+library(edgeR)
+library(zellkonverter)
+library(SingleCellExperiment)
+library(magrittr)
+library(data.table) 
+library(ruvIIInb)
+library(scran)
+library(igraph)
+library(patchwork)
+library(ggplot2)
+library(RColorBrewer)
+plots <- list()
+#loading in SCE object
+sce <- readH5AD("totalAdataAnno3D.h5ad",raw = TRUE)  
+
+cell_types <- c("Exc","Inh","Ast","Mic","Oli","Opc")
+
+for (ct in cell_types) {
+	#subsetting for cell type
+	if (ct == "Exc"){
+		sceNew <- sce[, colData(sce)$cell_type %in% c("Ex_L4_5", "Ex_L5_6", "Ex_L5_6_CC", "Ex_L2_3", "Ex_L4","Ex_L5")]
+	} else if (ct == "Inh"){
+		sceNew <- sce[, colData(sce)$cell_type %in% c("In_VIP", "In_PV (Basket)", "In_PV (Chandelier)", "In_SST", "In_Rosehip")]
+	} else if (ct == "Opc"){
+		sceNew <- sce[, colData(sce)$cell_type == "OPC"]
+	} else {
+		sceNew <- sce[, colData(sce)$cell_type == ct]
+	}
+
+	assayNames(sceNew)[assayNames(sceNew) == "X"] <- "counts"
+
+	#barcode column! 
+	colData(sceNew)$barcode <- colnames(sceNew) 
+
+	#subsetting patients based on cognitive status, merging metadata attributes with sce patient IDs
+	library(dplyr)
+	data <- read.csv("dataset_652_basic_03-23-2022.csv") %>%
+	  rename(patient_id = projid)
+	meta_df <- as.data.frame(colData(sceNew))
+	meta_df <- merge(meta_df, data, by = "patient_id", all.x = TRUE)
+
+	meta_df <- meta_df[match(colData(sceNew)$barcode, meta_df$barcode), ]
+	colData(sceNew) <- DataFrame(meta_df)
+	# sceNew <- sceNew[, colData(sceNew)$niareagansc %in% c(3, 4)]
+
+	#subset for females and males
+	sceF <- sceNew[, colData(sceNew)$msex == 0]
+	sceM <- sceNew[, colData(sceNew)$msex == 1]
+
+	#raw counts!
+	raw_exp <- altExp(sceF, "raw")
+	colData(raw_exp) <- colData(sceF)
+	raw_exp <- as(raw_exp, "SingleCellExperiment")
+	rownames(raw_exp) <- rownames(sceF)
+	assayNames(raw_exp)[assayNames(raw_exp) == "X"] <- "counts"
+	assayNames(sceF)[assayNames(sceF) == "X"] <- "counts"
+
+	#pseudobulking
+	pseudo_countsF <- aggregateAcrossCells(raw_exp, ids = colData(raw_exp)$patient_id)
+	colData(pseudo_countsF)$age_death <- scale(colData(pseudo_countsF)$age_death)
+	colData(pseudo_countsF)$pmi <- scale(colData(pseudo_countsF)$pmi)
+	saveRDS(pseudo_countsF, file = paste0("pseudobulk_female_",ct,".rds"))
+
+	counts_mat <- assay(pseudo_countsF, "counts")
+	cpm <- colSums(counts_mat)
+	norm_counts <- sweep(counts_mat, 2, cpm, FUN = "/") * 1e6
+	out_file <- paste0("dejpseudobulk_female_", ct, ".tsv")
+	write.table(norm_counts,file = out_file,sep = "\t",quote = FALSE,col.names = NA)
+	
+	d0 <- DGEList(assays(pseudo_countsF)$counts)
+	d0 <- calcNormFactors(d0)
+
+	cutoff <- 1
+	drop <- which(apply(edgeR::cpm(d0), 1, max) < cutoff)
+	d <- d0
+	#[-drop,] 
+
+	mm <- model.matrix(~0 + age_death + pmi + social_isolation_avg + niareagansc, data = as.data.frame(colData(pseudo_countsF)))
+
+	y <- voom(d, mm, plot = T)
+
+	fit <- lmFit(y, mm)
+
+	contr <- makeContrasts(SIA = social_isolation_avg, levels = colnames(coef(fit)))
+
+	fit.cont <- contrasts.fit(fit, contr)
+
+	fit.eb   <- eBayes(fit.cont)
+
+	tt <- topTable(fit.eb, coef = "SIA", number = Inf)
+	write.csv(tt, file =  paste0("limma_SIA_resultsFem",ct,".csv"), row.names = TRUE)
+
+	library(DESeq2)
+	#running DESeq2
+	ddsF <- DESeqDataSetFromMatrix(
+	  countData = assay(pseudo_countsF),  # or `counts_matrix`
+	  colData = colData(pseudo_countsF),
+	  design = ~ age_death + pmi + social_isolation_avg + niareagansc
+	)
+
+	ddsF <- DESeq(ddsF)
+	resF <- results(ddsF, name = "social_isolation_avg")
+	save(resF, file = paste0("./", "deseqAnalysisSocIsl",ct,"Fem", ".rda"))
+
+	#raw counts!
+	raw_exp <- altExp(sceM, "raw")
+	raw_exp <- as(raw_exp, "SingleCellExperiment")
+	colData(raw_exp) <- colData(sceM)
+	rownames(raw_exp) <- rownames(sceM)
+	assayNames(raw_exp)[assayNames(raw_exp) == "X"] <- "counts"
+	assayNames(sceM)[assayNames(sceM) == "X"] <- "counts"
+
+	#pseudobulking
+	pseudo_countsM <- aggregateAcrossCells(raw_exp, ids = colData(raw_exp)$patient_id)
+	print(colData(pseudo_countsM)$social_isolation_avg)
+	colData(pseudo_countsM)$age_death <- scale(colData(pseudo_countsM)$age_death)
+	colData(pseudo_countsM)$pmi <- scale(colData(pseudo_countsM)$pmi)
+	saveRDS(pseudo_countsM, file = paste0("pseudobulk_male_",ct,".rds"))
+
+	counts_mat <- assay(pseudo_countsM, "counts")
+	cpm <- colSums(counts_mat)
+	norm_counts <- sweep(counts_mat, 2, cpm, FUN = "/") * 1e6
+	out_file <- paste0("dejpseudobulk_male_", ct, ".tsv")
+	write.table(norm_counts,file = out_file,sep = "\t",quote = FALSE,col.names = NA)
+
+	library(edgeR)
+
+	d0 <- DGEList(assays(pseudo_countsM)$counts)
+	d0 <- calcNormFactors(d0)
+
+	cutoff <- 1
+	drop <- which(apply(edgeR::cpm(d0), 1, max) < cutoff)
+	d <- d0
+	#[-drop,] 
+
+	mm <- model.matrix(~0 + age_death + pmi + social_isolation_avg + niareagansc, data = as.data.frame(colData(pseudo_countsM)))
+
+	y <- voom(d, mm, plot = T)
+
+	fit <- lmFit(y, mm)
+
+	contr <- makeContrasts(SIA = social_isolation_avg, levels = colnames(coef(fit)))
+
+	fit.cont <- contrasts.fit(fit, contr)
+
+	fit.eb   <- eBayes(fit.cont)
+
+	tt <- topTable(fit.eb, coef = "SIA", number = Inf)
+	write.csv(tt, file =  paste0("limma_SIA_resultsMale",ct,".csv"), row.names = TRUE)
+
+	#running DESeq2
+	ddsM <- DESeqDataSetFromMatrix(
+	  countData = assay(pseudo_countsM),  # or `counts_matrix`
+	  colData = colData(pseudo_countsM),
+	  design = ~ age_death + pmi + niareagansc + social_isolation_avg
+	)
+	#age_death + pmi +  
+	ddsM <- DESeq(ddsM)
+	resM <- results(ddsM, name = "social_isolation_avg")
+	save(resM, file = paste0("./", "deseqAnalysisSocIsl",ct,"Male", ".rda"))
+	print(ct)
+	print(resM["SREBF2",])
+
+	norm_countsM <- counts(ddsM, normalized = TRUE)
+	norm_countsF <- counts(ddsF, normalized = TRUE)
+
+	gene_list <- c("SCD", "LDLR", "STARD4", "ACAT2", "FDFT1", "LSS", "MMAB", "MVK", 
+				   "DHCR24", "SREBF2", "INSIG1", "FDPS", "HMGCR", "MSMO1", "SQLE", 
+				   "MVD", "IDI1", "HSD17B7", "HMGCS1", "ZNF730", "SC5D")
+	avg_exprM <- colMeans(norm_countsM[gene_list, , drop = FALSE])
+	yM <- colData(pseudo_countsM)$social_isolation_avg
+	subsettedNorm <- norm_countsM[gene_list, , drop = FALSE]
+
+
+	exprM <- as.numeric(norm_countsM["SREBF2", , drop = FALSE])
+	exprF <- as.numeric(norm_countsF["SREBF2", , drop = FALSE])
+	avg_exprF <- colMeans(norm_countsF[gene_list, , drop = FALSE])
+	yF <- colData(pseudo_countsF)$social_isolation_avg
+	png(paste0("avgExpr_vs_socialIsolation_Stacked_", ct, ".png"), width = 800, height = 1200)
+	par(mfrow = c(2, 1)) 
+
+	model <- lm(avg_exprM ~ yM)
+	r2 <- summary(model)$r.squared
+	p_val <- summary(model)$coefficients[2, 4]
+
+	plot(yM, avg_exprM,
+	     xlab = "Social Isolation Avg",
+	     ylab = "Average Expression",
+	     main = paste("Male -", ct),
+	     pch = 16, col = "blue")
+	abline(lm(avg_exprM ~ yM), col = "red", lwd = 2)  # Fit line
+
+	text(x = min(yM), y = max(avg_exprM),
+     labels = paste0("R² = ", round(r2, 3), 
+                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+     adj = c(0, 1), cex = 0.9)
+
+	model <- lm(avg_exprF ~ yF)
+	r2 <- summary(model)$r.squared
+	p_val <- summary(model)$coefficients[2, 4]
+
+	plot(yF, avg_exprF,
+	     xlab = "Social Isolation Avg",
+	     ylab = "Average Expression",
+	     main = paste("Female -", ct),
+	     pch = 16, col = "purple")
+	abline(lm(avg_exprF ~ yF), col = "red", lwd = 2)  # Fit line
+	text(x = min(yF), y = max(avg_exprF),
+     labels = paste0("R² = ", round(r2, 3), 
+                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+     adj = c(0, 1), cex = 0.9)
+	dev.off()
+
+	data_to_saveF <- rbind("SREBF2 expression" = exprF,"M20 Expression" = avg_exprF,"Social Isolation Avg" = yF)
+	data_to_saveM <- rbind("SREBF2 expression" = exprM,"M20 Expression" = avg_exprM,"Social Isolation Avg" = yM)
+	write.csv(data_to_saveF, file = paste0("dejagerDataF",ct,".csv"), row.names = TRUE)
+	write.csv(data_to_saveM, file = paste0("dejagerDataM",ct,".csv"), row.names = TRUE)
+
+  modelM <- lm(avg_exprM ~ yM)
+  r2M <- summary(modelM)$r.squared
+  p_valM <- summary(modelM)$coefficients[2, 4]
+	 pM <- ggplot(data.frame(x=yM, y=avg_exprM), aes(x, y)) +
+    geom_point(color="blue") +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(x="Social Isolation Avg", y="SREBF2 Expression",
+         title=paste("Male -", ct)) +
+    annotate("text", x=min(yM), y=max(avg_exprM),
+             label=paste0("R² = ", round(r2M, 3),
+                          "\nP = ", format.pval(p_valM, digits=3, eps=.001)),
+             hjust=0, vjust=1)
+
+  modelF <- lm(avg_exprF ~ yF)
+  r2F <- summary(modelF)$r.squared
+  p_valF <- summary(modelF)$coefficients[2, 4]
+
+  pF <- ggplot(data.frame(x=yF, y=avg_exprF), aes(x, y)) +
+    geom_point(color="purple") +
+    geom_smooth(method="lm", se=FALSE, color="red") +
+    labs(x="Social Isolation Avg", y="SREBF2 Expression",
+         title=paste("Female -", ct)) +
+    annotate("text", x=min(yF), y=max(avg_exprF),
+             label=paste0("R² = ", round(r2F, 3),
+                          "\nP = ", format.pval(p_valF, digits=3, eps=.001)),
+             hjust=0, vjust=1)
+
+	png(paste0("SrebF2Pic_", ct, ".png"), width = 800, height = 1200)
+	par(mfrow = c(2, 1)) 
+
+	model <- lm(exprM ~ yM)
+	r2 <- summary(model)$r.squared
+	p_val <- summary(model)$coefficients[2, 4]
+
+	plot(yM, exprM,
+	     xlab = "Social Isolation Avg",
+	     ylab = "SREBF2 Expression",
+	     main = paste("Male -", ct),
+	     pch = 16, col = "blue")
+	abline(model, col = "red", lwd = 2)
+	text(x = min(yM), y = max(exprM),
+     labels = paste0("R² = ", round(r2, 3), 
+                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+     adj = c(0, 1), cex = 0.9)
+
+	model <- lm(exprF ~ yF)
+	r2 <- summary(model)$r.squared
+	p_val <- summary(model)$coefficients[2, 4]
+
+	plot(yF, exprF,
+	     xlab = "Social Isolation Avg",
+	     ylab = "SREBF2 Expression",
+	     main = paste("Female -", ct),
+	     pch = 16, col = "blue")
+	abline(model, col = "red", lwd = 2)
+	text(x = min(yF), y = max(exprF),
+     labels = paste0("R² = ", round(r2, 3), 
+                     "\nP = ", format.pval(p_val, digits = 3, eps = .001)),
+     adj = c(0, 1), cex = 0.9)
+	dev.off()
+
+	stacked <- pM / pF  
+	plots[[ct]] <- stacked
+	library(RRHO)
+	library(RRHO2)
+	dfMale <- read.csv(paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.male.tsv"), sep = "\t")
+	dfFemale <- read.csv(paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.female.tsv"), sep = "\t")
+
+	print(str(resF))
+	print(str(dfFemale))
+	dfFemale$signed_stat <- sign(dfFemale$log2FoldChange) * (-log10(dfFemale$pvalue))
+	genes1 <- setNames(dfFemale$signed_stat, dfFemale$gene)
+	genes1 <- sort(genes1, decreasing = TRUE)
+	resF$signed_stat <- sign(resF@listData$log2FoldChange) * (-log10(resF@listData$pvalue))
+	genes2 <- setNames(resF@listData$signed_stat, resF@rownames)
+	genes2 <- sort(genes2, decreasing = TRUE)
+
+	common_genes <- intersect(names(genes1), names(genes2))
+	genes1_sub <- genes1[common_genes]
+	genes2_sub <- genes2[common_genes]
+
+	str(genes2)
+	genes1_df <- data.frame(Gene = names(genes1_sub), logFC = genes1_sub)
+	genes2_df <- data.frame(Gene = names(genes2_sub), logFC = genes2_sub)
+	genes1_df$logFC <- as.numeric(genes1_df$logFC)
+	genes2_df$logFC <- as.numeric(genes2_df$logFC)
+
+	RRHO_objF <-  RRHO2_initialize(genes1_df, genes2_df, labels = c("tsai", "dejager"), log10.ind=FALSE)
+
+
+	dfMale$signed_stat <- sign(dfMale$log2FoldChange) * (-log10(dfMale$pvalue))
+	genes1M <- setNames(dfMale$signed_stat, dfMale$gene)
+	genes1M <- sort(genes1M, decreasing = TRUE)
+	resM$signed_stat <- sign(resM@listData$log2FoldChange) * (-log10(resM@listData$pvalue))
+	genes2M <- setNames(resM@listData$signed_stat, resM@rownames)
+	genes2M <- sort(genes2M, decreasing = TRUE)
+
+	common_genes <- intersect(names(genes1M), names(genes2M))
+	genes1_subM <- genes1M[common_genes]
+	genes2_subM <- genes2M[common_genes]
+
+	# Example
+
+	genes1_dfM <- data.frame(Gene = names(genes1_subM), logFC = genes1_subM)
+	genes2_dfM <- data.frame(Gene = names(genes2_subM), logFC = genes2_subM)
+
+	RRHO_objM <-  RRHO2_initialize(genes1_dfM, genes2_dfM, labels = c("tsai", "dejager"), log10.ind=FALSE)
+	max_val_M <- max(RRHO_objM$hypermat, na.rm = TRUE)
+	max_val_F <- max(RRHO_objF$hypermat, na.rm = TRUE)
+
+	global_max <- max(max_val_M, max_val_F)
+	ncol <- 100
+	breaks <- seq(0, global_max, length.out = ncol + 1)
+	mycols <- colorRampPalette(rev(brewer.pal(11, "RdYlBu")))(ncol)
+
+	png(paste0("RRHO_heatmap",ct,"F.png"), width = 5, height = 5, units = "in", res = 600)  
+	par(mar = c(3, 3, 2, 2), 
+    cex = 0.6,        
+    mgp = c(1.5, 0.5, 0))  
+	RRHO2_heatmap(RRHO_objF)
+	dev.off()
+	png(paste0("RRHO_heatmap",ct,"M.png"), width = 5, height = 5, units = "in", res = 600)  
+	par(mar = c(3, 3, 2, 2), 
+    cex = 0.6,        
+    mgp = c(1.5, 0.5, 0))  
+	RRHO2_heatmap(RRHO_objM)
+	dev.off()
+}
+big_plot <- wrap_plots(plots, ncol=6)
+ggsave("all_celltypes_plotsSREBF2.png", big_plot, width=18, height=6, dpi=300)

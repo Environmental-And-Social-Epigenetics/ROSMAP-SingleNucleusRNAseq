@@ -1,0 +1,90 @@
+#!/usr/bin/env Rscript
+
+require(WebGestaltR)
+setwd("/om/scratch/Tue/mabdel03/SocialIsolation/Tsai")
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tibble)
+
+cell_types <- c("Exc","Ast","Inh","Mic","Oli","Opc")
+
+types <- c("geneontology_Biological_Process_noRedundant","geneontology_Cellular_Component_noRedundant","geneontology_Molecular_Function_noRedundant","pathway_KEGG","pathway_Panther","pathway_Reactome","pathway_Wikipathway","network_Transcription_Factor_target")
+
+for(type in types){
+	all_results <- data.frame()
+	for(ct in cell_types){
+	  # assuming files are in a directory
+	  files <- list.files(path="/om/scratch/Tue/mabdel03/SocialIsolation/Tsai/", 
+	                      pattern=paste0("overallWebGestaltRResultFem",ct,".rds"), full.names=TRUE)
+	  print(ct)
+	  for(f in files){
+	    gsea <- readRDS(f)
+	    strO <- paste0(ct,"_",type)
+		    if (strO %in% names(gsea)) {
+			    gsea <- gsea[[strO]]
+			    # select relevant columns: gene set, numGenes, pValue
+			    gsea <- gsea %>% 
+				  select(description, leadingEdgeNum, pValue) %>% 
+				  mutate(
+				    cellType = ct,
+				    pValue = ifelse(pValue == 0, 0.0000001, pValue)
+				  )
+			    all_results <- rbind(all_results, gsea)
+			}  
+		}
+	}
+
+	plot_df <- all_results %>%
+	  mutate(logpValue = -log10(pValue)) %>%
+	  rename(numGenes = leadingEdgeNum)
+	p <- ggplot(plot_df, aes(x = cellType, y = description)) +
+	  geom_point(aes(size = numGenes, color = logpValue)) +
+	  scale_color_gradient(low = "blue", high = "red") +
+	  theme_bw() +
+	  theme(axis.text.y = element_text(size = 8)) +
+	  labs(x = "Cell Type", y = "GO Term", color = "-log10(pValue)", size = "number of genes")
+	ggsave(paste0("tsaiFemaleHeatmap",type,".png"), plot = p, width = 10, height = 10, dpi = 300)
+
+}
+# go thru all 7, see what changes stand out
+#scenic
+#m20 look to see whcih are significant
+
+
+for(type in types){
+	all_results <- data.frame()
+	for(ct in cell_types){
+	  # assuming files are in a directory
+	  files <- list.files(path="/om/scratch/Tue/mabdel03/SocialIsolation/Tsai/", 
+	                      pattern=paste0("overallWebGestaltRResult",ct,".rds"), full.names=TRUE)
+	  print(ct)
+	  for(f in files){
+	    gsea <- readRDS(f)
+	    strO <- paste0(ct,"_",type)
+		    if (strO %in% names(gsea)) {
+			    gsea <- gsea[[strO]]
+			    # select relevant columns: gene set, numGenes, pValue
+			    gsea <- gsea %>% 
+				  select(description, leadingEdgeNum, pValue) %>% 
+				  mutate(
+				    cellType = ct,
+				    pValue = ifelse(pValue == 0, 0.0000001, pValue)
+				  )
+			    all_results <- rbind(all_results, gsea)
+			} 
+		}
+	}
+
+	plot_df <- all_results %>%
+	  mutate(logpValue = -log10(pValue)) %>%
+	  rename(numGenes = leadingEdgeNum)
+	p <- ggplot(plot_df, aes(x = cellType, y = description)) +
+	  geom_point(aes(size = numGenes, color = logpValue)) +
+	  scale_color_gradient(low = "blue", high = "red") +
+	  theme_bw() +
+	  theme(axis.text.y = element_text(size = 8)) +
+	  labs(x = "Cell Type", y = "GO Term", color = "-log10(pValue)", size = "number of genes")
+	ggsave(paste0("tsaiMaleHeatmap",type,".png"), plot = p, width = 10, height = 10, dpi = 300)
+
+}

@@ -1,0 +1,171 @@
+library(edgeR)
+library(zellkonverter)
+library(SingleCellExperiment)
+library(magrittr)
+library(data.table) 
+library(ruvIIInb)
+library(scran)
+library(igraph)
+
+#loading in SCE object
+sce <- readH5AD("totalAdataAnno040825.h5ad",raw = TRUE)  
+
+cell_types <- c("Exc","Ast","Inh","Mic","Oli","OPC")
+#
+for (ct in cell_types) {
+	#subsetting for cell type
+	sceNew <- sce[, colData(sce)$cell_type == "Mic"]
+	if (ct == "Exc"){
+		sceNew <- sce[, colData(sce)$cell_type %in% c("Ex_L4_5", "Ex_L5_6", "Ex_L5_6_CC", "Ex_L2_3", "Ex_L4","Ex_L5")]
+	} else if (ct == "Inh"){
+		sceNew <- sce[, colData(sce)$cell_type %in% c("In_VIP", "In_PV (Basket)", "In_SST", "In_Rosehip")]
+	} else {
+		sceNew <- sce[, colData(sce)$cell_type == ct]
+	}
+	print("hiii")
+	#barcode column! 
+	print(str(sceNew))
+	colData(sceNew)$barcode <- colnames(sceNew) 
+
+	#subsetting patients based on cognitive status
+	library(dplyr)
+
+	data <- read.csv("dataset_652_basic_03-23-2022.csv") %>%
+	  rename(patient_id = projid)
+	print("hiii1")
+
+	meta_df <- as.data.frame(colData(sceNew))
+	meta_df <- merge(meta_df, data, by = "patient_id", all.x = TRUE)
+
+	meta_df <- meta_df[match(colData(sceNew)$barcode, meta_df$barcode), ]
+	colData(sceNew) <- DataFrame(meta_df)
+	print("hiii2")
+	print(sceNew)
+
+	#subset for females and males
+
+	sceF <- sceNew[, colData(sceNew)$msex == 0]
+	sceM <- sceNew[, colData(sceNew)$msex == 1]
+	print("hiii3")
+
+	raw_exp <- altExp(sceF, "raw")
+	colData(raw_exp) <- colData(sceF)
+	raw_exp <- as(raw_exp, "SingleCellExperiment")
+	var_names <- read.csv("var_names.csv", stringsAsFactors = FALSE)
+	rownames(raw_exp) <- var_names$gene
+	print("hiii4")
+	#subsetting for the filtered genes
+
+	assayNames(raw_exp)[assayNames(raw_exp) == "X"] <- "counts"
+
+	pseudo_countsF <- aggregateAcrossCells(raw_exp, ids = colData(raw_exp)$patient_id)
+
+	library(DESeq2)
+
+	ddsF <- DESeqDataSetFromMatrix(
+	  countData = assay(pseudo_countsF),  # or `counts_matrix`
+	  colData = colData(pseudo_countsF),
+	  design = ~ niareagansc + age_death + pmi + social_isolation_avg
+	)
+
+	ddsF <- DESeq(ddsF)
+	resF <- results(ddsF, name = "social_isolation_avg")
+
+	save(resF, file = paste0("./", "deseqAnalysisSocIsl",ct,"Fem", ".rda"))
+
+
+	raw_exp <- altExp(sceM, "raw")
+	raw_exp <- as(raw_exp, "SingleCellExperiment")
+	colData(raw_exp) <- colData(sceM)
+	var_names <- read.csv("var_names.csv", stringsAsFactors = FALSE)
+	rownames(raw_exp) <- var_names$gene
+
+	#subsetting for the filtered genes
+
+	assayNames(raw_exp)[assayNames(raw_exp) == "X"] <- "counts"
+
+	pseudo_countsM <- aggregateAcrossCells(raw_exp, ids = colData(raw_exp)$patient_id)
+
+	ddsM <- DESeqDataSetFromMatrix(
+	  countData = assay(pseudo_countsM),  # or `counts_matrix`
+	  colData = colData(pseudo_countsM),
+	  design = ~ niareagansc + age_death + pmi + social_isolation_avg
+	)
+
+	ddsM <- DESeq(ddsM)
+	resM <- results(ddsM, name = "social_isolation_avg")
+
+	save(resM, file = paste0("./", "deseqAnalysisSocIsl",ct,"Male", ".rda"))
+
+	gene_list <- c("SCD", "LDLR", "STARD4", "ACAT2", "FDFT1", "LSS", "MMAB", "MVK", 
+				   "DHCR24", "SREBF2", "INSIG1", "FDPS", "HMGCR", "MSMO1", "SQLE", 
+				   "MVD", "IDI1", "HSD17B7", "HMGCS1", "ZNF730", "SC5D")
+
+
+	avg_exprM <- colMeans(assays(pseudo_countsM)$counts[gene_list, , drop = FALSE])
+	avg_exprF <- colMeans(assays(pseudo_countsF)$counts[gene_list, , drop = FALSE])
+	yM <- colData(pseudo_countsM)$social_isolation_avg
+	yF <- colData(pseudo_countsF)$social_isolation_avg
+	png(paste0("avgExpr_vs_socialIsolation_Stacked_", ct, ".png"), width = 800, height = 1200)
+	par(mfrow = c(2, 1))  # 2 rows, 1 column
+
+	plot(avg_exprM, yM,
+	     xlab = "Social Isolation Avg",
+	     ylab = "Average Expression",
+	     main = paste("Male -", ct),
+	     pch = 16, col = "blue")
+	abline(lm(yM ~ avg_exprM), col = "red", lwd = 2)  # Fit line
+	plot(avg_exprF, yF,
+	     xlab = "Social Isolation Avg",
+	     ylab = "Average Expression",
+	     main = paste("Female -", ct),
+	     pch = 16, col = "purple")
+	abline(lm(yF ~ avg_exprF), col = "red", lwd = 2)  # Fit line
+	dev.off()
+
+	library(RRHO)
+	library(RRHO2)
+	dfMale <- read.csv(paste0("Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.male.tsv"), sep = "\t")
+	dfFemale <- read.csv(paste0("Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.female.tsv"), sep = "\t")
+	dfFemale$signed_stat <- dfFemale$log2FoldChange
+	genes1 <- setNames(dfFemale$signed_stat, dfFemale$gene)
+	genes1 <- sort(genes1, decreasing = TRUE)
+	resF$signed_stat <- resF$log2FoldChange
+	genes2 <- setNames(resF$signed_stat, resF$gene)
+	genes2 <- sort(genes2, decreasing = TRUE)
+	common_genes <- intersect(names(genes1), names(genes2))
+	genes1_sub <- genes1[common_genes]
+	genes2_sub <- genes2[common_genes]
+	str(genes2)
+	genes1_df <- data.frame(Gene = names(genes1_sub), logFC = genes1_sub)
+	genes2_df <- data.frame(Gene = names(genes2_sub), logFC = genes2_sub)
+
+	RRHO_obj <-  RRHO2_initialize(genes1_df, genes2_df, labels = c("tsai", "dejager"), log10.ind=TRUE)
+
+	print(RRHO_obj$genelist_dd$gene_list_overlap_dd)
+	print(RRHO_obj$genelist_uu$gene_list_overlap_uu)
+
+	png(paste0("RRHO_heatmap",ct,".png"), width=800, height=800)
+	RRHO2_heatmap(RRHO_obj)
+	dev.off()
+
+	dfMale$signed_stat <- dfMale$log2FoldChange
+	genes1M <- setNames(dfMale$signed_stat, dfMale$gene)
+	genes1M <- sort(genes1M, decreasing = TRUE)
+	resM$signed_stat <- resM$log2FoldChange
+	genes2M <- setNames(resM$signed_stat, resM$gene)
+	genes2M <- sort(genes2M, decreasing = TRUE)
+
+	common_genes <- intersect(names(genes1M), names(genes2M))
+	genes1_subM <- genes1M[common_genes]
+	genes2_subM <- genes2M[common_genes]
+	genes1_dfM <- data.frame(Gene = names(genes1_subM), logFC = genes1_subM)
+	genes2_dfM <- data.frame(Gene = names(genes2_subM), logFC = genes2_subM)
+	RRHO_objM <-  RRHO2_initialize(genes1_dfM, genes2_dfM, labels = c("tsai", "dejager"), log10.ind=TRUE)
+	png(paste0("RRHO_heatmap",ct,"M.png"), width=800, height=800)
+	RRHO2_heatmap(RRHO_objM)
+	dev.off()
+}
+
+
+#Make figure

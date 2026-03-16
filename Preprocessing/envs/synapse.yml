@@ -1,0 +1,13 @@
+name: synapse_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.10
+  - pandas>=2.0
+  - pip
+  - pip:
+      - synapseclient>=4.0
+# After creating the environment, authenticate:
+#   synapse login --auth-token <YOUR_PERSONAL_ACCESS_TOKEN>
+# Or set: export SYNAPSE_AUTH_TOKEN=<token>

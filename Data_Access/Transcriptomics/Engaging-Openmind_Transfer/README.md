@@ -13,10 +13,10 @@ retries, checkpointing, and parallelism automatically.
 
 ## Endpoint IDs
 
-| Cluster   | Endpoint Name   | UUID                                   |
-|-----------|----------------|----------------------------------------|
-| Openmind  | mithpc#openmind | `cbc6f8da-d37e-11eb-bde9-5111456017d9` |
-| Engaging  | mithpc#engaging | `c52fcff2-761c-11eb-8cfc-cd623f92e1c0` |
+| Cluster   | Endpoint Name   | UUID                                   | Status |
+|-----------|----------------|----------------------------------------|--------|
+| Openmind  | mithpc#openmind | `cbc6f8da-d37e-11eb-bde9-5111456017d9` | Decommissioned March 2026 |
+| Engaging  | MIT ORCD Engaging Collection | `ec54b570-cac5-47f7-b2a1-100c2078686f` | Active |
 
 To find endpoint UUIDs: `globus endpoint search <NAME>`
 

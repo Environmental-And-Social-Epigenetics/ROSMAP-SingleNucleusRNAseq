@@ -37,7 +37,7 @@ DeJager_Data/Processing_Outputs/
 - Output: `{library}_qc.h5ad`
 
 **Patient ID assignment** (DeJager-specific):
-- For multiplexed libraries: cell barcodes are mapped to patient IDs via `cell_to_patient_assignmentsFinal0.csv`
+- For multiplexed libraries: cell barcodes are mapped to patient IDs via the patient map CSV (see [Obtaining the Patient Map](#obtaining-the-patient-map); two versions exist: `Final0` and `Final1`)
 - For "alone" libraries (suffix `-alone`): the R-number is extracted from the library name and mapped to a patient ID via `patient_id_overrides.json`
 - Cells without a patient ID mapping are dropped
 
@@ -88,6 +88,39 @@ Stage 3 processing steps:
 | Annotation | `decoupler.run_ora` | Markers: Mohammadi 2020 PFC reference; `use_raw=False`; top-1 cell type per `leiden_res0_5` cluster |
 
 ## Quick Start
+
+> **STATUS (March 2026):** The DeJager processing pipeline has NOT been run yet.
+> CellBender outputs (131 directories) and CellRanger outputs (47 libraries) have
+> been transferred to Engaging and are ready to process. See the Engaging Quick
+> Start below.
+
+### Quick Start on Engaging
+
+```bash
+# 1. SSH to Engaging
+ssh <Kerberos ID>@orcd-login003.mit.edu
+
+# 2. Clone and configure
+git clone <repo-url> && cd ROSMAP-SingleNucleusRNAseq
+cp config/paths.local.sh.template config/paths.local.sh
+# Edit paths.local.sh:
+#   DATA_ROOT → your project directory on Engaging
+#   DEJAGER_PREPROCESSED → /orcd/data/lhtsai/001/mabdel03/ROSMAP_Data/Single_Nucleus/DeJager/Cellbender_Output
+#   DEJAGER_PATIENT_MAP → /home/nkhera/orcd/pool/WGS/cell_to_patient_assignmentsFinal1.csv
+# (or symlink the Engaging data to the default paths)
+
+# 3. Create conda environments
+bash setup/install_envs.sh
+
+# 4. Verify prerequisites
+bash config/preflight.sh dejager-stage1
+
+# 5. Run the full pipeline
+cd Processing/DeJager/Pipeline
+./submit_pipeline.sh all
+```
+
+### General Quick Start
 
 Run the entire pipeline with automatic dependency chaining:
 
@@ -140,15 +173,20 @@ Conda environment specs are in `envs/` for recreating environments from scratch.
 
 ## Obtaining the Patient Map
 
-The barcode-to-patient mapping file (`cell_to_patient_assignmentsFinal0.csv`) is
-**~155 MB / 3.3 million rows** and is too large to store in git. You must obtain
-it separately before running Stage 1 on multiplexed libraries.
+The barcode-to-patient mapping file is **~155 MB / 3.3 million rows** and is too
+large to store in git. You must obtain it separately before running Stage 1 on
+multiplexed libraries.
 
-**Option 1 — Shared cluster storage (MIT Engaging):**
+> **Note:** Two versions exist: `cell_to_patient_assignmentsFinal0.csv` (original)
+> and `cell_to_patient_assignmentsFinal1.csv` (updated version on Engaging). Both
+> work with the pipeline. The code default in `config/paths.sh` expects `Final0`;
+> set `DEJAGER_PATIENT_MAP` in `paths.local.sh` to match whichever version you have.
+
+**Option 1 — Engaging cluster storage (recommended):**
 
 ```bash
-# Copy from the shared Openmind scratch folder
-cp /om/scratch/Mon/shared_folder/WGS/cell_to_patient_assignmentsFinal0.csv \
+# Copy from the transferred WGS data on Engaging (Final1 version)
+cp /home/nkhera/orcd/pool/WGS/cell_to_patient_assignmentsFinal1.csv \
    "$DEJAGER_PATIENT_MAP"
 ```
 

@@ -1,0 +1,20 @@
+name: scenic_analysis
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3.10
+  - pandas>=2.0
+  - numpy>=1.24
+  - loompy>=3.0
+  - pip
+  - pip:
+      - pyscenic>=0.12
+      - scanpy>=1.9
+      - anndata>=0.9
+# Note: pySCENIC requires external reference files (not included in this env):
+#   - hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather (~1.2 GB)
+#   - hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather (~1.1 GB)
+#   - motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl (~1.2 GB)
+# Download from: https://resources.aertslab.org/cistarget/

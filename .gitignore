@@ -41,6 +41,9 @@ __pycache__/
 !Data/Phenotypes/TSAI_DEJAGER_all_patients_wACEscores.csv
 !Data/Phenotypes/DeJager_ID_Map.csv
 
+# SocIsl analysis result CSVs (small, migrated from legacy Openmind analysis)
+!Analysis/SocIsl/**/*.csv
+
 # FASTQ/BAM files
 *.fastq
 *.fastq.gz
@@ -93,11 +96,13 @@ Thumbs.db
 tmp/
 temp/
 
-# Large outputs
-figures/
+# Large outputs (generated during pipeline runs)
 output/
 outputs/
 results/
+
+# Whitelist SocIsl analysis figures (migrated from legacy Openmind analysis)
+!Analysis/SocIsl/figures/
 
 # Local configuration overrides (keep paths.sh as template)
 config/paths.local.sh

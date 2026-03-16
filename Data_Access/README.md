@@ -12,21 +12,21 @@ source config/paths.sh
 
 ## Quick Reference: Where Is My Data?
 
+> **Note (March 2026):** Openmind was decommissioned on March 17, 2026. All data has been migrated to Engaging. See [Data on MIT Engaging](#data-on-mit-engaging-march-2026-migration) below for the full layout.
+
 | Data | Primary Location | Backup | How to Get It |
 |------|-----------------|--------|---------------|
-| **Tsai FASTQs** | Engaging cluster | NAS, Openmind | Globus: [`send_globus.sh`](Transcriptomics/Engaging-Openmind_Transfer/Tsai/send_globus.sh) |
-| **DeJager FASTQs** | Synapse (`syn21438684`) | NAS, Openmind | Synapse: [`Preprocessing/DeJager/01_FASTQ_Download/`](../Preprocessing/DeJager/01_FASTQ_Download/) |
-| **Tsai CellRanger** | Openmind (`$TSAI_CELLRANGER`) | NAS | NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_from_nas.sh) |
-| **DeJager CellRanger** | Openmind (`$DEJAGER_CELLRANGER`) | NAS | NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/DeJager/download_from_nas.sh) |
-| **Tsai CellBender** | Openmind (`$TSAI_CELLBENDER`) | NAS | NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_from_nas.sh) |
-| **DeJager CellBender** | Openmind permanent (`$DEJAGER_CELLBENDER`) | NAS | NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/DeJager/download_from_nas.sh) |
-| **Tsai QC-Filtered** | `$TSAI_QC_FILTERED` | NAS | NAS: [`download_processing_outputs_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_processing_outputs_from_nas.sh) or run pipeline Stage 1 |
-| **Tsai Doublet-Removed** | `$TSAI_DOUBLET_REMOVED` | NAS | NAS: [`download_processing_outputs_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_processing_outputs_from_nas.sh) or run pipeline Stage 2 |
-| **Tsai Annotated** | `$TSAI_INTEGRATED` | NAS | NAS: [`download_processing_outputs_from_nas.sh 03_Integrated`](Transcriptomics/Tsai_Server/Tsai/download_processing_outputs_from_nas.sh) or run pipeline Stage 3 |
-| **DeJager QC-Filtered** | `$DEJAGER_QC_FILTERED` | NAS | NAS: [`download_processing_outputs_from_nas.sh`](Transcriptomics/Tsai_Server/DeJager/download_processing_outputs_from_nas.sh) or run pipeline Stage 1 |
-| **DeJager Doublet-Removed** | `$DEJAGER_DOUBLET_REMOVED` | NAS | NAS: [`download_processing_outputs_from_nas.sh`](Transcriptomics/Tsai_Server/DeJager/download_processing_outputs_from_nas.sh) or run pipeline Stage 2 |
-| **DeJager Annotated** | `$DEJAGER_INTEGRATED` | NAS | NAS: [`download_processing_outputs_from_nas.sh 03_Integrated`](Transcriptomics/Tsai_Server/DeJager/download_processing_outputs_from_nas.sh) or run pipeline Stage 3 |
-| **Phenotypes** | `Data/Phenotypes/` (in repo) | NAS | Already in repo |
+| **Tsai FASTQs** | Engaging cluster | NAS | Already on Engaging; NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_from_nas.sh) |
+| **DeJager FASTQs** | Synapse (`syn21438684`) | Engaging, NAS | Synapse: [`Preprocessing/DeJager/01_FASTQ_Download/`](../Preprocessing/DeJager/01_FASTQ_Download/) |
+| **Tsai CellRanger** | Engaging | NAS | Already on Engaging; NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_from_nas.sh) |
+| **DeJager CellRanger** | Engaging | NAS | Already on Engaging; NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/DeJager/download_from_nas.sh) |
+| **Tsai CellBender** | Engaging (478 samples) | NAS | Already on Engaging; NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_from_nas.sh) |
+| **DeJager CellBender** | Engaging (131 directories) | NAS | Already on Engaging; NAS: [`download_from_nas.sh`](Transcriptomics/Tsai_Server/DeJager/download_from_nas.sh) |
+| **Tsai QC-Filtered** | Engaging | NAS | Already on Engaging; NAS: [`download_processing_outputs_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_processing_outputs_from_nas.sh) or run pipeline Stage 1 |
+| **Tsai Doublet-Removed** | Engaging | NAS | Already on Engaging; NAS: [`download_processing_outputs_from_nas.sh`](Transcriptomics/Tsai_Server/Tsai/download_processing_outputs_from_nas.sh) or run pipeline Stage 2 |
+| **Tsai Annotated** | Engaging (`tsai_annotated.h5ad`, 83GB) | NAS | Already on Engaging; NAS: [`download_processing_outputs_from_nas.sh 03_Integrated`](Transcriptomics/Tsai_Server/Tsai/download_processing_outputs_from_nas.sh) or run pipeline Stage 3 |
+| **DeJager Processing** | **Not yet generated** | — | Run pipeline on Engaging: `Processing/DeJager/Pipeline/submit_pipeline.sh all` |
+| **Phenotypes** | `Data/Phenotypes/` (in repo) | Engaging, NAS | Already in repo |
 
 ---
 
@@ -39,7 +39,7 @@ source config/paths.sh
 | **Description** | 480 patients, 5,197 FASTQ files, ~9 TB |
 | **Primary location** | Engaging cluster (scattered across `/nfs/picower*` filesystems) |
 | **FASTQ index CSV** | `$TSAI_FASTQS_CSV` -- maps each FASTQ to its patient, library, and path on Engaging |
-| **Canonical path (Openmind)** | `$TSAI_FASTQS` = `Data/Transcriptomics/Tsai/FASTQs/` |
+| **Canonical repo path** | `$TSAI_FASTQS` = `Data/Transcriptomics/Tsai/FASTQs/` |
 | **NAS backup** | `LabShared/$NAS_SFTP_USER/ROSMAP/Data/Transcriptomics/Tsai/FASTQs/` |
 
 **How to get Tsai FASTQs:**
@@ -58,7 +58,7 @@ source config/paths.sh
 | **Description** | ~50 multiplexed libraries, ~9.8 TB |
 | **Primary location** | Synapse project [`syn21438684`](https://www.synapse.org/#!Synapse:syn21438684) |
 | **Requirements** | Synapse account + project access + personal access token |
-| **Canonical path (Openmind)** | `$DEJAGER_FASTQS_DIR` = `Data/Transcriptomics/DeJager/FASTQs/` |
+| **Canonical repo path** | `$DEJAGER_FASTQS_DIR` = `Data/Transcriptomics/DeJager/FASTQs/` |
 | **NAS backup** | `LabShared/$NAS_SFTP_USER/ROSMAP/Data/Transcriptomics/DeJager/FASTQs/` |
 
 **How to get DeJager FASTQs:**
@@ -82,7 +82,7 @@ sbatch Preprocessing/DeJager/01_FASTQ_Download/Download_FASTQs.sh
 
 ### CellRanger Output
 
-Generated on Openmind from FASTQs using Cell Ranger 8.0.0 (`$CELLRANGER_PATH`).
+Originally generated on Openmind (now decommissioned) from FASTQs using Cell Ranger 8.0.0 (`$CELLRANGER_PATH`). Outputs now on Engaging.
 
 | | Tsai | DeJager |
 |---|---|---|
@@ -103,14 +103,14 @@ Ambient RNA removal applied to CellRanger output.
 |---|---|---|
 | **Path variable** | `$TSAI_CELLBENDER` | `$DEJAGER_CELLBENDER` |
 | **Location** | `Data/Transcriptomics/Tsai/Cellbender_Output/` | `Data/Transcriptomics/DeJager/Cellbender_Output/` |
-| **Samples** | 478 | ~127 |
+| **Samples** | 478 | 131 |
 | **Size** | ~862 GB | ~525 GB |
 | **Key file per sample** | `processed_feature_bc_matrix_filtered.h5` | Same |
 | **Preprocessing scripts** | [`Preprocessing/Tsai/03_Cellbender/`](../Preprocessing/Tsai/03_Cellbender/) | [`Preprocessing/DeJager/03_Cellbender/`](../Preprocessing/DeJager/03_Cellbender/) |
 
 **NAS backup notes:**
 - Tsai CellBender is also at the legacy NAS path: `LabShared/$NAS_SFTP_USER/ROSMAP/RNAseq/Tsai_Sequencing/Cellbender_Outputs` (478 folders, uploaded March 2026)
-- DeJager CellBender primary copy is on permanent storage: `$DATA_ROOT/Data/DeJager/Preprocessed_Counts/`
+- DeJager CellBender is now on Engaging (see [Engaging data layout](#data-on-mit-engaging-march-2026-migration)); configure `$DEJAGER_PREPROCESSED` accordingly
 
 ---
 
@@ -182,7 +182,7 @@ Merges all samples, runs Harmony batch correction, Leiden clustering, UMAP, and 
 | Field | Description |
 |-------|-------------|
 | `cell_type` | Top-1 cell type annotation per Leiden 0.5 cluster |
-| `leiden_res0_2`, `leiden_res0_5`, `leiden_res1_0` | Cluster assignments at 3 resolutions |
+| `leiden_res0_2`, `leiden_res0_5`, `leiden_res1` | Cluster assignments at 3 resolutions |
 | `patient_id` / `projid` | Patient identifier |
 | `n_genes_by_counts`, `total_counts`, `pct_counts_mt` | QC metrics |
 
@@ -246,8 +246,9 @@ Small CSVs tracked in the repo at `Data/Phenotypes/` (`$PHENOTYPE_DIR`).
 - **GUI**: https://app.globus.org/
 - **CLI**: `globus transfer` command (installed in conda environments)
 - **Endpoint IDs**:
-  - Openmind: `cbc6f8da-d37e-11eb-bde9-5111456017d9`
-  - Engaging: `c52fcff2-761c-11eb-8cfc-cd623f92e1c0`
+  - Openmind (decommissioned): `cbc6f8da-d37e-11eb-bde9-5111456017d9`
+  - Engaging (MIT ORCD): `ec54b570-cac5-47f7-b2a1-100c2078686f`
+  - ~~Old Engaging endpoint (deprecated): `c52fcff2-761c-11eb-8cfc-cd623f92e1c0`~~
 - **Conda environment**: `$GLOBUS_ENV` (set in `config/paths.sh`, defaults to `${CONDA_ENV_BASE}/globus_env`)
 
 ### Prerequisites
@@ -293,6 +294,76 @@ LabShared/$NAS_SFTP_USER/ROSMAP/Data/
 
 Note: Tsai CellBender data was previously uploaded to
 `LabShared/$NAS_SFTP_USER/ROSMAP/RNAseq/Tsai_Sequencing/Cellbender_Outputs` (478 folders).
+
+---
+
+## Data on MIT Engaging (March 2026 Migration)
+
+On March 15-16, 2026, all ROSMAP snRNA-seq data was transferred from Openmind to Engaging via Globus. **Openmind was decommissioned on March 17, 2026.** The primary data location is now Engaging.
+
+### ROSMAP Pipeline Data
+
+**Base path**: `/orcd/data/lhtsai/001/mabdel03/ROSMAP_Data/Single_Nucleus/`
+
+```
+Single_Nucleus/
+├── Tsai/
+│   ├── Cellbender_Output/       478 sample directories (CellBender ambient RNA removal)
+│   ├── Cellranger_Output/       480 sample directories (Cell Ranger alignment + counts)
+│   └── Processing_Outputs/
+│       ├── 01_QC_Filtered/      478 *_qc.h5ad files
+│       ├── 02_Doublet_Removed/  478 *_singlets.h5ad files
+│       ├── 03_Integrated/       tsai_annotated.h5ad (83GB), tsai_integrated.h5ad (82GB)
+│       ├── 03_Integrated_projid/  Alternate Harmony correction (by patient ID)
+│       ├── 03_Comparison/       Batch correction comparison outputs
+│       └── Logs/                SLURM log files
+├── DeJager/
+│   ├── Cellbender_Output/       131 directories (libraries + individual "alone" samples)
+│   ├── Cellranger_Output/       47 library directories
+│   └── Processing_Outputs/      *** DOES NOT EXIST — pipeline not yet run ***
+└── Phenotypes/
+    ├── ROSMAP_clinical.csv
+    ├── dataset_652_basic_12-23-2021.csv
+    ├── TSAI_DEJAGER_all_patients_wACEscores.csv
+    └── DeJager_ID_Map.csv
+```
+
+**DeJager processing is a TODO**: The DeJager processing pipeline has never been run. CellBender outputs are on Engaging and ready to process. Run:
+```bash
+cd Processing/DeJager/Pipeline && ./submit_pipeline.sh all
+```
+
+### Additional Data on Engaging
+
+| Data | Engaging Path | Size | Description |
+|------|--------------|------|-------------|
+| WGS VCF + patient assignments | `/home/nkhera/orcd/pool/WGS/` | ~275 GB | `fixedconcatenated_liftedROSMAP.vcf.gz`, `cell_to_patient_assignmentsFinal1.csv`, `individ/` |
+| DeJager COMPASS outputs | `/home/nkhera/orcd/pool/Subfolder/` | ~507 GB | COMPASS metabolic analysis outputs for DeJager cell types (Ast, Exc, Inh, Mic, Oli, OPC, Endo, etc.) |
+| Moseq behavioral data | `/orcd/data/lhtsai/001/mabdel03/BAP_Data/Phenoscape/Moseq/` | ~2.2 TB | BAP_Moseq, Run_All, Run_Moms, Run_Offsprings |
+
+### Globus Transfer Audit Trail (March 15-16, 2026)
+
+| Transfer | Task ID | Status | Files | Bytes |
+|----------|---------|--------|-------|-------|
+| Tsai (CellBender + CellRanger + Processing) | `ccec021c-20cb-11f1-aaf9-0affe9efaee5` | SUCCEEDED | 971,477 | 1.83 TB |
+| DeJager (CellBender + CellRanger) | `ce88ccc0-20cb-11f1-b80d-02ea150f82e1` | SUCCEEDED | 168,022 | 3.70 TB |
+| Shared Phenotypes | `cf84ee9e-20cb-11f1-ace9-02ea150f82e1` | SUCCEEDED | 4 | 2.7 MB |
+| WGS + Subfolder (to nkhera pool) | `5a3ea267-2095-11f1-9c3d-0e34a6ec9899` | SUCCEEDED | 143,824 | 839 GB |
+| Moseq | `92e038ae-20d3-11f1-82b1-02ea150f82e1` | SUCCEEDED | 2,771 | 2.39 TB |
+
+**Globus endpoints:**
+- Openmind (decommissioned): `cbc6f8da-d37e-11eb-bde9-5111456017d9`
+- Engaging (MIT ORCD): `ec54b570-cac5-47f7-b2a1-100c2078686f`
+
+### Engaging Access
+
+```bash
+ssh <Kerberos ID>@orcd-login003.mit.edu
+```
+
+To configure the pipeline for Engaging, create `config/paths.local.sh` with paths pointing to the ROSMAP_Data directory structure above.
+
+---
 
 ### Transfer Scripts Directory Structure
 

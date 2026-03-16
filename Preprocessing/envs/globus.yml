@@ -1,0 +1,13 @@
+name: globus_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.10
+  - pip
+  - pip:
+      - globus-cli>=3.0
+# After creating the environment, authenticate:
+#   globus login
+# Verify with:
+#   globus whoami

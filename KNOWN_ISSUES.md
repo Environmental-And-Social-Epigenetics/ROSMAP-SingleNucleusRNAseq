@@ -39,18 +39,21 @@ Demuxlet-specific path variables added to `config/paths.sh`.
 
 ### 3. Scratch Space Dependencies
 
-**Severity**: Medium  
+**Severity**: Medium
 **Affected Scripts**: Cell Ranger and CellBender scripts
+**Status**: Partially resolved by Engaging migration
 
-Scripts reference temporary scratch directories:
+Scripts previously referenced temporary scratch directories on Openmind:
 - `/om/scratch/Mon/mabdel03/` (weekly cleanup)
 - `/om/scratch/Sun/mabdel03/` (weekly cleanup)
 
-**Risk**: Data loss if scratch is cleaned before processing completes.
+**Update (March 2026)**: Openmind was decommissioned. All data has been transferred
+to Engaging, which uses a different storage tier model. Users should configure
+`SCRATCH_ROOT` in `paths.local.sh` to an appropriate Engaging scratch location.
 
-**Recommendation**: 
-- Move intermediate outputs to persistent storage
-- Or document scratch cleanup schedule
+**Recommendation**:
+- Use Engaging scratch storage for intermediate outputs
+- Understand Engaging's storage policies before relying on scratch
 
 ---
 
@@ -80,18 +83,21 @@ recreating envs from scratch are in `Processing/Tsai/Pipeline/envs/`.
 
 ---
 
-### 6. Missing SocIsl Processing Scripts
+### 6. Missing SocIsl Processing Scripts — PARTIALLY RESOLVED
 
-**Severity**: Medium  
-**Location**: `Preprocessing/Tsai/`
+**Severity**: Medium
+**Location**: `Preprocessing/Tsai/`, `Analysis/SocIsl/`
+**Status**: Partially resolved
 
-SocIsl cohort has batch scripts but no dedicated notebooks for script generation.
+SocIsl cohort has batch scripts but no dedicated notebooks for Cell Ranger/CellBender
+script generation in `Preprocessing/`.
 
-**Affected Steps**:
-- 02_Cellranger_Counts: Uses Resilient notebook pattern
-- 03_Cellbender: No SocIsl notebook
-
-**Recommendation**: Create dedicated notebooks or document the workflow for SocIsl.
+**Update (March 2026)**: Legacy SocIsl analysis scripts (DEG, SCENIC, COMPASS, GSEA)
+from the Openmind working directory have been copied into `Analysis/SocIsl/`. These
+scripts contain hardcoded Openmind paths and will need updates to run on Engaging.
+The preprocessing gap for SocIsl remains open — the current unified pipeline
+(`Processing/Tsai/Pipeline/submit_pipeline.sh`) handles all Tsai patients including
+SocIsl cohort members, so dedicated SocIsl preprocessing scripts are not needed.
 
 ---
 
@@ -240,6 +246,66 @@ portable. The current production pipeline is in `Processing/{Dataset}/Pipeline/`
 
 ---
 
+### 19. DeJager Processing Pipeline Not Yet Run
+
+**Severity**: High
+**Status**: Open
+
+The DeJager processing pipeline (QC filtering, doublet removal, integration &
+annotation) has never been executed. CellBender outputs (131 directories) and
+CellRanger outputs (47 libraries) are on Engaging and ready to process.
+
+**Recommendation**: Run the pipeline on Engaging:
+```bash
+cd Processing/DeJager/Pipeline && ./submit_pipeline.sh all
+```
+
+Prerequisites:
+- Configure `DEJAGER_PREPROCESSED` to point to the CellBender outputs on Engaging
+- Obtain `cell_to_patient_assignmentsFinal1.csv` from `/home/nkhera/orcd/pool/WGS/`
+- Create conda environments via `setup/install_envs.sh`
+
+---
+
+### 20. No Environment Specs for Preprocessing — RESOLVED
+
+**Severity**: Medium
+**Status**: Resolved
+
+The preprocessing steps (CellBender, Synapse download, bcftools, Globus) had no
+conda YAML specifications in the repo, making it impossible to recreate the
+environments from scratch.
+
+**Fix**: Created `Preprocessing/envs/` with YAML specs for all four preprocessing
+environments (cellbender.yml, synapse.yml, bcftools.yml, globus.yml).
+
+---
+
+### 21. No Environment Specs for Analysis — RESOLVED
+
+**Severity**: Medium
+**Status**: Resolved
+
+The Analysis directory had no conda YAML specifications for downstream analysis
+(DEG, SCENIC, COMPASS, GSEA).
+
+**Fix**: Created `Analysis/envs/` with YAML specs for all four analysis environments.
+
+---
+
+### 22. Engaging Data Layout Undocumented — RESOLVED
+
+**Severity**: Medium
+**Status**: Resolved
+
+After the Openmind-to-Engaging migration, the data layout on Engaging was not
+documented anywhere in the repo.
+
+**Fix**: Added comprehensive "Data on MIT Engaging (March 2026 Migration)" section
+to `Data_Access/README.md` with directory trees, file counts, and Globus audit trail.
+
+---
+
 ## Resolution Tracking
 
 | Issue | Status | Date Fixed |
@@ -247,10 +313,10 @@ portable. The current production pipeline is in `Processing/{Dataset}/Pipeline/`
 | 1. Hardcoded paths (pipeline) | Resolved | 2026-03-08 |
 | 1. Hardcoded paths (preprocessing) | Resolved | 2026-03-08 |
 | 2. Demuxlet cleanup | Resolved | 2026-03-11 |
-| 3. Scratch dependencies | Open | - |
+| 3. Scratch dependencies | Partially resolved | 2026-03-16 |
 | 4. Pipeline naming | Open | - |
 | 5. Conda paths | Resolved | 2026-03-08 |
-| 6. SocIsl scripts | Open | - |
+| 6. SocIsl scripts | Partially resolved | 2026-03-16 |
 | 10. .gitignore blocking files | Resolved | 2026-03-08 |
 | 11. Hemoglobin regex bug | Resolved | 2026-03-08 |
 | 12. No QC summary tracking | Resolved | 2026-03-08 |
@@ -260,6 +326,10 @@ portable. The current production pipeline is in `Processing/{Dataset}/Pipeline/`
 | 16. Untracked files | Resolved | 2026-03-14 |
 | 17. Hardcoded mabdel03 paths | Resolved | 2026-03-14 |
 | 18. Archive scripts non-portable | By design | - |
+| 19. DeJager processing not run | Open | - |
+| 20. No preprocessing env specs | Resolved | 2026-03-16 |
+| 21. No analysis env specs | Resolved | 2026-03-16 |
+| 22. Engaging data undocumented | Resolved | 2026-03-16 |
 
 ---
 

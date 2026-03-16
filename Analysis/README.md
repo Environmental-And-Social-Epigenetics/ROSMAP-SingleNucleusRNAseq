@@ -47,11 +47,11 @@ Analysis/
 
 ## Current Phenotype Analyses
 
-| Phenotype | Description | Status |
-|-----------|-------------|--------|
-| ACE | Adverse Childhood Experiences | Placeholder |
-| Resilient | Cognitive Resilience despite AD pathology | Placeholder |
-| SocIsl | Social Isolation | Placeholder |
+| Phenotype | Description | Status | Notes |
+|-----------|-------------|--------|-------|
+| ACE | Adverse Childhood Experiences | Placeholder | Directory structure only |
+| Resilient | Cognitive Resilience despite AD pathology | Placeholder | Directory structure only |
+| SocIsl | Social Isolation | Legacy scripts migrated | DEG, SCENIC, COMPASS, GSEA scripts + result CSVs from Openmind |
 
 ## Resource Requirements
 
