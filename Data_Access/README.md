@@ -40,7 +40,7 @@ source config/paths.sh
 | **Primary location** | Engaging cluster (scattered across `/nfs/picower*` filesystems) |
 | **FASTQ index CSV** | `$TSAI_FASTQS_CSV` -- maps each FASTQ to its patient, library, and path on Engaging |
 | **Canonical path (Openmind)** | `$TSAI_FASTQS` = `Data/Transcriptomics/Tsai/FASTQs/` |
-| **NAS backup** | `LabShared/mabdel03/ROSMAP/Data/Transcriptomics/Tsai/FASTQs/` |
+| **NAS backup** | `LabShared/$NAS_SFTP_USER/ROSMAP/Data/Transcriptomics/Tsai/FASTQs/` |
 
 **How to get Tsai FASTQs:**
 
@@ -59,7 +59,7 @@ source config/paths.sh
 | **Primary location** | Synapse project [`syn21438684`](https://www.synapse.org/#!Synapse:syn21438684) |
 | **Requirements** | Synapse account + project access + personal access token |
 | **Canonical path (Openmind)** | `$DEJAGER_FASTQS_DIR` = `Data/Transcriptomics/DeJager/FASTQs/` |
-| **NAS backup** | `LabShared/mabdel03/ROSMAP/Data/Transcriptomics/DeJager/FASTQs/` |
+| **NAS backup** | `LabShared/$NAS_SFTP_USER/ROSMAP/Data/Transcriptomics/DeJager/FASTQs/` |
 
 **How to get DeJager FASTQs:**
 
@@ -109,7 +109,7 @@ Ambient RNA removal applied to CellRanger output.
 | **Preprocessing scripts** | [`Preprocessing/Tsai/03_Cellbender/`](../Preprocessing/Tsai/03_Cellbender/) | [`Preprocessing/DeJager/03_Cellbender/`](../Preprocessing/DeJager/03_Cellbender/) |
 
 **NAS backup notes:**
-- Tsai CellBender is also at the legacy NAS path: `LabShared/mabdel03/ROSMAP/RNAseq/Tsai_Sequencing/Cellbender_Outputs` (478 folders, uploaded March 2026)
+- Tsai CellBender is also at the legacy NAS path: `LabShared/$NAS_SFTP_USER/ROSMAP/RNAseq/Tsai_Sequencing/Cellbender_Outputs` (478 folders, uploaded March 2026)
 - DeJager CellBender primary copy is on permanent storage: `$DATA_ROOT/Data/DeJager/Preprocessed_Counts/`
 
 ---
@@ -206,7 +206,7 @@ Small CSVs tracked in the repo at `Data/Phenotypes/` (`$PHENOTYPE_DIR`).
 | `TSAI_DEJAGER_all_patients_wACEscores.csv` | Tsai + DeJager patients with ACE scores | 296 |
 | `DeJager_ID_Map.csv` | Maps `projid` to `individualID` for DeJager samples | ~20 |
 
-**NAS backup:** `LabShared/mabdel03/ROSMAP/Data/Phenotypes/`
+**NAS backup:** `LabShared/$NAS_SFTP_USER/ROSMAP/Data/Phenotypes/`
 
 **Transfer scripts:**
 - Upload to NAS: [`Phenotypes/Tsai_Server/upload_to_nas.sh`](Phenotypes/Tsai_Server/upload_to_nas.sh)
@@ -219,11 +219,11 @@ Small CSVs tracked in the repo at `Data/Phenotypes/` (`$PHENOTYPE_DIR`).
 
 | Resource | Path Variable | Location |
 |----------|--------------|----------|
-| Cell Ranger 8.0.0 | `$CELLRANGER_PATH` | `/om2/user/mabdel03/apps/yard/cellranger-8.0.0` |
-| GRCh38 reference | `$CELLRANGER_REF` | `/om2/user/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A` |
+| Cell Ranger 8.0.0 | `$CELLRANGER_PATH` | Set in `config/paths.local.sh` |
+| GRCh38 reference | `$CELLRANGER_REF` | Set in `config/paths.local.sh` |
 | PFC marker genes | `$TSAI_MARKERS_RDS` | `Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds` |
 | Tsai patient metadata | `$TSAI_METADATA_CSV` | `Preprocessing/Tsai/02_Cellranger_Counts/Tracking/patient_metadata.csv` |
-| DeJager barcode-to-patient map | `$DEJAGER_PATIENT_MAP` | `/om/scratch/Mon/shared_folder/WGS/cell_to_patient_assignmentsFinal0.csv` |
+| DeJager barcode-to-patient map | `$DEJAGER_PATIENT_MAP` | 155MB CSV, not in repo (see `Processing/DeJager/Pipeline/README.md`) |
 | DeJager patient ID overrides | `$DEJAGER_PATIENT_ID_OVERRIDES` | `Processing/DeJager/Pipeline/Resources/patient_id_overrides.json` |
 | All path variables | -- | [`config/paths.sh`](../config/paths.sh) |
 
@@ -248,16 +248,14 @@ Small CSVs tracked in the repo at `Data/Phenotypes/` (`$PHENOTYPE_DIR`).
 - **Endpoint IDs**:
   - Openmind: `cbc6f8da-d37e-11eb-bde9-5111456017d9`
   - Engaging: `c52fcff2-761c-11eb-8cfc-cd623f92e1c0`
-- **Conda environments**:
-  - Openmind: `/om2/user/mabdel03/conda_envs/globus_env`
-  - Engaging: `/home/mabdel03/conda_envs/globus_env`
+- **Conda environment**: `$GLOBUS_ENV` (set in `config/paths.sh`, defaults to `${CONDA_ENV_BASE}/globus_env`)
 
 ### Prerequisites
 
 #### For Tsai Server transfers:
 1. Password file at `~/.smb_tsailabnas` with format:
    ```
-   username = mabdel03
+   username = YOUR_NAS_USERNAME
    password = YOUR_PASSWORD
    ```
 2. `chmod 600 ~/.smb_tsailabnas`
@@ -272,7 +270,7 @@ Small CSVs tracked in the repo at `Data/Phenotypes/` (`$PHENOTYPE_DIR`).
 
 NAS paths mirror the local `Data/` structure:
 ```
-LabShared/mabdel03/ROSMAP/Data/
+LabShared/$NAS_SFTP_USER/ROSMAP/Data/
 ├── Transcriptomics/
 │   ├── Tsai/
 │   │   ├── FASTQs/
@@ -294,7 +292,7 @@ LabShared/mabdel03/ROSMAP/Data/
 ```
 
 Note: Tsai CellBender data was previously uploaded to
-`LabShared/mabdel03/ROSMAP/RNAseq/Tsai_Sequencing/Cellbender_Outputs` (478 folders).
+`LabShared/$NAS_SFTP_USER/ROSMAP/RNAseq/Tsai_Sequencing/Cellbender_Outputs` (478 folders).
 
 ### Transfer Scripts Directory Structure
 

@@ -36,6 +36,7 @@ def default_paths() -> dict[str, Path]:
         / "Tracking"
         / "patient_metadata.csv",
         "markers_rds": script_path.parent / "Resources" / "Brain_Human_PFC_Markers_Mohammadi2020.rds",
+        "derived_batches_csv": script_path.parent / "Resources" / "derived_batches.csv",
     }
 
 
@@ -65,6 +66,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-hvgs", type=int, default=3000, help="Number of highly variable genes.")
     parser.add_argument("--neighbor-metric", type=str, default="cosine", help="Distance metric for neighbor graph.")
     parser.add_argument("--umap-min-dist", type=float, default=0.15, help="UMAP minimum distance.")
+    parser.add_argument(
+        "--harmony-batch-key",
+        type=str,
+        default="derived_batch",
+        help="obs column for Harmony batch correction. "
+        "Options: 'derived_batch' (flowcell-based, ~41 groups), "
+        "'projid' (per-patient, 480 groups — old default), "
+        "or any other obs column.",
+    )
+    parser.add_argument(
+        "--harmony-theta",
+        type=float,
+        default=2.0,
+        help="Harmony diversity penalty. Lower = less aggressive correction. Default: 2.0.",
+    )
+    parser.add_argument(
+        "--derived-batches-csv",
+        type=Path,
+        default=paths["derived_batches_csv"],
+        help="CSV mapping projid -> derived_batch (from derive_batches.py).",
+    )
+    parser.add_argument(
+        "--skip-harmony",
+        action="store_true",
+        help="Skip Harmony entirely. Use PCA embedding directly for "
+        "neighbors/clustering (useful as a no-correction baseline).",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -198,7 +226,13 @@ def run_annotation(
     if "ora_estimate" in adata.obsm:
         del adata.obsm["ora_estimate"]
 
-    dc.run_ora(adata, markers_df, source="source", target="target", use_raw=False)
+    dc.run_ora(adata, markers_df, source="source", target="target", use_raw=True)
+    if "ora_estimate" not in adata.obsm:
+        raise RuntimeError(
+            "dc.run_ora() produced no 'ora_estimate' in obsm. "
+            f"Check that marker genes overlap with adata.raw.var_names "
+            f"({adata.raw.n_vars if adata.raw is not None else 'NO .raw'} genes)."
+        )
     acts = dc.get_acts(adata, obsm_key="ora_estimate")
 
     acts_values = np.asarray(acts.X)
@@ -255,12 +289,24 @@ def save_figures(
         plt.close(fig)
 
     # --- 2. Pre/post Harmony comparison ---
-    if "X_umap_pca" in adata.obsm:
-        batch_values = adata.obs["batch"].astype(str)
+    # Color by the batch key that was used for correction (stored in uns).
+    harmony_params = adata.uns.get("harmony_params", {})
+    batch_color_key = harmony_params.get("batch_key", "batch")
+    if batch_color_key == "SKIPPED" or batch_color_key not in adata.obs.columns:
+        batch_color_key = "batch" if "batch" in adata.obs.columns else None
+
+    if "X_umap_pca" in adata.obsm and batch_color_key is not None:
+        batch_values = adata.obs[batch_color_key].astype(str)
         unique_batches = sorted(batch_values.unique())
         cmap = plt.cm.get_cmap("tab20", len(unique_batches))
         batch_colors = {b: cmap(i) for i, b in enumerate(unique_batches)}
         colors = [batch_colors[b] for b in batch_values]
+
+        correction_label = harmony_params.get("batch_key", "Harmony")
+        if correction_label == "SKIPPED":
+            correction_label = "No Correction (PCA)"
+        else:
+            correction_label = f"After Harmony ({correction_label})"
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
         ax1.scatter(
@@ -276,12 +322,12 @@ def save_figures(
             adata.obsm["X_umap"][:, 0], adata.obsm["X_umap"][:, 1],
             c=colors, s=1, alpha=0.3, rasterized=True,
         )
-        ax2.set_title("After Harmony")
+        ax2.set_title(correction_label)
         ax2.set_xlabel("UMAP1")
         ax2.set_ylabel("UMAP2")
         ax2.set_aspect("equal")
 
-        fig.suptitle("Batch Integration Comparison", fontsize=13)
+        fig.suptitle(f"Batch Integration Comparison (colored by {batch_color_key})", fontsize=13)
         fig.tight_layout()
         fig.savefig(figures_dir / "harmony_comparison.png", dpi=150, bbox_inches="tight")
         plt.close(fig)
@@ -297,19 +343,22 @@ def save_figures(
         sc.pl.umap(adata, color=res_keys, show=False, save="_multi_resolution.png")
 
     # --- 5 & 6. Existing integration + cell type UMAPs ---
-    sc.pl.umap(adata, color=["batch", cluster_key], show=False, save="_tsai_integration.png")
+    umap_color_keys = [k for k in [batch_color_key, cluster_key] if k and k in adata.obs.columns]
+    if umap_color_keys:
+        sc.pl.umap(adata, color=umap_color_keys, show=False, save="_tsai_integration.png")
     if "cell_type" in adata.obs.columns:
         sc.pl.umap(adata, color=["cell_type"], legend_loc="on data", show=False, save="_tsai_celltypes.png")
 
     # --- 7. Cluster-batch composition ---
-    if "batch" in adata.obs.columns and cluster_key in adata.obs.columns:
-        ct = pd.crosstab(adata.obs[cluster_key], adata.obs["batch"], normalize="index")
+    composition_key = batch_color_key or "batch"
+    if composition_key in adata.obs.columns and cluster_key in adata.obs.columns:
+        ct = pd.crosstab(adata.obs[cluster_key], adata.obs[composition_key], normalize="index")
         fig, ax = plt.subplots(figsize=(max(8, len(ct) * 0.5), 6))
         ct.plot(kind="bar", stacked=True, ax=ax, width=0.85)
         ax.set_xlabel("Cluster")
         ax.set_ylabel("Proportion")
-        ax.set_title("Batch Composition per Cluster")
-        ax.legend(title="Batch", bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=6)
+        ax.set_title(f"Batch Composition per Cluster ({composition_key})")
+        ax.legend(title=composition_key, bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=6)
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
         fig.savefig(figures_dir / "cluster_batch_composition.png", dpi=150, bbox_inches="tight")
         plt.close(fig)
@@ -371,6 +420,7 @@ def main() -> None:
     args.output_dir = args.output_dir.resolve()
     args.metadata_csv = args.metadata_csv.resolve()
     args.markers_rds = args.markers_rds.resolve()
+    args.derived_batches_csv = args.derived_batches_csv.resolve()
 
     integrated_path = args.output_dir / "tsai_integrated.h5ad"
     annotated_path = args.output_dir / "tsai_annotated.h5ad"
@@ -408,6 +458,29 @@ def main() -> None:
         combined.obs["sample_id"] = combined.obs["sample_id"].astype(str)
         combined.obs["batch"] = combined.obs["batch"].astype(str).astype("category")
 
+        # Merge derived batch assignments if using flowcell-based batches.
+        if args.harmony_batch_key == "derived_batch":
+            derived_csv = args.derived_batches_csv.resolve()
+            if not derived_csv.exists():
+                raise SystemExit(
+                    f"Derived batches CSV not found: {derived_csv}\n"
+                    "Run derive_batches.py first, or use --harmony-batch-key projid"
+                )
+            derived = pd.read_csv(derived_csv, dtype=str).set_index("projid")
+            combined.obs["derived_batch"] = (
+                combined.obs["projid"]
+                .map(derived["derived_batch"])
+                .fillna("UNKNOWN")
+                .astype("category")
+            )
+            n_unknown = (combined.obs["derived_batch"] == "UNKNOWN").sum()
+            if n_unknown > 0:
+                print(f"[WARN] {n_unknown} cells have no derived_batch assignment")
+            n_groups = combined.obs["derived_batch"].nunique()
+            print(f"[batch] Using derived_batch ({n_groups} groups) for Harmony")
+        elif not args.skip_harmony:
+            print(f"[batch] Using '{args.harmony_batch_key}' for Harmony")
+
         print(f"[concat] {combined.n_obs} cells x {combined.n_vars} genes")
 
         combined.layers["counts"] = combined.X.copy()
@@ -434,12 +507,36 @@ def main() -> None:
         del combined.obsp["pca_neighbors_distances"], combined.obsp["pca_neighbors_connectivities"]
         combined.uns.pop("pca_neighbors", None)
 
-        harmony_result = hm.run_harmony(combined.obsm["X_pca"], combined.obs, "projid")
-        combined.obsm["X_harmony"] = harmony_result.Z_corr.T
+        if not args.skip_harmony:
+            batch_key = args.harmony_batch_key
+            if batch_key not in combined.obs.columns:
+                raise SystemExit(
+                    f"Harmony batch key '{batch_key}' not found in obs columns. "
+                    f"Available: {', '.join(combined.obs.columns[:20])}"
+                )
+            print(f"[harmony] batch_key={batch_key}, theta={args.harmony_theta}")
+            harmony_result = hm.run_harmony(
+                combined.obsm["X_pca"],
+                combined.obs,
+                batch_key,
+                theta=args.harmony_theta,
+            )
+            combined.obsm["X_harmony"] = harmony_result.Z_corr.T
+            neighbor_rep = "X_harmony"
+        else:
+            print("[harmony] SKIPPED — using PCA embedding directly")
+            neighbor_rep = "X_pca"
+
+        # Store provenance for downstream reference.
+        combined.uns["harmony_params"] = {
+            "batch_key": "SKIPPED" if args.skip_harmony else args.harmony_batch_key,
+            "theta": None if args.skip_harmony else args.harmony_theta,
+            "neighbor_rep": neighbor_rep,
+        }
 
         sc.pp.neighbors(
             combined,
-            use_rep="X_harmony",
+            use_rep=neighbor_rep,
             n_neighbors=args.n_neighbors,
             n_pcs=args.n_pcs,
             metric=args.neighbor_metric,

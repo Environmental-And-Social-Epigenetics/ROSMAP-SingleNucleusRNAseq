@@ -175,6 +175,71 @@ to reference config variables instead.
 
 ---
 
+### 15. Harmony Batch Variable Was Patient ID — RESOLVED
+
+**Severity**: High
+**Status**: Fixed
+
+`03_integration_annotation.py` used `projid` (patient ID, 480 levels) as the
+Harmony batch variable. This was too aggressive — it forced cells from all 480
+patients to overlap in PC space, removing genuine inter-individual biological
+variation needed for downstream pseudobulk DEG analysis. Additionally, the
+`batch` column in `patient_metadata.csv` (values 1-16) was a computational
+convenience grouping for SLURM jobs, not a real sequencing/wet-lab batch.
+
+**Fix**: Created `derive_batches.py` which extracts actual Illumina flowcell IDs
+from FASTQ headers and groups samples by shared flowcells (~41 natural batch
+groups). The integration script now defaults to `--harmony-batch-key derived_batch`
+but supports switching to `projid` or any other obs column via CLI flags.
+
+---
+
+### 16. Data_Access/ and Key Pipeline Files Were Untracked — RESOLVED
+
+**Severity**: High
+**Status**: Fixed
+
+The entire `Data_Access/` directory (29 transfer scripts), all 4 phenotype CSVs
+in `Data/Phenotypes/`, `derive_batches.py`, `03_integration_annotation_projid.sh`,
+`03b_evaluate_correction.py`, `derived_batches.csv`, and `batch_assignments.csv`
+were not tracked in git. A fresh clone was missing data download capability,
+phenotype data, and batch derivation tooling.
+
+**Fix**: Added `.gitignore` whitelist entries for phenotype CSVs and pipeline
+resources. `git add`-ed all untracked files. Created `Data/Transcriptomics/README.md`
+documenting the canonical data layout.
+
+---
+
+### 17. Hardcoded mabdel03 Paths in Production Scripts — RESOLVED
+
+**Severity**: High
+**Status**: Fixed
+
+All defaults in `config/paths.sh` and fallback paths in Preprocessing/Processing
+Python and shell scripts were hardcoded to mabdel03's Openmind environment. Globus
+and NAS transfer scripts also had hardcoded conda and SFTP paths.
+
+**Fix**: Replaced all user-specific defaults with `${HOME}`-based auto-detection,
+`__UNCONFIGURED__` sentinels for must-configure values, and `${VAR:-default}`
+patterns that respect environment overrides. Created `config/paths.local.sh.template`.
+Archive/legacy scripts are marked as non-portable with header comments.
+
+---
+
+### 18. Archive Scripts Are Not Portable (Intentional)
+
+**Severity**: Informational
+**Status**: By design
+
+Scripts under `Processing/Tsai/archive/`, `Processing/DeJager/_legacy/`,
+`Preprocessing/Tsai/02_Cellranger_Counts/Old/`, and generated `Batch_Scripts/`
+directories contain hardcoded paths from the original development environment.
+These are preserved for historical reference only and are not intended to be
+portable. The current production pipeline is in `Processing/{Dataset}/Pipeline/`.
+
+---
+
 ## Resolution Tracking
 
 | Issue | Status | Date Fixed |
@@ -191,6 +256,10 @@ to reference config variables instead.
 | 12. No QC summary tracking | Resolved | 2026-03-08 |
 | 13. Stale parent READMEs | Resolved | 2026-03-08 |
 | 14. README hardcoded paths | Resolved | 2026-03-10 |
+| 15. Harmony batch variable | Resolved | 2026-03-11 |
+| 16. Untracked files | Resolved | 2026-03-14 |
+| 17. Hardcoded mabdel03 paths | Resolved | 2026-03-14 |
+| 18. Archive scripts non-portable | By design | - |
 
 ---
 

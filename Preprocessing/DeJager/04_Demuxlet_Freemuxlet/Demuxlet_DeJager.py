@@ -19,22 +19,28 @@ import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
 # Resolve paths from environment (set by config/paths.sh)
 # ---------------------------------------------------------------------------
 
+# Compute repo/workspace roots from script location (depth 4 from repo root)
+_script_path = Path(__file__).resolve()
+_repo_root = _script_path.parents[3]
+_workspace_root = _repo_root.parent
+
 DEJAGER_WGS_DIR = os.environ.get(
     "DEJAGER_WGS_DIR", "/om/scratch/Mon/shared_folder/WGS"
 )
 DEJAGER_COUNTS = os.environ.get(
     "DEJAGER_COUNTS",
-    os.path.join(os.environ.get("SCRATCH_ROOT", "/om/scratch/Mon/mabdel03"), "Counts"),
+    str(_workspace_root / "DeJager_Data" / "Counts"),
 )
 DEJAGER_PREPROCESSED = os.environ.get(
     "DEJAGER_PREPROCESSED",
-    "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts",
+    str(_workspace_root / "DeJager_Data" / "Preprocessed_Counts"),
 )
 DEJAGER_DEMUX_VCF = os.environ.get(
     "DEJAGER_DEMUX_VCF",
@@ -48,11 +54,11 @@ DEJAGER_PATIENT_IDS_DIR = os.environ.get(
 )
 CONDA_INIT_SCRIPT = os.environ.get(
     "CONDA_INIT_SCRIPT",
-    "/om2/user/mabdel03/anaconda/etc/profile.d/conda.sh",
+    os.path.join(os.environ.get("HOME", ""), "miniforge3/etc/profile.d/conda.sh"),
 )
 BCFTOOLS_ENV = os.environ.get(
     "BCFTOOLS_ENV",
-    "/net/vast-storage/scratch/vast/lhtsai/mabdel03/conda_envs/bcftools_env",
+    os.path.join(os.environ.get("HOME", ""), "conda_envs/bcftools_env"),
 )
 SINGULARITY_MODULE = os.environ.get("SINGULARITY_MODULE", "openmind/singularity/3.10.4")
 SLURM_MAIL_USER = os.environ.get("SLURM_MAIL_USER", "")

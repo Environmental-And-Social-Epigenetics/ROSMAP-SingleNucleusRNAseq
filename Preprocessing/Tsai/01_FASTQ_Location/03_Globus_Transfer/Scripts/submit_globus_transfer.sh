@@ -23,8 +23,11 @@ set -e
 ENGAGING_ENDPOINT="ec54b570-cac5-47f7-b2a1-100c2078686f"  # MIT ORCD Engaging Collection
 OPENMIND_ENDPOINT="cbc6f8da-d37e-11eb-bde9-5111456017d9"
 
-# Conda environment with Globus CLI
-GLOBUS_CONDA_ENV="/home/mabdel03/conda_envs/globus_env"
+# Source central path config
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../.." && pwd)/config/paths.sh"
+
+# Conda environment with Globus CLI (from config/paths.sh)
+GLOBUS_CONDA_ENV="${GLOBUS_ENV}"
 
 # Script directory (resolve relative paths)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -79,8 +82,8 @@ echo
 
 # Activate conda environment
 log "Activating Globus conda environment..."
-if [[ -f "/home/mabdel03/miniforge3/etc/profile.d/conda.sh" ]]; then
-    source /home/mabdel03/miniforge3/etc/profile.d/conda.sh
+if [[ -f "${CONDA_INIT_SCRIPT}" ]]; then
+    source "${CONDA_INIT_SCRIPT}"
 elif [[ -f "$HOME/.bashrc" ]]; then
     source "$HOME/.bashrc"
 fi

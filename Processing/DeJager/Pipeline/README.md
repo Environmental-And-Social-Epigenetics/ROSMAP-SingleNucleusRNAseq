@@ -10,7 +10,7 @@ The DeJager pipeline uses **identical processing methods** to the Tsai pipeline,
 ## Inputs
 
 - CellBender outputs: `{DEJAGER_PREPROCESSED}/{library}/processed_feature_bc_matrix_filtered.h5`
-- Patient barcode mapping: `/om/scratch/Mon/shared_folder/WGS/cell_to_patient_assignmentsFinal0.csv`
+- Patient barcode mapping: `$DEJAGER_PATIENT_MAP` (see [Obtaining the Patient Map](#obtaining-the-patient-map) below)
 - Patient ID overrides for "alone" libraries: `Resources/patient_id_overrides.json`
 - Marker reference: `Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds` (symlink to Tsai's copy)
 
@@ -137,6 +137,41 @@ paths. Key DeJager-specific variables:
 | `DEJAGER_PATIENT_ID_OVERRIDES` | R-number overrides JSON |
 
 Conda environment specs are in `envs/` for recreating environments from scratch.
+
+## Obtaining the Patient Map
+
+The barcode-to-patient mapping file (`cell_to_patient_assignmentsFinal0.csv`) is
+**~155 MB / 3.3 million rows** and is too large to store in git. You must obtain
+it separately before running Stage 1 on multiplexed libraries.
+
+**Option 1 — Shared cluster storage (MIT Engaging):**
+
+```bash
+# Copy from the shared Openmind scratch folder
+cp /om/scratch/Mon/shared_folder/WGS/cell_to_patient_assignmentsFinal0.csv \
+   "$DEJAGER_PATIENT_MAP"
+```
+
+**Option 2 — Tsai Lab NAS:**
+
+The file is archived on the Tsai Lab Server NAS under
+`/LabShared/<user>/DeJager_Data/`. Use the NAS download scripts in
+`Data_Access/Transcriptomics/Tsai_Server/DeJager/` to retrieve it.
+
+**Option 3 — Regenerate from Demuxlet/Freemuxlet outputs:**
+
+The CSV was produced by the Demuxlet postprocessing step. If you have the raw
+demuxlet outputs, run:
+
+```bash
+python Preprocessing/DeJager/04_Demuxlet_Freemuxlet/postprocess_assignments.py
+```
+
+After obtaining the file, set `DEJAGER_PATIENT_MAP` in your `config/paths.local.sh`
+to its location, or place it at the default path shown by `check_paths`.
+
+> **Note:** "Alone" libraries (suffix `-alone`) do not use this CSV — they use
+> `Resources/patient_id_overrides.json` instead.
 
 ## Resources
 

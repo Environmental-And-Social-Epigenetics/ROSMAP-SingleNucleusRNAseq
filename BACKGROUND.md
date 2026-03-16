@@ -60,13 +60,14 @@ These thresholds balance removing damaged/dying cells against retaining genuine 
 
 ## Why Harmony for Batch Correction?
 
-The Tsai dataset spans 16 processing batches (30 patients each). Even with identical protocols, technical differences between batches (reagent lots, sequencing runs, handling variation) introduce systematic variation that can confound biological signal.
+Even with identical protocols, technical differences between sequencing runs (reagent lots, flowcells, instruments, handling variation) introduce systematic variation that can confound biological signal.
 
 **Harmony** corrects for batch effects by iteratively adjusting the PCA embedding so that cells from different batches overlap in reduced-dimensional space. Critically:
 
 - It operates on the **PCA embedding** only, leaving the raw count matrix untouched
 - This preserves the original expression values for downstream differential expression analysis
-- The correction uses the patient ID as the covariate (`projid` for Tsai, `patient_id` for DeJager), treating each patient as a "batch" to remove per-patient technical variation while preserving condition-level biological signal
+- The correction uses **derived sequencing batches** as the covariate — groups of samples that were sequenced on the same flowcell(s), inferred from FASTQ headers by `derive_batches.py`. This produces ~41 natural batch groups for the Tsai dataset, reflecting actual technical variation rather than arbitrary groupings
+- The batch variable is configurable via `--harmony-batch-key` (see `03_integration_annotation.py`), allowing comparison between different correction strategies (e.g., flowcell-based vs. per-patient)
 
 ## The Two Datasets
 

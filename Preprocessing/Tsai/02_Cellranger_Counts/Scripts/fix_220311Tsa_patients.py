@@ -9,8 +9,10 @@ import os
 import pandas as pd
 from pathlib import Path
 
-# Configuration
-REPO_ROOT = "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq"
+# Derive REPO_ROOT from this file's location:
+#   <REPO_ROOT>/Preprocessing/Tsai/02_Cellranger_Counts/Scripts/fix_220311Tsa_patients.py
+REPO_ROOT = str(Path(__file__).resolve().parents[4])
+
 PIPELINE_DIR = f"{REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts"
 INPUT_CSV = f"{REPO_ROOT}/Data/Tsai/All_ROSMAP_FASTQs.csv"
 
@@ -20,11 +22,12 @@ SYMLINKS_DIR = f"{REPO_ROOT}/Data/Tsai/FASTQ_Symlinks"
 # Problematic directory
 PROBLEMATIC_DIR = "/nfs/picower001/lhtsailab/lab_shared/lpantano/data/220311Tsa"
 
-# Cell Ranger settings
-CELLRANGER_PATH = "/orcd/data/lhtsai/001/om2/mabdel03/apps/yard/cellranger-8.0.0"
-TRANSCRIPTOME = "/orcd/data/lhtsai/001/om2/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A"
-SCRATCH_ROOT = "/home/mabdel03/orcd/scratch"
-CELLRANGER_OUTPUT = f"{SCRATCH_ROOT}/Tsai/Cellranger_Counts"
+# Cell Ranger settings (read from environment if sourced via config/paths.sh,
+# otherwise fall back to sensible defaults derived from REPO_ROOT)
+CELLRANGER_PATH = os.environ.get("CELLRANGER_PATH", f"{REPO_ROOT}/../apps/yard/cellranger-8.0.0")
+TRANSCRIPTOME = os.environ.get("CELLRANGER_REF", f"{REPO_ROOT}/../yard/references/human/refdata-gex-GRCh38-2020-A")
+SCRATCH_ROOT = os.environ.get("SCRATCH_ROOT", str(Path(REPO_ROOT).parent))
+CELLRANGER_OUTPUT = os.environ.get("TSAI_CELLRANGER_OUTPUT", f"{SCRATCH_ROOT}/Tsai_Data/Cellranger_Outputs")
 TRACKING_DIR = f"{PIPELINE_DIR}/Tracking"
 LOGS_OUT = f"{PIPELINE_DIR}/Logs/Outs"
 LOGS_ERR = f"{PIPELINE_DIR}/Logs/Errs"
@@ -61,7 +64,6 @@ def generate_cellranger_script(projid, library_id, fastq_dir, batch_num):
 #SBATCH --mem=64G
 #SBATCH --output={LOGS_OUT}/cellranger_{projid}_%j.out
 #SBATCH --error={LOGS_ERR}/cellranger_{projid}_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
 #SBATCH --mail-type=FAIL
 
 # Cell Ranger count for patient {projid} (Batch {batch_num})

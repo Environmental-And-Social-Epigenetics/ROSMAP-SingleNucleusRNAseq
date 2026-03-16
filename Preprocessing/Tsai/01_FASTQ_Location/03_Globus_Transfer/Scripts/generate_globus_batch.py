@@ -31,8 +31,11 @@ from collections import defaultdict
 # Configuration
 # =============================================================================
 
+# Derive REPO_ROOT from this file's location:
+#   <REPO_ROOT>/Preprocessing/Tsai/01_FASTQ_Location/03_Globus_Transfer/Scripts/generate_globus_batch.py
+REPO_ROOT = str(Path(__file__).resolve().parents[5])
+
 # Input CSV with FASTQ locations
-REPO_ROOT = "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq"
 INPUT_CSV = f"{REPO_ROOT}/Data/Tsai/All_ROSMAP_FASTQs.csv"
 
 # Script directory (for relative paths to output)
@@ -41,7 +44,11 @@ BATCH_FILE = SCRIPT_DIR / "Batch_Files" / "globus_batch.txt"
 LOG_DIR = SCRIPT_DIR / "Logs"
 
 # Destination base path on Openmind
-DEST_BASE = "/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs"
+# Falls back to WORKSPACE_ROOT/../Tsai_Data/FASTQs when TSAI_FASTQS_DIR is not set.
+DEST_BASE = os.environ.get(
+    "TSAI_FASTQS_DIR",
+    str(Path(REPO_ROOT).parent / "Tsai_Data" / "FASTQs"),
+)
 
 # Globus endpoint IDs
 # Note: Use MIT ORCD Engaging Collection, not the older mithpc#engaging

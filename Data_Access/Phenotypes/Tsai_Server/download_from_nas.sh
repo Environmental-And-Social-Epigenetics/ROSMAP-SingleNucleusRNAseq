@@ -22,14 +22,14 @@ source "$(cd "${SCRIPT_DIR}/../../../config" && pwd)/paths.sh"
 # ---------------------------------------------------------------------------
 REMOTE_HOST="tsailabnas.mit.edu"
 SFTP_PORT=22
-SFTP_USER="mabdel03"
+SFTP_USER="${NAS_SFTP_USER:-${USER}}"
 SFTP_AUTHFILE="${HOME}/.smb_tsailabnas"
 SFTP_NUM_REQUESTS=64
 SFTP_CIPHER="aes128-gcm@openssh.com"
 SFTP_BUFFER_SIZE=""
 
 LOCAL_BASE="${REPO_ROOT}/Data/Phenotypes"
-SFTP_REMOTE_BASE="/LabShared/mabdel03/ROSMAP/Data/Phenotypes"
+SFTP_REMOTE_BASE="/LabShared/${NAS_SFTP_USER:-${USER}}/ROSMAP/Data/Phenotypes"
 STATE_DIR="${HOME}/.nas_transfer_state"
 
 # ---------------------------------------------------------------------------

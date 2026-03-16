@@ -1,4 +1,5 @@
 #!/bin/bash
+# ONE-OFF EXAMPLE — kept for reference; paths are not portable
 #SBATCH -t 47:00:00
 #SBATCH -n 32
 #SBATCH --mem=128G

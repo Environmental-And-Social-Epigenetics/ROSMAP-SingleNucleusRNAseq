@@ -36,21 +36,21 @@ ENGAGING_ENDPOINT="c52fcff2-761c-11eb-8cfc-cd623f92e1c0"
 
 if [[ -d "/om2" ]]; then
     CURRENT_CLUSTER="openmind"
-    CONDA_INIT="/om2/user/mabdel03/anaconda/etc/profile.d/conda.sh"
-    GLOBUS_ENV="/om2/user/mabdel03/conda_envs/globus_env"
     SOURCE_ENDPOINT="$OPENMIND_ENDPOINT"
     DEST_ENDPOINT="$ENGAGING_ENDPOINT"
     SOURCE_LABEL="Openmind"
     DEST_LABEL="Engaging"
 else
     CURRENT_CLUSTER="engaging"
-    CONDA_INIT="/home/mabdel03/miniforge3/etc/profile.d/conda.sh"
-    GLOBUS_ENV="/home/mabdel03/conda_envs/globus_env"
     SOURCE_ENDPOINT="$ENGAGING_ENDPOINT"
     DEST_ENDPOINT="$OPENMIND_ENDPOINT"
     SOURCE_LABEL="Engaging"
     DEST_LABEL="Openmind"
 fi
+
+# Use config-sourced conda/Globus paths (set in config/paths.sh or paths.local.sh)
+CONDA_INIT="${CONDA_INIT_SCRIPT}"
+GLOBUS_ENV_PATH="${GLOBUS_ENV}"
 
 # =============================================================================
 # Configuration
@@ -116,8 +116,8 @@ fi
 # ---- Activate Globus conda environment ----
 log "Activating Globus conda environment..."
 source "$CONDA_INIT"
-conda activate "$GLOBUS_ENV"
-log "Conda environment activated: ${GLOBUS_ENV}"
+conda activate "$GLOBUS_ENV_PATH"
+log "Conda environment activated: ${GLOBUS_ENV_PATH}"
 echo
 
 # ---- Check Globus login status ----

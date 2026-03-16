@@ -4,9 +4,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
-#SBATCH --output=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/FASTQ_Transfer/New/Logs/build_csv_%j.out
-#SBATCH --error=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/FASTQ_Transfer/New/Logs/build_csv_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+#SBATCH --output=build_csv_%j.out
+#SBATCH --error=build_csv_%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
 
 #
@@ -16,11 +15,16 @@
 
 set -e
 
-# Define absolute paths (required for SLURM which copies the script)
-PIPELINE_ROOT="/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/FASTQ_Transfer"
-SCRIPT_DIR="${PIPELINE_ROOT}/New/Scripts/01_Build_Master_CSV"
+# ---------------------------------------------------------------------------
+# Source central path config (REPO_ROOT, DATA_ROOT, TSAI_FASTQ_TRANSFER_ROOT, etc.)
+# ---------------------------------------------------------------------------
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)/config/paths.sh"
 
-# Load configuration
+# Define paths from config
+PIPELINE_ROOT="${TSAI_FASTQ_TRANSFER_ROOT}"
+SCRIPT_DIR="${REPO_ROOT}/Preprocessing/Tsai/01_FASTQ_Location/01_Build_Master_CSV"
+
+# Load FASTQ-transfer-specific configuration
 source "${PIPELINE_ROOT}/New/Scripts/Config/config.sh"
 
 # Activate conda environment
@@ -63,15 +67,15 @@ fi
 ROW_NUM=0
 tail -n +2 "$MASTER_CSV" | while IFS=',' read -r idx idx2 batch projid library_id tsai_path openmind_dest; do
     ROW_NUM=$((ROW_NUM + 1))
-    
+
     # Clean up fields (remove quotes if present)
     projid=$(echo "$projid" | tr -d '"')
     library_id=$(echo "$library_id" | tr -d '"')
     tsai_path=$(echo "$tsai_path" | tr -d '"')
-    
+
     # Get backup path if available
     backup_path="${BACKUPS_MAP[$tsai_path]:-}"
-    
+
     # Write job: row_num|projid|library_id|tsai_path|backup_path
     echo "${ROW_NUM}|${projid}|${library_id}|${tsai_path}|${backup_path}"
 done > "$JOBS_FILE"
@@ -121,4 +125,3 @@ echo "Master FASTQ CSV built successfully!"
 echo "Output: ${ALL_FASTQS_CSV}"
 echo "Completed: $(date)"
 echo "=============================================="
-

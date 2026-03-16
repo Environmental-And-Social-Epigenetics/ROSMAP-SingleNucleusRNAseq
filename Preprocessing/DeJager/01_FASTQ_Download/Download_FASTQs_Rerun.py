@@ -11,19 +11,25 @@ Usage:
 """
 
 import os
+from pathlib import Path
 
 import pandas as pd
 import synapseclient
 
 
+# Compute repo/workspace roots from script location (depth 3 from repo root)
+_script_path = Path(__file__).resolve()
+_repo_root = _script_path.parents[3]
+_workspace_root = _repo_root.parent
+
 # Resolve paths from environment (set by config/paths.sh) or use defaults
 DATA_ROOT = os.environ.get(
     "DATA_ROOT",
-    "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis",
+    "__UNCONFIGURED__set_DATA_ROOT_in_paths_local_sh",
 )
 DEJAGER_FASTQS = os.environ.get(
     "DEJAGER_FASTQS",
-    os.path.join(os.environ.get("SCRATCH_ROOT", "/om/scratch/Mon/mabdel03"), "FASTQs"),
+    str(_workspace_root / "DeJager_Data" / "FASTQs"),
 )
 
 SYNAPSE_CSV = os.path.join(

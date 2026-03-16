@@ -23,19 +23,13 @@ alongside the repo in the same parent directory (`/your/workspace/`).
 
 ## Step 2: Configure Paths
 
-Edit `config/paths.sh` — or better, create `config/paths.local.sh` (gitignored)
-to override just the variables that differ on your cluster:
+Copy the template and fill in your cluster-specific paths:
 
 ```bash
-# config/paths.local.sh — example
-export CONDA_INIT_SCRIPT="$HOME/miniforge3/etc/profile.d/conda.sh"
-export CONDA_ENV_BASE="$HOME/conda_envs"
-export SCRATCH_ROOT="/scratch/$USER"
-export DATA_ROOT="/data/project/mylab"
-export CELLRANGER_PATH="$HOME/apps/cellranger-8.0.0"
-export CELLRANGER_REF="$HOME/references/refdata-gex-GRCh38-2020-A"
-export SLURM_MAIL_USER="you@university.edu"
-export SLURM_PARTITION="your_partition"
+cp config/paths.local.sh.template config/paths.local.sh
+# Edit config/paths.local.sh — set at minimum:
+#   CONDA_INIT_SCRIPT, CONDA_ENV_BASE, DATA_ROOT, SCRATCH_ROOT,
+#   CELLRANGER_PATH, CELLRANGER_REF, SLURM_MAIL_USER
 ```
 
 Then verify:
@@ -44,6 +38,8 @@ Then verify:
 source config/paths.sh
 check_paths
 ```
+
+See `config/paths.local.sh.template` for MIT Engaging example paths.
 
 ## Step 3: Install Cell Ranger
 
@@ -95,7 +91,17 @@ pip install cellbender
 
 Set `CELLBENDER_ENV` in your config to the environment path.
 
-## Step 6: Synapse Credentials (DeJager only)
+## Step 6: DeJager Patient Map (DeJager only)
+
+The barcode-to-patient mapping file (`cell_to_patient_assignmentsFinal0.csv`,
+~155 MB) is required for Stage 1 of the DeJager Processing pipeline but is too
+large for git. See
+[Processing/DeJager/Pipeline/README.md](../Processing/DeJager/Pipeline/README.md#obtaining-the-patient-map)
+for instructions on obtaining it.
+
+Set `DEJAGER_PATIENT_MAP` in `config/paths.local.sh` to point to the file.
+
+## Step 7: Synapse Credentials (DeJager only)
 
 The DeJager dataset is downloaded from Synapse.  If you need to run the DeJager
 Preprocessing pipeline:
@@ -104,7 +110,7 @@ Preprocessing pipeline:
 2. Install the Synapse client: `pip install synapseclient`
 3. Configure credentials: `synapse login -u <username> -p <password> --rememberMe`
 
-## Step 7: Verify Setup
+## Step 8: Verify Setup
 
 ```bash
 source config/paths.sh
@@ -117,15 +123,22 @@ python 01_qc_filter.py --list-samples | head -2
 
 ## SLURM Partitions
 
-The pipeline uses these cluster-specific partitions (configured for MIT Openmind):
+Configure your cluster's partitions in `config/paths.local.sh`:
 
-| Partition | Used By | Purpose |
-|-----------|---------|---------|
-| `mit_preemptable` | Cell Ranger | Lower-priority partition with shorter queue times; jobs may be preempted |
-| `mit_normal_gpu` | CellBender | GPU partition for ambient RNA removal |
-| `lhtsai` | Stage 3 Integration | Lab-specific high-memory partition |
+```bash
+export SLURM_PARTITION="your_default_partition"
+export SLURM_PARTITION_GPU="your_gpu_partition"
+```
 
-To override the default partition, set `SLURM_PARTITION` in `config/paths.sh` or `config/paths.local.sh`. If your cluster uses different partition names, update this variable.
+If no partition is set, SLURM will use the cluster default.
+
+### MIT Engaging / Openmind Reference
+
+| Pipeline Use | Partition | Notes |
+|-------------|-----------|-------|
+| Cell Ranger | `mit_preemptable` | Lower-priority, shorter queue; jobs may be preempted |
+| CellBender | `mit_normal_gpu` | GPU partition (A100) for ambient RNA removal |
+| Stage 3 Integration | `lhtsai` | Lab-specific high-memory partition (500GB) |
 
 ## Directory Layout
 

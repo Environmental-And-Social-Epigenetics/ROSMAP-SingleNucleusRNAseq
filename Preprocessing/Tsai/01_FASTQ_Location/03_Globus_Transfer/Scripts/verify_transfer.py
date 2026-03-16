@@ -38,12 +38,19 @@ from collections import defaultdict
 # Configuration
 # =============================================================================
 
+# Derive REPO_ROOT from this file's location:
+#   <REPO_ROOT>/Preprocessing/Tsai/01_FASTQ_Location/03_Globus_Transfer/Scripts/verify_transfer.py
+REPO_ROOT = str(Path(__file__).resolve().parents[5])
+
 # Input CSV with expected FASTQ locations
-REPO_ROOT = "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq"
 INPUT_CSV = f"{REPO_ROOT}/Data/Tsai/All_ROSMAP_FASTQs.csv"
 
 # Default destination base path on Openmind
-DEFAULT_DEST_BASE = "/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs"
+# Override with --dest-dir at the command line if your scratch differs.
+DEFAULT_DEST_BASE = os.environ.get(
+    "TSAI_FASTQS_DIR",
+    str(Path(REPO_ROOT).parent / "Tsai_Data" / "FASTQs"),
+)
 
 # Script directory (for relative paths to output)
 SCRIPT_DIR = Path(__file__).parent.parent

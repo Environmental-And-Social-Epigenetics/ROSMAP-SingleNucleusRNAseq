@@ -17,6 +17,30 @@ This repository contains the single nucleus RNA sequencing (snRNA-seq) analysis 
    ```
 5. **Downstream Analysis** — See [Analysis/](Analysis/README.md)
 
+### For New Lab Members
+
+1. Get MIT Engaging cluster access: `ssh <Kerberos ID>@orcd-login003.mit.edu`
+2. Clone this repo to your workspace
+3. Copy `config/paths.local.sh.template` to `config/paths.local.sh` and fill in your paths
+4. Run `bash setup/install_envs.sh` to create conda environments
+5. Download data from the Tsai Lab NAS (see [Data_Access/](Data_Access/README.md))
+6. Run the pipeline: `cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all`
+
+## Data Provenance (March 2026)
+
+The processed data from Mahmoud Abdelmoneum, Nina Khera, and Ravikiran Raju's March 2026 analysis is available at these locations:
+
+| Data | Location | Access Method |
+|------|----------|---------------|
+| Tsai raw FASTQs | MIT Engaging cluster | Globus transfer (CSV mapping in repo) |
+| DeJager raw FASTQs | Synapse ([syn21438684](https://www.synapse.org/#!Synapse:syn21438684)) | Synapse download |
+| CellBender outputs (both datasets) | Tsai Lab Server NAS | SFTP download |
+| Cell-type annotated objects (both datasets) | Tsai Lab Server NAS | SFTP download |
+| Phenotype CSVs | In repo (`Data/Phenotypes/`) | Already included |
+| DeJager WGS VCF + Demuxafy SIF | Shared cluster storage | Contact lab |
+
+See [Data_Access/README.md](Data_Access/README.md) for transfer scripts and detailed instructions.
+
 ## Repository Structure
 
 ```
@@ -52,8 +76,10 @@ ROSMAP-SingleNucleusRNAseq/
 │       │   ├── Resources/         # Marker gene references
 │       │   └── envs/              # Conda environment specs
 │       └── archive/               # Superseded legacy scripts
-├── Data/                    # Clinical phenotype data
-│   └── Phenotypes/          # ROSMAP clinical, ACE scores, ID maps
+├── Data/                    # Pipeline data (phenotypes tracked, transcriptomics gitignored)
+│   ├── Phenotypes/          # ROSMAP clinical, ACE scores, ID maps (tracked in git)
+│   └── Transcriptomics/     # FASTQs, CellRanger, CellBender outputs (populate via Data_Access/)
+├── Data_Access/             # Scripts to download/transfer data (NAS, Globus, Synapse)
 └── Analysis/                # Downstream analysis (organized by phenotype)
     ├── _template/           # Template for adding new phenotype analyses
     ├── ACE/                 # Adverse Childhood Experiences
@@ -118,10 +144,11 @@ Conda environment specs are provided in `Processing/Tsai/Pipeline/envs/`.
 
 ### Path Configuration
 
-Before running the pipeline, configure paths in `config/paths.sh` (or create
-`config/paths.local.sh` for per-user overrides):
+Before running the pipeline, create your local path overrides:
 
 ```bash
+cp config/paths.local.sh.template config/paths.local.sh
+# Edit config/paths.local.sh with your cluster-specific paths
 source config/paths.sh
 check_paths
 ```
@@ -227,4 +254,10 @@ When adding new scripts or analyses:
 
 ## Contact
 
-For questions about this pipeline, contact the Environmental and Social Epigenetics lab.
+For questions about this pipeline, contact:
+
+- Mahmoud Abdelmoneum (mabdel03@mit.edu)
+- Nina Khera (nkhera@college.harvard.edu)
+- Ravikiran Raju (rraju@mit.edu)
+
+Environmental and Social Epigenetics Lab, Tsai Lab, MIT.

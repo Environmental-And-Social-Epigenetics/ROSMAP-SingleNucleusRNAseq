@@ -73,8 +73,8 @@ Stage 3 processing steps:
 | Log transform | `sc.pp.log1p` | Natural log(1 + x) |
 | HVG selection | `sc.pp.highly_variable_genes` | `flavor="seurat_v3"`, `n_top_genes=3000`, `layer="counts"` |
 | PCA | `sc.tl.pca` | `n_comps=30`, `svd_solver="arpack"`, `use_highly_variable=True` |
-| Batch correction | `harmonypy.run_harmony` | Input: `X_pca`; batch variable: `projid` |
-| Neighbors | `sc.pp.neighbors` | `n_neighbors=30`, `n_pcs=30`, `metric="cosine"`, `use_rep="X_harmony"` |
+| Batch correction | `harmonypy.run_harmony` | Input: `X_pca`; batch variable: `derived_batch` (flowcell-based, ~41 groups); configurable via `--harmony-batch-key`; `--harmony-theta 2.0`; `--skip-harmony` for no correction |
+| Neighbors | `sc.pp.neighbors` | `n_neighbors=30`, `n_pcs=30`, `metric="cosine"`, `use_rep="X_harmony"` (or `"X_pca"` if `--skip-harmony`) |
 | Clustering | `sc.tl.leiden` | Resolutions: **0.2**, **0.5**, **1.0** |
 | UMAP | `sc.tl.umap` | `min_dist=0.15`, `random_state=0` |
 | Annotation | `decoupler.run_ora` | Markers: Mohammadi 2020 PFC reference; `use_raw=False`; top-1 cell type per `leiden_res0_5` cluster |

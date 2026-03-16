@@ -5,9 +5,15 @@ The final production VCF is `snp_fixedconcatenated_liftedROSMAP.vcf.gz` (~84GB).
 
 ## Source Data
 
-The ROSMAP Whole Genome Sequencing (WGS) data was obtained as per-chromosome VCF
-files from the ROSMAP study. These files contained variants for all sequenced
-ROSMAP subjects.
+The ROSMAP Whole Genome Sequencing (WGS) data was obtained from the
+AD Knowledge Portal on Synapse (https://adknowledgeportal.synapse.org/) as part
+of the ROSMAP genomics collection. These are per-chromosome VCF files containing
+variants for all sequenced ROSMAP subjects.
+
+**Access requirements**: ROSMAP WGS data is controlled-access. You must have a
+Synapse account and an approved Data Use Agreement (DUA) for the ROSMAP study.
+Navigate to the ROSMAP study page on the AD Knowledge Portal to locate the WGS
+VCF files.
 
 Original files (per chromosome):
 ```
@@ -21,7 +27,26 @@ DEJ_11898_B01_GRM_WGS_2017-05-15_{chr}.recalibrated_variants_chr.vcf.gz
 The original WGS VCFs were aligned to GRCh37 (hg19). Since Cell Ranger aligns
 reads to GRCh38 (hg38), the VCFs needed to be lifted over to match.
 
-Tools: Picard LiftoverVcf or CrossMap
+**Tools**: Either Picard LiftoverVcf or CrossMap can be used. Example with Picard:
+
+```bash
+java -jar picard.jar LiftoverVcf \
+    I=input_hg19.vcf.gz \
+    O=output_hg38.vcf.gz \
+    CHAIN=hg19ToHg38.over.chain.gz \
+    REJECT=rejected_variants.vcf.gz \
+    R=hg38.fa
+```
+
+**Chain file**: `hg19ToHg38.over.chain.gz` is available from the UCSC Genome
+Browser downloads (https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/).
+
+**Reference FASTA**: The GRCh38 reference must match the Cell Ranger reference.
+If using the 10x-provided reference (`refdata-gex-GRCh38-2020-A`), the FASTA
+is at `fasta/genome.fa` within the reference directory.
+
+Some variants will fail liftover (typically <1%). These are written to the
+REJECT file and excluded from the final VCF.
 
 ### 2. Chromosome Name Fixing
 
@@ -85,8 +110,23 @@ SM-CJIYJ
 SM-CTEEG
 ```
 
-These files were created by cross-referencing the library pooling records with
-the WGS sample manifest.
+These files were created by cross-referencing:
+- The **library pooling records** from the DeJager lab, which document which
+  patients (by WGS sample ID) were loaded into each 10x Chromium channel.
+  These records are lab-internal and were provided with the dataset metadata.
+- The **WGS sample manifest**, which maps SM-* identifiers to ROSMAP
+  participant IDs.
+
+The SM-* IDs in these files must exactly match the sample names in the VCF
+header. You can verify this with:
+
+```bash
+bcftools query -l ${DEJAGER_DEMUX_VCF} | grep "SM-CJGLI"
+```
+
+If you are applying this pipeline to a different multiplexed dataset, you will
+need to create equivalent patient ID files for your libraries by determining
+which patients were pooled in each library.
 
 ## Additional VCF Filtering (Optional)
 

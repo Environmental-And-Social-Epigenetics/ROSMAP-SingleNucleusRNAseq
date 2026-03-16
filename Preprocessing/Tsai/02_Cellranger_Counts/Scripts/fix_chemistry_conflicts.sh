@@ -4,9 +4,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
-#SBATCH --output=/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Logs/Outs/fix_chemistry_%j.out
-#SBATCH --error=/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Logs/Errs/fix_chemistry_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+#SBATCH --output=fix_chemistry_%j.out
+#SBATCH --error=fix_chemistry_%j.err
 #SBATCH --mail-type=FAIL
 
 # Fix chemistry conflict patients by running samples separately then aggregating
@@ -14,12 +13,15 @@
 
 set -e
 
-export PATH=/om2/user/mabdel03/apps/yard/cellranger-8.0.0:$PATH
+# Source central path config
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)/config/paths.sh"
 
-TRACKING_DIR="/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Tracking"
-OUTPUT_BASE="/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs"
-FASTQ_BASE="/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs"
-TRANSCRIPTOME="/om2/user/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A"
+export PATH="${CELLRANGER_PATH}:$PATH"
+
+TRACKING_DIR="${REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts/Tracking"
+OUTPUT_BASE="${TSAI_CELLRANGER_OUTPUT}"
+FASTQ_BASE="${TSAI_FASTQS_DIR}"
+TRANSCRIPTOME="${CELLRANGER_REF}"
 
 #=============================================================================
 # Patient 11630705

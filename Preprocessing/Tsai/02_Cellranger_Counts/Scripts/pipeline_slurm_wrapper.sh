@@ -5,9 +5,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=4G
-#SBATCH --output=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Logs/Outs/pipeline_master_%j.out
-#SBATCH --error=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Logs/Errs/pipeline_master_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+#SBATCH --output=pipeline_master_%j.out
+#SBATCH --error=pipeline_master_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --requeue
 
@@ -15,8 +14,10 @@
 # Requeues automatically if preempted, will continue from where it left off
 # Uses tracking files to know what's already done
 
-# Use absolute paths (SLURM copies scripts, breaking BASH_SOURCE)
-PIPELINE_DIR="/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts"
+# Source central path config (REPO_ROOT, DATA_ROOT, etc.)
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)/config/paths.sh"
+
+PIPELINE_DIR="${REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts"
 SCRIPT_DIR="${PIPELINE_DIR}/Scripts"
 source "${PIPELINE_DIR}/Config/cellranger_config.sh"
 

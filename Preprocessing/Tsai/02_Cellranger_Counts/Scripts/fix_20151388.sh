@@ -4,9 +4,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
-#SBATCH --output=/weka/scratch/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Logs/Outs/fix_20151388_%j.out
-#SBATCH --error=/weka/scratch/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Logs/Errs/fix_20151388_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+#SBATCH --output=fix_20151388_%j.out
+#SBATCH --error=fix_20151388_%j.err
 #SBATCH --mail-type=FAIL
 
 # Fix chemistry conflict for patient 20151388 by running libraries separately
@@ -15,13 +14,16 @@
 
 set -euo pipefail
 
-export PATH=/om2/user/mabdel03/apps/yard/cellranger-8.0.0:$PATH
+# Source central path config
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)/config/paths.sh"
+
+export PATH="${CELLRANGER_PATH}:$PATH"
 export HDF5_USE_FILE_LOCKING=FALSE
 
-OUTPUT_BASE="/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs"
-FASTQ_BASE="/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs"
-TRANSCRIPTOME="/om2/user/mabdel03/yard/references/human/refdata-gex-GRCh38-2020-A"
-TRACKING_DIR="/weka/scratch/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/02_Cellranger_Counts/Tracking"
+OUTPUT_BASE="${TSAI_CELLRANGER_OUTPUT}"
+FASTQ_BASE="${TSAI_FASTQS_DIR}"
+TRANSCRIPTOME="${CELLRANGER_REF}"
+TRACKING_DIR="${REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts/Tracking"
 
 PATIENT="20151388"
 

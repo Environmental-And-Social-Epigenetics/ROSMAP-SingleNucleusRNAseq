@@ -40,8 +40,8 @@ export CELLRANGER_COMPLETED="${CELLRANGER_TRACKING_DIR}/cellranger_completed.txt
 # CELLBENDER PARAMETERS
 # =============================================================================
 
-export CONDA_INIT_SCRIPT="/om2/user/mabdel03/anaconda/etc/profile.d/conda.sh"
-export CELLBENDER_CONDA="/om2/user/mabdel03/conda_envs/Cellbender_env"
+export CONDA_INIT_SCRIPT="${CONDA_INIT_SCRIPT}"
+export CELLBENDER_CONDA="${CELLBENDER_ENV}"
 export CB_FPR="0"
 export CB_CUDA="true"
 
@@ -53,7 +53,7 @@ export CB_SLURM_TIME="47:00:00"
 export CB_SLURM_CPUS="32"
 export CB_SLURM_MEM="128G"
 export CB_SLURM_GPU="1"
-export SLURM_MAIL_USER="mabdel03@mit.edu"
+export SLURM_MAIL_USER="${SLURM_MAIL_USER}"
 
 # =============================================================================
 # HELPERS

@@ -4,9 +4,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
-#SBATCH --output=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/FASTQ_Transfer/New/Logs/organize_%j.out
-#SBATCH --error=/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/FASTQ_Transfer/New/Logs/organize_%j.err
-#SBATCH --mail-user=mabdel03@mit.edu
+#SBATCH --output=organize_%j.out
+#SBATCH --error=organize_%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
 
 #
@@ -16,11 +15,16 @@
 
 set -e
 
-# Define absolute paths (required for SLURM which copies the script)
-PIPELINE_ROOT="/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/FASTQ_Transfer"
-SCRIPT_DIR="${PIPELINE_ROOT}/New/Scripts/02_Organize_FASTQs"
+# ---------------------------------------------------------------------------
+# Source central path config (REPO_ROOT, DATA_ROOT, TSAI_FASTQ_TRANSFER_ROOT, etc.)
+# ---------------------------------------------------------------------------
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)/config/paths.sh"
 
-# Load configuration
+# Define paths from config
+PIPELINE_ROOT="${TSAI_FASTQ_TRANSFER_ROOT}"
+SCRIPT_DIR="${REPO_ROOT}/Preprocessing/Tsai/01_FASTQ_Location/02_Organize_FASTQs"
+
+# Load FASTQ-transfer-specific configuration
 source "${PIPELINE_ROOT}/New/Scripts/Config/config.sh"
 
 # Activate conda environment
@@ -69,13 +73,13 @@ for idx, row in df.iterrows():
     projid = str(row['projid'])
     lib_id = row['Library_ID']
     source_dir = row['source_dir']
-    
+
     key = f"{projid}|{lib_id}"
-    
+
     # Get or assign occurrence number for this source_dir
     if source_dir not in occurrence_map[key]:
         occurrence_map[key][source_dir] = len(occurrence_map[key]) + 1
-    
+
     occurrences.append(occurrence_map[key][source_dir])
 
 df['occurrence'] = occurrences
@@ -124,4 +128,3 @@ echo "Output directory: ${FASTQ_OUTPUT_DIR}"
 echo "Validation report: ${VALIDATION_REPORT}"
 echo "Completed: $(date)"
 echo "=============================================="
-

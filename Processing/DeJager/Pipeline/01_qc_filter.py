@@ -27,12 +27,12 @@ def default_paths() -> dict[str, Path]:
         "workspace_root": workspace_root,
         "input_dir": Path(os.environ.get(
             "DEJAGER_PREPROCESSED",
-            "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts",
+            str(workspace_root / "DeJager_Data" / "Preprocessed_Counts"),
         )),
         "output_dir": workspace_root / "DeJager_Data" / "Processing_Outputs" / "01_QC_Filtered",
         "patient_map_csv": Path(os.environ.get(
             "DEJAGER_PATIENT_MAP",
-            "/om/scratch/Mon/shared_folder/WGS/cell_to_patient_assignmentsFinal0.csv",
+            str(workspace_root / "DeJager_Data" / "cell_to_patient_assignmentsFinal0.csv"),
         )),
         "patient_id_overrides_json": script_path.parent / "Resources" / "patient_id_overrides.json",
     }

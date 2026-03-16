@@ -19,9 +19,14 @@ def env_bool(value, default=False):
     return value.strip().lower() in {"1", "true", "yes", "y"}
 
 
+# Compute repo/workspace roots from script location (depth 4 from repo root)
+_script_path = Path(__file__).resolve()
+_repo_root = _script_path.parents[3]
+_workspace_root = _repo_root.parent
+
 # Defaults (override with environment variables)
 REPO_ROOT = os.environ.get(
-    "REPO_ROOT", "/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq"
+    "REPO_ROOT", str(_repo_root)
 )
 PIPELINE_DIR = os.environ.get(
     "PIPELINE_DIR", f"{REPO_ROOT}/Preprocessing/Tsai/03_Cellbender"
@@ -36,17 +41,17 @@ LOGS_ERR = os.environ.get("LOGS_ERR", f"{PIPELINE_DIR}/Logs/Errs")
 
 CELLRANGER_OUTPUT = os.environ.get(
     "CELLRANGER_OUTPUT",
-    os.environ.get("TSAI_CELLRANGER_OUTPUT", "/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs"),
+    os.environ.get("TSAI_CELLRANGER_OUTPUT", str(_workspace_root / "Tsai_Data" / "Cellranger_Outputs")),
 )
 CELLBENDER_OUTPUT = os.environ.get(
     "CELLBENDER_OUTPUT",
-    os.environ.get("TSAI_CELLBENDER_SCRATCH", "/om/scratch/Mon/mabdel03/Tsai/Cellbender_Output"),
+    os.environ.get("TSAI_CELLBENDER_SCRATCH", str(_workspace_root / "Tsai" / "Cellbender_Output")),
 )
 FINAL_OUTPUT = os.environ.get(
     "FINAL_OUTPUT",
     os.environ.get(
         "TSAI_PREPROCESSED",
-        "/om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs",
+        str(_workspace_root / "Tsai_Data" / "Cellbender_Outputs"),
     ),
 )
 
@@ -68,14 +73,15 @@ CB_SLURM_TIME = os.environ.get("CB_SLURM_TIME", "47:00:00")
 CB_SLURM_CPUS = os.environ.get("CB_SLURM_CPUS", "32")
 CB_SLURM_MEM = os.environ.get("CB_SLURM_MEM", "128G")
 CB_SLURM_GPU = os.environ.get("CB_SLURM_GPU", "1")
-SLURM_MAIL_USER = os.environ.get("SLURM_MAIL_USER", "mabdel03@mit.edu")
+SLURM_MAIL_USER = os.environ.get("SLURM_MAIL_USER", "")
 
 CONDA_INIT_SCRIPT = os.environ.get(
     "CONDA_INIT_SCRIPT",
-    "/om2/user/mabdel03/anaconda/etc/profile.d/conda.sh",
+    os.path.join(os.environ.get("HOME", ""), "miniforge3/etc/profile.d/conda.sh"),
 )
 CELLBENDER_CONDA = os.environ.get(
-    "CELLBENDER_CONDA", "/om2/user/mabdel03/conda_envs/Cellbender_env"
+    "CELLBENDER_CONDA",
+    os.environ.get("CELLBENDER_ENV", os.path.join(os.environ.get("HOME", ""), "conda_envs/Cellbender_env")),
 )
 
 

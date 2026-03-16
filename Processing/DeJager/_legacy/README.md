@@ -6,7 +6,9 @@ Processing scripts for the DeJager ROSMAP snRNA-seq dataset.
 
 This directory contains scripts for QC, normalization, batch correction, and cell type annotation of the DeJager snRNA-seq data. The workflow was initially developed for the Tsai dataset and adapted for DeJager.
 
-> **Note**: This is the original pipeline version developed on Tsai data. The actively maintained pipeline with modern tooling (scDblFinder, SLURM array jobs, automatic dependency chaining) is at `Processing/Tsai/Pipeline/`. Scripts here are named `*TsaiPipeline.*` for this historical reason.
+> **Note**: This is the original pipeline version developed on Tsai data. The actively maintained pipeline with modern tooling (scDblFinder, SLURM array jobs, automatic dependency chaining) is at `Processing/DeJager/Pipeline/`. Scripts here are named `*TsaiPipeline.*` for this historical reason.
+>
+> **Not portable**: These scripts contain hardcoded paths from the original development environment and are kept for historical reference only.
 
 ## Scripts
 

@@ -7,9 +7,11 @@
 
 set -euo pipefail
 
-# Hardcoded for standalone sbatch submission (BASH_SOURCE resolves to
-# SLURM's temp copy, not the original path).
-REPO_ROOT="/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq"
+# Derive REPO_ROOT if not already set (e.g. when submit_pipeline.sh exports it).
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    REPO_ROOT="$(cd "${_SCRIPT_DIR}/../../.." && pwd)"
+fi
 SCRIPT_DIR="${REPO_ROOT}/Processing/Tsai/Pipeline"
 
 source "${REPO_ROOT}/config/paths.sh"

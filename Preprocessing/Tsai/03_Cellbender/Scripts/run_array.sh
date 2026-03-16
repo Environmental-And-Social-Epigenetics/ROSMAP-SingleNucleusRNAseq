@@ -1,4 +1,18 @@
 #!/bin/bash
+#
+# CellBender array job - max 10 concurrent
+#
+# Source config/paths.sh before submitting, or ensure the environment variables
+# are set.  SBATCH directives below use values from the sourced config.
+#
+
+# Source config/paths.sh relative to this script's location (depth 4 from repo root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+source "${REPO_ROOT}/config/paths.sh"
+
+PIPELINE_DIR="${REPO_ROOT}/Preprocessing/Tsai/03_Cellbender"
+
 #SBATCH --job-name=cellbender_array
 #SBATCH --array=1-36%10
 #SBATCH --nodes=1
@@ -7,9 +21,8 @@
 #SBATCH --time=47:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --mem=128G
-#SBATCH --output=/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/03_Cellbender/Logs/Outs/array_%A_%a.out
-#SBATCH --error=/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/03_Cellbender/Logs/Errs/array_%A_%a.err
-#SBATCH --mail-user=mabdel03@mit.edu
+#SBATCH --output=${PIPELINE_DIR}/Logs/Outs/array_%A_%a.out
+#SBATCH --error=${PIPELINE_DIR}/Logs/Errs/array_%A_%a.err
 #SBATCH --mail-type=FAIL
 
 # CellBender array job - max 10 concurrent
@@ -17,7 +30,7 @@
 # Disable HDF5 file locking to avoid shared filesystem locking issues
 export HDF5_USE_FILE_LOCKING=FALSE
 
-TRACKING_DIR="/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq/Preprocessing/Tsai/03_Cellbender/Tracking"
+TRACKING_DIR="${PIPELINE_DIR}/Tracking"
 NEEDS_RERUN="${TRACKING_DIR}/needs_rerun.txt"
 
 # Get projid for this array task
@@ -30,9 +43,9 @@ fi
 
 echo "Processing projid: $PROJID (task ${SLURM_ARRAY_TASK_ID})"
 
-# Paths
-INPUT_H5="/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/${PROJID}/outs/raw_feature_bc_matrix.h5"
-OUTPUT_DIR="/om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/${PROJID}"
+# Paths — use variables from config/paths.sh
+INPUT_H5="${TSAI_CELLRANGER_OUTPUT}/${PROJID}/outs/raw_feature_bc_matrix.h5"
+OUTPUT_DIR="${TSAI_PREPROCESSED}/${PROJID}"
 OUTPUT_H5="${OUTPUT_DIR}/processed_feature_bc_matrix.h5"
 
 # Check if already completed
@@ -48,8 +61,8 @@ if [[ ! -f "$INPUT_H5" ]]; then
 fi
 
 # Initialize conda
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
-conda activate /om2/user/mabdel03/conda_envs/Cellbender_env
+source "${CONDA_INIT_SCRIPT}"
+conda activate "${CELLBENDER_ENV}"
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
