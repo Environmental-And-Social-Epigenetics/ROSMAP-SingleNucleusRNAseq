@@ -1,0 +1,231 @@
+library(zellkonverter)
+library(SingleCellExperiment)
+library(scran)
+library(DESeq2)
+library(dplyr)
+
+required_pheno_cols <- c(
+  "projid", "tot_adverse_exp", "early_hh_ses",
+  "msex", "age_death", "pmi", "niareagansc"
+)
+
+args <- commandArgs(trailingOnly = TRUE)
+integration <- "derived_batch"
+phenotype <- NULL
+celltype <- NULL
+input_dir <- Sys.getenv("ACE_DEG_INPUT_DIR", "")
+output_dir <- Sys.getenv("ACE_DEG_OUTPUT_DIR", "")
+pheno_path <- Sys.getenv("ACE_SCORES_CSV", "")
+smoke_mode <- FALSE
+
+i <- 1
+while (i <= length(args)) {
+  if (args[i] == "--integration" && i < length(args)) {
+    integration <- args[i + 1]
+    i <- i + 2
+  } else if (args[i] == "--phenotype" && i < length(args)) {
+    phenotype <- args[i + 1]
+    i <- i + 2
+  } else if (args[i] == "--celltype" && i < length(args)) {
+    celltype <- args[i + 1]
+    i <- i + 2
+  } else if (args[i] == "--input-dir" && i < length(args)) {
+    input_dir <- args[i + 1]
+    i <- i + 2
+  } else if (args[i] == "--output-dir" && i < length(args)) {
+    output_dir <- args[i + 1]
+    i <- i + 2
+  } else if (args[i] == "--pheno-csv" && i < length(args)) {
+    pheno_path <- args[i + 1]
+    i <- i + 2
+  } else if (args[i] == "--smoke") {
+    smoke_mode <- TRUE
+    i <- i + 1
+  } else {
+    i <- i + 1
+  }
+}
+
+if (is.null(phenotype)) {
+  stop("ERROR: --phenotype is required. Options: tot_adverse_exp, early_hh_ses, ace_aggregate")
+}
+if (!nzchar(input_dir)) {
+  stop("ERROR: ACE DEG input directory is not set. Pass --input-dir or set ACE_DEG_INPUT_DIR.")
+}
+if (!nzchar(output_dir)) {
+  stop("ERROR: ACE DEG output directory is not set. Pass --output-dir or set ACE_DEG_OUTPUT_DIR.")
+}
+if (!nzchar(pheno_path)) {
+  stop("ERROR: ACE phenotype CSV is not set. Pass --pheno-csv or export ACE_SCORES_CSV.")
+}
+
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+cat("Integration:", integration, "\n")
+cat("Phenotype:", phenotype, "\n")
+cat("Input dir:", input_dir, "\n")
+cat("Output dir:", output_dir, "\n")
+cat("Phenotype CSV:", pheno_path, "\n")
+if (!is.null(celltype)) cat("Cell type:", celltype, "\n")
+
+pheno <- read.csv(pheno_path)
+missing_pheno <- setdiff(required_pheno_cols, colnames(pheno))
+if (length(missing_pheno) > 0) {
+  stop("ERROR: phenotype CSV missing columns: ", paste(missing_pheno, collapse = ", "))
+}
+
+pheno <- pheno %>%
+  mutate(projid = as.character(projid)) %>%
+  filter(!is.na(tot_adverse_exp))
+
+pheno$ace_aggregate <- as.numeric(scale(pheno$tot_adverse_exp)) -
+  as.numeric(scale(pheno$early_hh_ses))
+
+h5ad_files <- list.files(input_dir, pattern = "\\.h5ad$", full.names = FALSE)
+if (length(h5ad_files) == 0) {
+  stop("ERROR: no H5AD files found in ", input_dir)
+}
+
+broad_files <- h5ad_files[grepl("^broad_", h5ad_files)]
+subtype_files <- h5ad_files[!grepl("^broad_", h5ad_files) & h5ad_files != "var_names.csv"]
+
+run_deg_for_file <- function(h5ad_file, ct_label) {
+  cat("\n=== Cell type:", ct_label, "===\n")
+
+  h5ad_path <- file.path(input_dir, h5ad_file)
+  sce <- zellkonverter::readH5AD(h5ad_path, reader = "R")
+  cat("  Loaded:", ncol(sce), "cells x", nrow(sce), "genes\n")
+
+  if (!"counts" %in% assayNames(sce)) {
+    assayNames(sce)[assayNames(sce) == "X"] <- "counts"
+  }
+
+  meta_df <- as.data.frame(colData(sce))
+  required_obs <- c("projid")
+  missing_obs <- setdiff(required_obs, names(meta_df))
+  if (length(missing_obs) > 0) {
+    stop("ERROR: H5AD missing required obs columns: ", paste(missing_obs, collapse = ", "))
+  }
+
+  meta_df$barcode <- colnames(sce)
+  meta_df$projid <- as.character(meta_df$projid)
+  meta_df <- merge(meta_df, pheno, by = "projid", all.x = TRUE, suffixes = c("", ".pheno"))
+  meta_df <- meta_df[!is.na(meta_df$tot_adverse_exp), ]
+  cat("  Cells with ACE phenotype:", nrow(meta_df), "\n")
+
+  if (smoke_mode) {
+    if (nrow(meta_df) == 0) {
+      stop("ERROR: smoke mode found no cells with ACE phenotype data")
+    }
+
+    sce_smoke <- sce[, colnames(sce) %in% meta_df$barcode]
+    meta_df <- meta_df[match(colnames(sce_smoke), meta_df$barcode), ]
+    colData(sce_smoke) <- DataFrame(meta_df)
+    pseudo <- aggregateAcrossCells(sce_smoke, ids = colData(sce_smoke)$projid)
+
+    smoke_summary <- data.frame(
+      integration = integration,
+      phenotype = phenotype,
+      cell_type = ct_label,
+      n_cells = ncol(sce_smoke),
+      n_genes = nrow(sce_smoke),
+      n_patients = ncol(pseudo),
+      stringsAsFactors = FALSE
+    )
+    write.csv(
+      smoke_summary,
+      file = file.path(output_dir, paste0("smoke_summary_", phenotype, "_", ct_label, ".csv")),
+      row.names = FALSE
+    )
+    cat("  Smoke summary written\n")
+    rm(sce_smoke, pseudo)
+    gc()
+    return(invisible(TRUE))
+  }
+
+  if (nrow(meta_df) < 10) {
+    cat("  SKIP: too few cells with ACE data\n")
+    return(NULL)
+  }
+
+  sce <- sce[, colnames(sce) %in% meta_df$barcode]
+  meta_df <- meta_df[match(colnames(sce), meta_df$barcode), ]
+  colData(sce) <- DataFrame(meta_df)
+
+  for (sex_code in c(0, 1)) {
+    sex_label <- ifelse(sex_code == 0, "Fem", "Male")
+    sex_mask <- colData(sce)$msex == sex_code
+    if (sum(sex_mask, na.rm = TRUE) < 10) {
+      cat("  SKIP", sex_label, ": too few cells\n")
+      next
+    }
+
+    sce_sex <- sce[, which(sex_mask)]
+    pseudo <- aggregateAcrossCells(sce_sex, ids = colData(sce_sex)$projid)
+    n_patients <- ncol(pseudo)
+    cat("  ", sex_label, "patients:", n_patients, "\n")
+    if (n_patients < 5) {
+      cat("    SKIP: too few patients\n")
+      next
+    }
+
+    colData(pseudo)$age_death <- as.numeric(scale(as.numeric(colData(pseudo)$age_death)))
+    colData(pseudo)$pmi <- as.numeric(scale(as.numeric(colData(pseudo)$pmi)))
+
+    saveRDS(
+      pseudo,
+      file = file.path(output_dir, paste0("pseudobulk_ACE_", sex_label, "_", ct_label, ".rds"))
+    )
+
+    pvals <- as.numeric(colData(pseudo)[[phenotype]])
+    if (sum(!is.na(pvals)) < 5) {
+      cat("    SKIP: too few non-NA values for", phenotype, "\n")
+      next
+    }
+
+    pseudo_sub <- pseudo[, !is.na(pvals)]
+    colData(pseudo_sub)$niareagansc <- as.numeric(colData(pseudo_sub)$niareagansc)
+    colData(pseudo_sub)[[phenotype]] <- as.numeric(colData(pseudo_sub)[[phenotype]])
+    design_formula <- as.formula(paste0("~ age_death + pmi + ", phenotype, " + niareagansc"))
+
+    tryCatch({
+      dds <- DESeqDataSetFromMatrix(
+        countData = assay(pseudo_sub, "counts"),
+        colData = colData(pseudo_sub),
+        design = design_formula
+      )
+      dds <- DESeq(dds)
+      res <- results(dds, name = phenotype)
+      save(
+        res,
+        file = file.path(output_dir, paste0("deseqAnalysisACE_", phenotype, "_", ct_label, "_", sex_label, ".rda"))
+      )
+      cat("    DESeq2 done:", sum(res$padj < 0.05, na.rm = TRUE), "DEGs (padj < 0.05)\n")
+    }, error = function(e) {
+      cat("    ERROR:", conditionMessage(e), "\n")
+    })
+  }
+
+  rm(sce)
+  gc()
+}
+
+if (!is.null(celltype)) {
+  h5ad_file <- paste0(celltype, ".h5ad")
+  if (!h5ad_file %in% h5ad_files) {
+    stop("ERROR: cell type file not found: ", h5ad_file)
+  }
+  run_deg_for_file(h5ad_file, sub("^broad_", "", sub("\\.h5ad$", "", h5ad_file)))
+} else {
+  cat("\n========== BROAD CELL TYPE GROUPS ==========\n")
+  for (f in broad_files) {
+    run_deg_for_file(f, sub("^broad_", "", sub("\\.h5ad$", "", f)))
+  }
+
+  cat("\n========== INDIVIDUAL SUBTYPES ==========\n")
+  for (f in subtype_files) {
+    run_deg_for_file(f, sub("\\.h5ad$", "", f))
+  }
+}
+
+cat("\nACE DEG analysis complete.\n")

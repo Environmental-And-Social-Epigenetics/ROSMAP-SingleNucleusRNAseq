@@ -1,8 +1,20 @@
-# DEG Analysis — ACE
+# ACE DEG
 
-Pseudobulk differential expression comparing ACE-exposed vs non-exposed within each cell type.
+Pseudobulk differential expression for the ACE phenotype set.
 
-## Subdirectories
+## Primary Models
 
-- `DeJager/` — DEG analysis on DeJager dataset
-- `Tsai/` — DEG analysis on Tsai dataset
+- `tot_adverse_exp`
+- `early_hh_ses`
+- `ace_aggregate`
+
+The DEG workflow uses the shared ACE phenotype table and writes split inputs,
+result tables, and logs under `ANALYSIS_OUTPUT_ROOT/ACE/DEG/`.
+
+Fixture-based smoke tests are available in each cohort directory as
+`smoke_test.sh`.
+
+## Cohort Entry Points
+
+- [Tsai/README.md](Tsai/README.md)
+- [DeJager/README.md](DeJager/README.md)

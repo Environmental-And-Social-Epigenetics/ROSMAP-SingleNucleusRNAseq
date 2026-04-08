@@ -1,265 +1,180 @@
 # ROSMAP Single Nucleus RNA Sequencing Pipeline
 
-This repository contains the single nucleus RNA sequencing (snRNA-seq) analysis pipeline for the Religious Orders Study and Memory and Aging Project (ROSMAP) dataset. The pipeline processes dorsolateral prefrontal cortex (DLPFC) samples from two primary data sources:
+This repository packages the ROSMAP single-nucleus RNA-seq workflows for two
+sequencing sets:
 
-- **DeJager Dataset**: Data downloaded from Synapse, requiring sample demultiplexing via Demuxlet/Freemuxlet
-- **Tsai Dataset**: Data located on MIT Engaging cluster, with known patient assignments
+- **Tsai**: FASTQs live on Engaging and libraries already map to individual donors
+- **DeJager**: FASTQs come from Synapse and multiplexed libraries require donor assignment
 
-## Getting Started
+The intended flow is:
 
-1. **Understand the project** — Read [BACKGROUND.md](BACKGROUND.md) for scientific context (ROSMAP, snRNA-seq, and why each pipeline step matters)
-2. **Set up your environment** — Follow [setup/README.md](setup/README.md) for first-time cluster setup
-3. **Run Preprocessing** — See [Preprocessing/](Preprocessing/README.md) (choose DeJager or Tsai pathway)
-4. **Run Processing** — Submit all three stages with one command:
+1. raw FASTQs
+2. preprocessing to CellBender-corrected counts
+3. a shared three-stage processing pipeline
+4. downstream phenotype analysis
+
+The current cleanup pass standardizes environments, removes hardcoded user paths,
+keeps generated outputs outside the repo, and formalizes ACE analysis for both
+cohorts.
+
+## Supported Workflows
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Tsai preprocessing | `official` | FASTQ discovery, Cell Ranger batching, CellBender |
+| DeJager preprocessing | `official` | Synapse download, Cell Ranger, scripted CellBender, Demuxlet/Freemuxlet |
+| Tsai processing | `official` | Canonical Stage 3 Harmony key: `derived_batch` |
+| DeJager processing | `official` | Canonical Stage 3 Harmony key: `library_id`; not yet run (see KNOWN_ISSUES #19) |
+| ACE DEG | `official` | Tsai and DeJager; outputs under `ANALYSIS_OUTPUT_ROOT` |
+| ACE cell-type proportion | `official` | sccomp workflow for Tsai and DeJager |
+| ACE SCENIC | `implemented` | Ported from SocIsl; requires SCENIC ranking databases |
+| ACE TF/COMPASS | `implemented` | Ported from SocIsl; requires IBM CPLEX license |
+| ACE GSEA | `implemented` | WebGestaltR pathway enrichment |
+| Resilient DEG | `implemented` | Ported from ACE with resilience group derivation |
+| Resilient cell-type proportion | `implemented` | sccomp with resilience groups |
+| SocIsl DEG | `migrated` | Paths migrated to config/paths.sh |
+| SocIsl SCENIC | `migrated` | Paths migrated; uses `${SCENIC_RANKING_DIR}` |
+| SocIsl TF/COMPASS | `migrated` | Paths migrated; uses `${CPLEX_DIR}` |
+| SocIsl GSEA | `migrated` | Paths migrated |
+| SocIsl cell-type proportion | `implemented` | Ported from ACE |
+
+## Analysis Status Matrix
+
+| | DEG | SCENIC | TF/COMPASS | GSEA | CellTypeProportion |
+|---|---|---|---|---|---|
+| **ACE** | official | implemented | implemented | implemented | official |
+| **SocIsl** | migrated | migrated | migrated | migrated | implemented |
+| **Resilient** | implemented | scaffold | scaffold | scaffold | implemented |
+
+## Quick Start
+
+1. Read [setup/README.md](setup/README.md).
+2. Copy `config/paths.local.sh.template` to `config/paths.local.sh`.
+3. Run:
    ```bash
-   cd Processing/Tsai/Pipeline
-   ./submit_pipeline.sh all
+   source config/paths.sh
+   check_paths
+   bash setup/install_envs.sh --all
    ```
-5. **Downstream Analysis** — See [Analysis/](Analysis/README.md)
+4. Run preprocessing for the cohort you need:
+   - [Preprocessing/Tsai/README.md](Preprocessing/Tsai/README.md)
+   - [Preprocessing/DeJager/README.md](Preprocessing/DeJager/README.md)
+5. Run processing:
+   ```bash
+   cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all
+   cd Processing/DeJager/Pipeline && ./submit_pipeline.sh all
+   ```
+6. Run downstream analysis:
+   - [Analysis/README.md](Analysis/README.md)
+   - [Analysis/ACE/README.md](Analysis/ACE/README.md)
 
-### For New Lab Members
+## Repository Layout
 
-1. Get MIT Engaging cluster access: `ssh <Kerberos ID>@orcd-login003.mit.edu`
-2. Clone this repo to your workspace
-3. Copy `config/paths.local.sh.template` to `config/paths.local.sh` and fill in your paths
-4. Run `bash setup/install_envs.sh` to create conda environments
-5. Verify your data is in place (on Engaging, most data is already available — see [Data_Access/](Data_Access/README.md))
-6. Run the pipeline: `cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all`
-
-## Data Provenance (March 2026)
-
-The processed data from Mahmoud Abdelmoneum, Nina Khera, and Ravikiran Raju's March 2026 analysis is available at these locations. **Openmind was decommissioned March 17, 2026 — all data now lives on Engaging.**
-
-| Data | Primary Location | Backup | Access Method |
-|------|-----------------|--------|---------------|
-| Tsai raw FASTQs | Engaging cluster | NAS | Already on Engaging (CSV mapping in repo) |
-| DeJager raw FASTQs | Synapse ([syn21438684](https://www.synapse.org/#!Synapse:syn21438684)) | Engaging, NAS | Synapse download or Engaging |
-| Tsai CellBender outputs (478 samples) | Engaging | NAS | Already on Engaging |
-| DeJager CellBender outputs (131 dirs) | Engaging | NAS | Already on Engaging |
-| Tsai cell-type annotated object | Engaging (`tsai_annotated.h5ad`, 83GB) | NAS | Already on Engaging |
-| **DeJager processing outputs** | **Not yet generated** | — | **Run pipeline on Engaging** |
-| Phenotype CSVs | In repo (`Data/Phenotypes/`) | Engaging, NAS | Already included |
-| DeJager WGS VCF + Demuxafy SIF | Engaging (`/home/nkhera/orcd/pool/WGS/`) | — | Already on Engaging |
-
-See [Data_Access/README.md](Data_Access/README.md) for the full Engaging data layout, transfer scripts, and Globus audit trail.
-
-## Repository Structure
-
-```
-ROSMAP-SingleNucleusRNAseq/
-├── config/                  # Central path configuration (paths.sh)
-├── setup/                   # First-time setup guide and install scripts
-├── Preprocessing/           # Raw data processing (FASTQs → CellBender outputs)
-│   ├── DeJager/            # DeJager-specific preprocessing
-│   │   ├── 01_FASTQ_Download/
-│   │   ├── 02_Cellranger_Counts/
-│   │   ├── 03_Cellbender/
-│   │   └── 04_Demuxlet_Freemuxlet/
-│   └── Tsai/               # Tsai-specific preprocessing (480 patients)
-│       ├── 01_FASTQ_Location/    # FASTQ discovery and indexing
-│       ├── 02_Cellranger_Counts/ # Automated batch pipeline (CR + CellBender)
-│       └── 03_Cellbender/        # Legacy cohort notebooks
-├── Processing/              # QC, doublet removal, batch correction, and annotation
-│   ├── DeJager/
-│   │   ├── Pipeline/              # 3-stage pipeline (mirrors Tsai)
-│   │   │   ├── 01_qc_filter.*
-│   │   │   ├── 02_doublet_removal.*
-│   │   │   ├── 03_integration_annotation.*
-│   │   │   ├── submit_pipeline.sh
-│   │   │   ├── Resources/
-│   │   │   └── envs/
-│   │   └── _legacy/               # Archived original scripts
-│   └── Tsai/
-│       ├── Pipeline/              # 3-stage pipeline (primary development target)
-│       │   ├── 01_qc_filter.*
-│       │   ├── 02_doublet_removal.*
-│       │   ├── 03_integration_annotation.*
-│       │   ├── submit_pipeline.sh # SLURM submission wrapper
-│       │   ├── Resources/         # Marker gene references
-│       │   └── envs/              # Conda environment specs
-│       └── archive/               # Superseded legacy scripts
-├── Data/                    # Pipeline data (phenotypes tracked, transcriptomics gitignored)
-│   ├── Phenotypes/          # ROSMAP clinical, ACE scores, ID maps (tracked in git)
-│   └── Transcriptomics/     # FASTQs, CellRanger, CellBender outputs (populate via Data_Access/)
-├── Data_Access/             # Scripts to download/transfer data (NAS, Globus, Synapse)
-└── Analysis/                # Downstream analysis (organized by phenotype)
-    ├── _template/           # Template for adding new phenotype analyses
-    ├── ACE/                 # Adverse Childhood Experiences
-    │   ├── DEG/  (DeJager/, Tsai/)
-    │   ├── TF/   (DeJager/, Tsai/)
-    │   └── SCENIC/ (DeJager/, Tsai/)
-    ├── Resilient/           # Cognitive Resilience
-    │   └── (same structure)
-    └── SocIsl/              # Social Isolation
-        └── (same structure)
+```text
+Transcriptomics/
+├── config/            central path and environment configuration
+├── setup/             first-time setup and environment installation
+├── Preprocessing/     FASTQ -> CellBender workflows
+├── Processing/        QC, doublet removal, Harmony integration, annotation
+├── Analysis/          phenotype analyses
+├── Data/Phenotypes/   tracked phenotype and ID-map inputs
+└── Data_Access/       download / transfer helpers
 ```
 
-## Pipeline Overview
+Large generated outputs are expected to live **outside** the repo tree. By
+default:
 
-### Phase 1: Preprocessing
+- processing outputs go under the configured `*_PROCESSING_OUTPUTS` roots
+- downstream analysis outputs go under `ANALYSIS_OUTPUT_ROOT`
 
-Converts raw FASTQ files into ambient RNA-corrected count matrices.
+## Pipeline Summary
 
-| Step | DeJager | Tsai |
-|------|---------|------|
-| 1. Data Acquisition | Download FASTQs from Synapse | Locate FASTQs on Engaging (indexed in CSV) |
-| 2. Alignment & Counting | Cell Ranger `count` | Cell Ranger `count` (batched, 30 patients/batch) |
-| 3. Ambient RNA Removal | CellBender | CellBender (GPU-accelerated) |
-| 4. Sample Assignment | Demuxlet/Freemuxlet (WGS-based) | Known from metadata |
+### Preprocessing
 
-### Phase 2: Processing
+| Step | Tsai | DeJager |
+|------|------|---------|
+| FASTQ access | indexed on Engaging | download from Synapse |
+| Alignment | Cell Ranger `count` | Cell Ranger `count` |
+| Ambient RNA removal | CellBender | CellBender |
+| Donor assignment | known from metadata | Demuxlet/Freemuxlet + overrides |
 
-Both datasets use an identical three-stage pipeline (`Processing/{Dataset}/Pipeline/`):
+### Processing
 
-1. **Stage 1 — QC Filtering** (`01_qc_filter.py`): Percentile-based outlier removal and mitochondrial % filtering
-2. **Stage 2 — Doublet Removal** (`02_doublet_removal.Rscript`): scDblFinder-based doublet detection
-3. **Stage 3 — Integration & Annotation** (`03_integration_annotation.py`): Normalization, HVG selection, PCA, Harmony batch correction, Leiden clustering, UMAP, and ORA-based cell type annotation with Mohammadi 2020 markers
+Both cohorts use the same three-stage structure:
 
-Submit all stages with dependency chaining:
+1. **Stage 1**: percentile-based QC filtering
+2. **Stage 2**: `scDblFinder` doublet removal
+3. **Stage 3**: normalization, HVG selection, PCA, Harmony, clustering, ORA annotation
 
-```bash
-cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all     # Tsai (478 samples with CellBender outputs)
-cd Processing/DeJager/Pipeline && ./submit_pipeline.sh all   # DeJager
-```
+Canonical batch variables:
 
-See `Processing/Tsai/Pipeline/README.md` or `Processing/DeJager/Pipeline/README.md` for full details.
+- **Tsai**: `derived_batch`
+- **DeJager**: `library_id`
 
-### Phase 3: Analysis
+The ORA annotation step uses the shared Mohammadi 2020 PFC marker reference and
+the raw gene space in both cohorts.
 
-Downstream biological analyses.
+### Analysis
 
-1. **Differential Expression**: DEG analysis between conditions/cell types
-2. **SCENIC**: Single-cell regulatory network inference
-3. **Transcription Factor Analysis**: TF activity and regulatory analysis
+Three phenotype analyses are implemented:
 
-## Prerequisites
+- **ACE**: pseudobulk DEG, cell-type proportion (sccomp), SCENIC, TF/COMPASS, GSEA
+- **Resilient**: pseudobulk DEG, cell-type proportion (sccomp)
+- **SocIsl**: DEG, SCENIC, TF/COMPASS, GSEA, cell-type proportion (migrated from legacy)
 
-### Software Requirements
+See [Analysis/ACE/README.md](Analysis/ACE/README.md), [Analysis/Resilient/README.md](Analysis/Resilient/README.md),
+and [Analysis/SocIsl/README.md](Analysis/SocIsl/README.md) for phenotype contracts.
 
-- **Cell Ranger** v8.0.0
-- **CellBender** (GPU-accelerated)
-- **Python** 3.10+ with: scanpy, anndata, harmonypy, decoupler
-- **R** 4.2+ with: scDblFinder, zellkonverter, BiocParallel
-- **Singularity** (for Demuxafy container, DeJager only)
+## Environment Setup
 
-Conda environment specs are provided in `Processing/Tsai/Pipeline/envs/`.
+Every official environment now lives in its own directory and includes:
 
-### Path Configuration
+- `environment.yml`
+- `requirements.txt`
+- `README.md`
 
-Before running the pipeline, create your local path overrides:
-
-```bash
-cp config/paths.local.sh.template config/paths.local.sh
-# Edit config/paths.local.sh with your cluster-specific paths
-source config/paths.sh
-check_paths
-```
-
-Validate that all pipeline prerequisites (conda environments, input files, references) are in place:
-
-```bash
-bash config/preflight.sh
-```
-
-See `setup/README.md` for a complete first-time setup guide.
-
-### Conda Environments
-
-Create the processing pipeline environments using the automated installer:
+Use the installer:
 
 ```bash
 source config/paths.sh
-bash setup/install_envs.sh
+bash setup/install_envs.sh --all
 ```
 
-Or manually from the YAML specs in `Processing/Tsai/Pipeline/envs/`.
-After creation, use the variables from `config/paths.sh`:
+Or choose an install method explicitly:
 
 ```bash
-source config/paths.sh
-init_conda
-conda activate "${QC_ENV}"          # Stage 1
-conda activate "${SINGLECELL_ENV}"  # Stage 2
-conda activate "${BATCHCORR_ENV}"   # Stage 3
+bash setup/install_envs.sh --analysis --method=conda
+bash setup/install_envs.sh --analysis --method=requirements
 ```
 
-### Reference Files
+`requirements.txt` is a companion artifact for every official env. For hybrid
+Python/R or system-dependent environments, the env README explains the required
+conda bootstrap before `pip install -r requirements.txt`.
 
-- Human reference genome: `refdata-gex-GRCh38-2020-A`
-- Set `CELLRANGER_REF` in `config/paths.sh` to the reference directory
+## Data Notes
 
-## SLURM Resources
+- `Preprocessing/Tsai/02_Cellranger_Counts/Tracking/patient_metadata.csv` lists
+  **480** Tsai samples.
+- The current CellBender-complete Tsai preprocessing set contains **478**
+  sample directories.
+- Missing Tsai CellBender outputs: `11467746`, `20834164`.
 
-### DeJager Pipeline
+## Configuration
 
-| Step | Partition | Cores | Memory | Time | GPU |
-|------|-----------|-------|--------|------|-----|
-| Cell Ranger | mit_normal | 32 | 128GB | 47h | - |
-| CellBender | mit_normal_gpu | 32 | 128GB | 47h | A100 |
-| Demuxlet | mit_normal | 80 | 400GB | 48h | - |
+The shared path contract lives in [config/paths.sh](config/paths.sh). Local
+machine- or user-specific overrides belong in `config/paths.local.sh`.
 
-### Tsai Pipeline (Updated)
+Important variables:
 
-| Step | Partition | Cores | Memory | Time | GPU |
-|------|-----------|-------|--------|------|-----|
-| Cell Ranger | mit_preemptable | 16 | 64GB | 2 days | - |
-| CellBender | mit_normal_gpu | 4 | 64GB | 4h | 1 |
+- `TSAI_INTEGRATED`, `TSAI_INTEGRATED_PROJID`
+- `DEJAGER_INTEGRATED`, `DEJAGER_INTEGRATED_PATIENT_ID`, `DEJAGER_INTEGRATED_POOL_BATCH`, `DEJAGER_INTEGRATED_DERIVED_BATCH`
+- `ACE_SCORES_CSV`
+- `ANALYSIS_OUTPUT_ROOT`
+- `NEBULA_ENV`, `SCCOMP_ENV`
 
-### Processing Pipeline (Both Datasets)
+## Next Reads
 
-| Stage | Cores | Memory | Time | Notes |
-|-------|-------|--------|------|-------|
-| 1 — QC Filtering | 4 | 32GB | 12h | Array job (Tsai: 478 tasks, DeJager: 200 tasks, 32 concurrent) |
-| 2 — Doublet Removal | 4 | 32GB | 12h | Array job (same dimensions as Stage 1) |
-| 3 — Integration & Annotation | 32 | 500GB | 48h | Single job (loads all samples) |
-
-## Data Locations
-
-Data paths are configured in `config/paths.sh`. Update `SCRATCH_ROOT` for your cluster.
-
-### DeJager
-
-| Data Type | Variable | Default Path |
-|-----------|----------|--------------|
-| FASTQs | `DEJAGER_FASTQS` | `${SCRATCH_ROOT}/FASTQs/` |
-| Counts | `DEJAGER_COUNTS` | `${SCRATCH_ROOT}/Counts/` |
-| Preprocessed | `DEJAGER_PREPROCESSED` | `${DATA_ROOT}/Data/DeJager/Preprocessed_Counts/` |
-
-### Tsai
-
-| Data Type | Variable | Default Path |
-|-----------|----------|--------------|
-| FASTQs | `TSAI_FASTQS_DIR` | `${SCRATCH_ROOT}/Tsai_Data/FASTQs` |
-| FASTQ Index | `TSAI_FASTQS_CSV` | `${DATA_ROOT}/Data/Tsai/Preprocessing/FASTQ_Transfer/New/CSVs/All_ROSMAP_FASTQs.csv` |
-| Cell Ranger | `TSAI_CELLRANGER_OUTPUT` | `${SCRATCH_ROOT}/Tsai_Data/Cellranger_Outputs` |
-| CellBender (temp) | `TSAI_CELLBENDER_SCRATCH` | `${SCRATCH_ROOT}/Tsai/Cellbender_Output` |
-| Preprocessed | `TSAI_PREPROCESSED` | `${WORKSPACE_ROOT}/Tsai_Data/Cellbender_Outputs` |
-
-**Dataset:** 480 patients, 5,197 FASTQ files, processed in 16 batches of 30 patients each.
-
-## Known Issues
-
-See `KNOWN_ISSUES.md` for a detailed tracker. Key remaining items:
-
-1. **Scratch dependencies**: Intermediate Cell Ranger/CellBender data on scratch may be cleaned before processing completes
-2. **Pipeline naming**: Legacy scripts in `Processing/DeJager/_legacy/` are named "TsaiPipeline" (historical artifact)
-3. **SocIsl preprocessing**: SocIsl cohort has batch scripts but no dedicated notebooks for Cell Ranger/CellBender script generation
-
-## Contributing
-
-When adding new scripts or analyses:
-
-1. Place scripts in the appropriate phase/dataset directory
-2. Update the relevant README.md with usage instructions
-3. Use relative paths or configuration files where possible
-4. Document any new dependencies
-
-## Contact
-
-For questions about this pipeline, contact:
-
-- Mahmoud Abdelmoneum (mabdel03@mit.edu)
-- Nina Khera (nkhera@college.harvard.edu)
-- Ravikiran Raju (rraju@mit.edu)
-
-Environmental and Social Epigenetics Lab, Tsai Lab, MIT.
+- [BACKGROUND.md](BACKGROUND.md)
+- [setup/README.md](setup/README.md)
+- [Processing/README.md](Processing/README.md)
+- [Analysis/README.md](Analysis/README.md)

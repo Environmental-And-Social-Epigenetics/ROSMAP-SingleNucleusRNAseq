@@ -1,3 +1,7 @@
+# DEPRECATED: Legacy data preparation script from Openmind era.
+# The current Processing pipeline (Processing/*/Pipeline/) supersedes this.
+# Paths may still reference decommissioned Openmind directories.
+#
 import pandas as pd
 import anndata as ad
 import os

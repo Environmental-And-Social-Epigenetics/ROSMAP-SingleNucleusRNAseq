@@ -1,173 +1,168 @@
 # First-Time Setup Guide
 
-This guide walks you through setting up the ROSMAP snRNA-seq pipeline on a new
-SLURM cluster, from clone to ready-to-run.
+This guide covers the shared setup contract for the ROSMAP transcriptomics repo.
 
-## Prerequisites
-
-- **SLURM** cluster access with GPU nodes (for CellBender)
-- **conda** or **mamba** installed (miniconda, miniforge, or anaconda)
-- **Git** for cloning the repository
-- **Singularity** (for DeJager Demuxlet step only): `module load openmind/singularity/3.10.4`
-- **Globus CLI** (for Tsai FASTQ transfer only): install in a dedicated conda environment
-
-## Step 1: Clone the Repository
+## 1. Clone And Configure Paths
 
 ```bash
 cd /your/workspace
-git clone <repo-url> ROSMAP-SingleNucleusRNAseq
-```
-
-The pipeline expects large data directories (e.g. `Tsai_Data/`) to live
-alongside the repo in the same parent directory (`/your/workspace/`).
-
-## Step 2: Configure Paths
-
-Copy the template and fill in your cluster-specific paths:
-
-```bash
+git clone <repo-url> Transcriptomics
+cd Transcriptomics
 cp config/paths.local.sh.template config/paths.local.sh
-# Edit config/paths.local.sh — set at minimum:
-#   CONDA_INIT_SCRIPT, CONDA_ENV_BASE, DATA_ROOT, SCRATCH_ROOT,
-#   CELLRANGER_PATH, CELLRANGER_REF, SLURM_MAIL_USER
 ```
 
-Then verify:
+Set at minimum:
+
+- `CONDA_INIT_SCRIPT`
+- `CONDA_ENV_BASE`
+- `DATA_ROOT`
+- `SCRATCH_ROOT`
+- `CELLRANGER_PATH`
+- `CELLRANGER_REF`
+
+Optional but commonly needed:
+
+- `ANALYSIS_OUTPUT_ROOT`
+- `DEJAGER_PATIENT_MAP`
+- `DEJAGER_SYNAPSE_FASTQ_CSV`
+- `NEBULA_ENV`
+- `SCCOMP_ENV`
+
+Then validate:
 
 ```bash
 source config/paths.sh
 check_paths
 ```
 
-See `config/paths.local.sh.template` for MIT Engaging example paths.
+## 2. Install Environments
 
-## Step 3: Install Cell Ranger
+Official environments are organized as per-env directories. Each one contains:
 
-Cell Ranger v8.0.0 is required for alignment. It is not available through
-conda and must be downloaded from 10x Genomics:
+- `environment.yml`
+- `requirements.txt`
+- `README.md`
 
-1. Register at https://www.10xgenomics.com/support/software/cell-ranger
-2. Download Cell Ranger v8.0.0 and extract it
-3. Set `CELLRANGER_PATH` in your config to the extracted directory
-
-## Step 4: Download Reference Genome
-
-The pipeline uses the 10x Genomics human reference `refdata-gex-GRCh38-2020-A`:
-
-```bash
-# Download from 10x Genomics (see their website for the current URL)
-curl -O https://cf.10xgenomics.com/supp/cell-exp/refdata-gex-GRCh38-2020-A.tar.gz
-tar -xzf refdata-gex-GRCh38-2020-A.tar.gz
-```
-
-Set `CELLRANGER_REF` in your config to the extracted directory.
-
-## Step 5: Create Conda Environments
-
-Run the automated installer:
+Use the installer:
 
 ```bash
 source config/paths.sh
-bash setup/install_envs.sh              # Processing environments only (required)
-bash setup/install_envs.sh --analysis   # Also install Analysis environments
-bash setup/install_envs.sh --preprocessing  # Also install Preprocessing environments
-bash setup/install_envs.sh --all        # Install everything
+bash setup/install_envs.sh                  # processing envs
+bash setup/install_envs.sh --preprocessing  # preprocessing envs too
+bash setup/install_envs.sh --analysis       # analysis envs too
+bash setup/install_envs.sh --all            # everything
+bash setup/install_envs.sh --analysis --recreate
 ```
 
-This creates environments from YAML specs in the repo:
+Choose an install method explicitly when needed:
 
-**Processing (always installed):**
+```bash
+bash setup/install_envs.sh --all --method=conda
+bash setup/install_envs.sh --all --method=requirements
+```
 
-| Environment | YAML spec | paths.sh variable | Purpose |
-|-------------|-----------|-------------------|---------|
-| `qcEnv` | `Processing/.../envs/stage1_qc.yml` | `QC_ENV` | Stage 1: QC filtering |
-| `single_cell_BP` | `Processing/.../envs/stage2_doublets.yml` | `SINGLECELL_ENV` | Stage 2: Doublet removal |
-| `BatchCorrection_SingleCell` | `Processing/.../envs/stage3_integration.yml` | `BATCHCORR_ENV` | Stage 3: Integration |
+### Install Methods
 
-**Preprocessing (`--preprocessing`):**
+- `conda`: create directly from `environment.yml`
+- `requirements`: create the bootstrap env described in each env `README.md`, then install the Python layer from `requirements.txt`
 
-| Environment | YAML spec | paths.sh variable | Purpose |
-|-------------|-----------|-------------------|---------|
-| `Cellbender_env` | `Preprocessing/envs/cellbender.yml` | `CELLBENDER_ENV` | Ambient RNA removal (GPU) |
-| `synapse_env` | `Preprocessing/envs/synapse.yml` | `SYNAPSE_ENV` | Synapse downloads |
-| `bcftools_env` | `Preprocessing/envs/bcftools.yml` | `BCFTOOLS_ENV` | BAM/VCF filtering |
-| `globus_env` | `Preprocessing/envs/globus.yml` | `GLOBUS_ENV` | Data transfers |
+Every official env has a companion `requirements.txt`. Some are
+`requirements-complete`, while others are `hybrid` and still need conda or
+system packages first.
 
-**Analysis (`--analysis`):**
+The installer now validates each env after creation, and it also validates
+already-existing envs instead of assuming they are healthy. Use `--recreate`
+when you need to rebuild a stale env from the tracked specs.
 
-| Environment | YAML spec | Purpose |
-|-------------|-----------|---------|
-| `deg_analysis` | `Analysis/envs/deg.yml` | DEG (DESeq2, limma, edgeR) |
-| `scenic_analysis` | `Analysis/envs/scenic.yml` | pySCENIC regulatory networks |
-| `compass_analysis` | `Analysis/envs/compass.yml` | COMPASS metabolic analysis |
-| `gsea_analysis` | `Analysis/envs/gsea.yml` | GSEA/pathway analysis |
+### Official Environment Inventory
 
-## Step 6: DeJager Patient Map (DeJager only)
+| Area | Env ID | Variable | Type |
+|------|--------|----------|------|
+| Processing | `stage1_qc` | `QC_ENV` | requirements-complete |
+| Processing | `stage2_doublets` | `SINGLECELL_ENV` | hybrid |
+| Processing | `stage3_integration` | `BATCHCORR_ENV` | hybrid |
+| Preprocessing | `cellbender` | `CELLBENDER_ENV` | hybrid |
+| Preprocessing | `synapse` | `SYNAPSE_ENV` | requirements-complete |
+| Preprocessing | `bcftools` | `BCFTOOLS_ENV` | hybrid |
+| Preprocessing | `globus` | `GLOBUS_ENV` | requirements-complete |
+| Analysis | `deg` | `DEG_ANALYSIS_ENV` | hybrid |
+| Analysis | `nebula` | `NEBULA_ENV` | hybrid |
+| Analysis | `sccomp` | `SCCOMP_ENV` | hybrid |
+| Analysis | `scenic` | `SCENIC_ANALYSIS_ENV` | requirements-complete |
+| Analysis | `compass` | `COMPASS_ANALYSIS_ENV` | requirements-complete |
+| Analysis | `gsea` | `GSEA_ANALYSIS_ENV` | hybrid |
 
-The barcode-to-patient mapping file (`cell_to_patient_assignmentsFinal0.csv`,
-~155 MB) is required for Stage 1 of the DeJager Processing pipeline but is too
-large for git. See
-[Processing/DeJager/Pipeline/README.md](../Processing/DeJager/Pipeline/README.md#obtaining-the-patient-map)
-for instructions on obtaining it.
+See the env READMEs in:
 
-Set `DEJAGER_PATIENT_MAP` in `config/paths.local.sh` to point to the file.
+- [Preprocessing/envs/README.md](../Preprocessing/envs/README.md)
+- [Processing/Tsai/Pipeline/envs/README.md](../Processing/Tsai/Pipeline/envs/README.md)
+- [Analysis/envs/README.md](../Analysis/envs/README.md)
 
-## Step 7: Synapse Credentials (DeJager only)
+## 3. External Tools
 
-The DeJager dataset is downloaded from Synapse.  If you need to run the DeJager
-Preprocessing pipeline:
+Not everything is installed through the repo envs.
 
-1. Create an account at https://www.synapse.org
-2. Install the Synapse client: `pip install synapseclient`
-3. Configure credentials: `synapse login -u <username> -p <password> --rememberMe`
+### Cell Ranger
 
-## Step 8: Verify Setup
+Cell Ranger v8.0.0 must be installed separately from 10x Genomics and exposed
+through `CELLRANGER_PATH`.
+
+### Reference Transcriptome
+
+Set `CELLRANGER_REF` to the extracted `refdata-gex-GRCh38-2020-A` directory.
+
+### Singularity
+
+Needed for DeJager Demuxlet/Freemuxlet helper workflows. Configure
+`SINGULARITY_MODULE` if your cluster uses a different module name.
+
+## 4. External Data Contracts
+
+The repo tracks phenotype tables and lightweight metadata, but several large or
+protected inputs stay external:
+
+- DeJager Synapse FASTQs
+- DeJager barcode-to-patient map
+- DeJager WGS / Demuxlet inputs
+- cohort-specific raw FASTQs and Cell Ranger outputs
+
+Important DeJager-specific variables:
+
+- `DEJAGER_PATIENT_MAP`
+- `DEJAGER_SYNAPSE_FASTQ_CSV`
+- `DEJAGER_WGS_DIR`
+
+See [Processing/DeJager/Pipeline/README.md](../Processing/DeJager/Pipeline/README.md)
+for the patient-map details.
+
+## 5. Validate The Setup
 
 ```bash
 source config/paths.sh
 check_paths
+bash config/preflight.sh env-specs
+bash config/preflight.sh ace-tsai-smoke
+```
 
-# Test processing pipeline on a small subset
+Useful spot checks:
+
+```bash
 cd Processing/Tsai/Pipeline
-python 01_qc_filter.py --list-samples | head -2
+python 01_qc_filter.py --list-samples | head
+
+cd ../../Analysis/ACE/DEG/Tsai
+bash smoke_test.sh
+
+cd ../../CellTypeProportion/Tsai
+bash smoke_test.sh
 ```
 
-## SLURM Partitions
+## 6. Output Locations
 
-Configure your cluster's partitions in `config/paths.local.sh`:
+Generated outputs should not be written into the repo tree.
 
-```bash
-export SLURM_PARTITION="your_default_partition"
-export SLURM_PARTITION_GPU="your_gpu_partition"
-```
+- processing outputs: the configured `*_PROCESSING_OUTPUTS` directories
+- downstream analysis outputs: `ANALYSIS_OUTPUT_ROOT`
 
-If no partition is set, SLURM will use the cluster default.
-
-### MIT Engaging / Openmind Reference
-
-| Pipeline Use | Partition | Notes |
-|-------------|-----------|-------|
-| Cell Ranger | `mit_preemptable` | Lower-priority, shorter queue; jobs may be preempted |
-| CellBender | `mit_normal_gpu` | GPU partition (A100) for ambient RNA removal |
-| Stage 3 Integration | `lhtsai` | Lab-specific high-memory partition (500GB) |
-
-## Directory Layout
-
-After setup, your workspace should look like:
-
-```
-/your/workspace/
-├── ROSMAP-SingleNucleusRNAseq/     # This repository
-│   ├── config/paths.sh
-│   ├── Preprocessing/
-│   ├── Processing/
-│   └── Analysis/
-└── Tsai_Data/                      # Large data (outside repo)
-    ├── FASTQs/
-    ├── Cellbender_Outputs/
-    └── Processing_Outputs/
-        ├── 01_QC_Filtered/
-        ├── 02_Doublet_Removed/
-        ├── 03_Integrated/
-        └── Logs/
-```
+If you leave `ANALYSIS_OUTPUT_ROOT` unset, it defaults to a sibling
+`Analysis_Outputs/` directory next to the repo.

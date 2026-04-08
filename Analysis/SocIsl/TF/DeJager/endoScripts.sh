@@ -5,20 +5,23 @@
 #SBATCH --mem=600G              # GB memory needed (memory PER CORE)
 #SBATCH -o %j.out               # Standard out goes to this file
 #SBATCH -e %j.err               # Standard err goes to this file
-#SBATCH --mail-user=nkhera@college.harvard.edu
+#SBATCH --mail-user=__SET_YOUR_EMAIL__
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+# Source central configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../../../../config/paths.sh"
+init_conda
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
-cd cd /net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/Preprocessed_Counts/Resilient/
+cd "${SOCISL_OUTPUT_ROOT}/Tsai"
 Rscript endoKV.Rscript
 Rscript endoRV.Rscript
 Rscript endoNV.Rscript
 
 
-cd /om/scratch/Wed/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 Rscript endoKVD.Rscript
 Rscript endoRVD.Rscript

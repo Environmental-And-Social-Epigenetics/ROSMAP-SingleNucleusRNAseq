@@ -1,119 +1,81 @@
 # Analysis
 
-Downstream biological analyses of processed snRNA-seq data, organized by phenotype.
+Downstream phenotype analyses built on the processed, annotated snRNA-seq
+objects.
 
-## Directory Structure
+## Shared Analysis Contract
 
-Each phenotype gets its own directory containing analysis type subdirectories, each split by dataset:
+The analysis layer expects processed AnnData inputs from `Processing/`.
 
-```
-Analysis/
-├── _template/          # Copy this to start a new phenotype analysis
-├── ACE/                # Adverse Childhood Experiences
-│   ├── DEG/
-│   │   ├── DeJager/
-│   │   └── Tsai/
-│   ├── TF/
-│   │   ├── DeJager/
-│   │   └── Tsai/
-│   └── SCENIC/
-│       ├── DeJager/
-│       └── Tsai/
-├── Resilient/          # Cognitive Resilience
-│   └── (same structure)
-└── SocIsl/             # Social Isolation
-    └── (same structure)
-```
+Required fields depend on cohort:
 
-## Quick Start: From Processing Output to Analysis
+| Cohort | Required obs fields |
+|--------|---------------------|
+| Tsai | `cell_type`, `sample_id` or `projid` |
+| DeJager | `cell_type`, `patient_id` |
 
-### What the Processing Pipeline Produces
+Phenotype tables come from `Data/Phenotypes/`, with ACE analyses using
+`ACE_SCORES_CSV` by default.
 
-The Processing pipeline (`Processing/Tsai/Pipeline/` or `Processing/DeJager/Pipeline/`) outputs
-an annotated AnnData object with these key fields in `obs`:
+Generated outputs belong under `ANALYSIS_OUTPUT_ROOT`, not inside the repo tree.
 
-| Field | Description | Source |
-|-------|-------------|--------|
-| `cell_type` | ORA-annotated cell type (Ast, Exc, Inh, Mic, Oli, OPC) | Stage 3 annotation |
-| `projid` | Patient identifier | Metadata CSV |
-| `leiden_res0_2`, `leiden_res0_5`, `leiden_res1` | Leiden clusters at multiple resolutions | Stage 3 clustering |
-| Clinical columns (e.g., `msex`, `age_death`, `pmi`) | From `patient_metadata.csv` | Attached in Stage 3 |
+## Current Workflow Status
 
-The final files are:
-- **Tsai**: `${TSAI_PROCESSING_OUTPUTS}/03_Integrated/tsai_annotated.h5ad` (~83 GB)
-- **DeJager**: `${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/dejager_annotated.h5ad` (not yet generated)
+| Phenotype / analysis | Status | Notes |
+|----------------------|--------|-------|
+| ACE DEG | `official` | Tsai + DeJager |
+| ACE cell-type proportion | `official` | Tsai + DeJager, sccomp |
+| SocIsl | `legacy` | older scripts retained for reference |
+| Resilient | `scaffold-only` | structure present, not yet formalized |
+| TF / SCENIC outside legacy areas | `scaffold-only` | directories exist, but setup and contracts are incomplete |
 
-### Loading Data for Analysis
+## Environments
 
-```python
-import scanpy as sc
-import pandas as pd
-
-# Load the annotated object from Processing
-adata = sc.read_h5ad("Tsai_Data/Processing_Outputs/03_Integrated/tsai_annotated.h5ad")
-
-# Attach phenotype data (e.g., social isolation scores)
-pheno = pd.read_csv("Data/Phenotypes/dataset_652_basic_12-23-2021.csv")
-adata.obs = adata.obs.merge(pheno[['projid', 'social_isolation_avg']], on='projid', how='left')
-```
-
-### Running Your First Analysis (DEG Example)
+Install the analysis envs with:
 
 ```bash
 source config/paths.sh
-init_conda
-conda activate "${CONDA_ENV_BASE}/deg_analysis"
-
-# Run Social Isolation DEG on Tsai dataset
-cd Analysis/SocIsl/DEG/Tsai
-sbatch socIslDegT.sh
+bash setup/install_envs.sh --analysis
 ```
 
-### Conda Environments for Analysis
+Official analysis env variables:
 
-Install with `bash setup/install_envs.sh --analysis`. See [Analysis/envs/README.md](envs/README.md) for details.
+- `DEG_ANALYSIS_ENV`
+- `NEBULA_ENV`
+- `SCCOMP_ENV`
+- `SCENIC_ANALYSIS_ENV`
+- `COMPASS_ANALYSIS_ENV`
+- `GSEA_ANALYSIS_ENV`
 
-| Environment | Variable | Used For |
-|-------------|----------|----------|
-| `deg_analysis` | `${CONDA_ENV_BASE}/deg_analysis` | DEG (limma, DESeq2, edgeR) |
-| `scenic_analysis` | `${CONDA_ENV_BASE}/scenic_analysis` | pySCENIC regulatory networks |
-| `compass_analysis` | `${CONDA_ENV_BASE}/compass_analysis` | COMPASS metabolic flux |
-| `gsea_analysis` | `${CONDA_ENV_BASE}/gsea_analysis` | WebGestaltR gene set enrichment |
+Each env now has its own directory with `environment.yml`, `requirements.txt`,
+and `README.md`. See [Analysis/envs/README.md](envs/README.md).
 
----
+## ACE Entry Points
 
-## Adding a New Phenotype Analysis
+See [Analysis/ACE/README.md](ACE/README.md) for the shared phenotype contract.
 
-1. Copy the template: `cp -r _template/ NewPhenotype/`
-2. Edit `NewPhenotype/README.md` with the phenotype definition and patient selection criteria
-3. Add analysis scripts to the appropriate `DEG/`, `TF/`, or `SCENIC/` subdirectories, split by dataset
+Main launchers:
 
-## Analysis Types
+- `Analysis/ACE/DEG/Tsai/aceDegT.sh`
+- `Analysis/ACE/DEG/DeJager/aceDegDJ.sh`
+- `Analysis/ACE/CellTypeProportion/Tsai/acePropT.sh`
+- `Analysis/ACE/CellTypeProportion/DeJager/acePropDJ.sh`
 
-| Type | Method | Description |
-|------|--------|-------------|
-| **DEG** | Pseudobulk (DESeq2/edgeR) | Differential expression comparing conditions within cell types |
-| **TF** | DoRothEA | Transcription factor activity inference and TF-target networks |
-| **SCENIC** | pySCENIC | Single-cell regulatory network inference — active TFs and regulons per cell type |
+Smoke tests:
 
-## Data Requirements
+- `Analysis/ACE/DEG/Tsai/smoke_test.sh`
+- `Analysis/ACE/DEG/DeJager/smoke_test.sh`
+- `Analysis/ACE/CellTypeProportion/Tsai/smoke_test.sh`
+- `Analysis/ACE/CellTypeProportion/DeJager/smoke_test.sh`
 
-- Annotated AnnData objects from the Processing phase (`obs['cell_type']`, `obs['projid']`)
-- Clinical phenotype data from `Data/Phenotypes/` (see `${PHENOTYPE_DIR}` in `config/paths.sh`)
-- Gene markers: `Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds`
+## Output Policy
 
-## Current Phenotype Analyses
+Analysis code and documentation stay in git. Large generated artifacts do not.
 
-| Phenotype | Description | Status | Notes |
-|-----------|-------------|--------|-------|
-| ACE | Adverse Childhood Experiences | Placeholder | Directory structure only |
-| Resilient | Cognitive Resilience despite AD pathology | Placeholder | Directory structure only |
-| SocIsl | Social Isolation | Legacy scripts migrated | DEG, SCENIC, COMPASS, GSEA scripts + result CSVs from Openmind |
+Examples of outputs that should live under `ANALYSIS_OUTPUT_ROOT`:
 
-## Resource Requirements
-
-| Analysis | Cores | Memory | Time |
-|----------|-------|--------|------|
-| DEG (pseudobulk) | 8 | 64GB | 1-2h |
-| SCENIC | 32+ | 256GB+ | 24-48h |
-| TF Analysis | 8 | 64GB | 2-4h |
+- split `.h5ad` files
+- DEG result tables
+- sccomp result objects
+- figures
+- SLURM logs

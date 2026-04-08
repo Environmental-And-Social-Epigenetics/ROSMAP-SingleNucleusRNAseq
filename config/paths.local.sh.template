@@ -29,6 +29,9 @@ export DATA_ROOT="/path/to/permanent/storage"
 # Scratch storage — fast temporary storage for intermediate pipeline outputs
 export SCRATCH_ROOT="/path/to/scratch/storage"
 
+# Analysis outputs — recommended to live outside the repo tree
+export ANALYSIS_OUTPUT_ROOT="/path/to/analysis/outputs"
+
 # Cell Ranger 8.0.0 installation directory
 # Download from: https://www.10xgenomics.com/support/software/cell-ranger
 export CELLRANGER_PATH="/path/to/cellranger-8.0.0"
@@ -62,26 +65,61 @@ export SLURM_MAIL_USER="you@university.edu"
 # Singularity module name (default: openmind/singularity/3.10.4)
 # export SINGULARITY_MODULE="your_cluster/singularity/version"
 
+# ACE analysis environments (override only if your local names differ)
+# export NEBULA_ENV="${CONDA_ENV_BASE}/nebulaAnalysis7"
+# export SCCOMP_ENV="${CONDA_ENV_BASE}/sccompAnalysis"
+
+# Optional: Synapse FASTQ ID mapping for DeJager derive_batches.py --fill-from-synapse
+# export DEJAGER_SYNAPSE_FASTQ_CSV="/path/to/Synapse_FASTQ_IDs.csv"
+
+# =============================================================================
+# REQUIRED only for SCENIC analysis
+# =============================================================================
+
+# pySCENIC ranking databases directory (~3.5 GB total)
+# Download from: https://resources.aertslab.org/cistarget/
+# Required files: hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+#                 hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+#                 motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl
+#                 hg.txt (TF names list)
+# export SCENIC_RANKING_DIR="/path/to/scenic_databases"
+
+# =============================================================================
+# REQUIRED only for COMPASS metabolic flux analysis
+# =============================================================================
+
+# IBM CPLEX installation directory
+# Obtain academic license: https://www.ibm.com/academic/
+# export CPLEX_DIR="/path/to/ibm/ILOG/CPLEX_Studio2211"
+
 # =============================================================================
 # MIT Engaging Example (Recommended — current primary cluster)
 # =============================================================================
 # If you are on MIT Engaging (ssh <Kerberos ID>@orcd-login003.mit.edu):
 #
-#   export CONDA_INIT_SCRIPT="${HOME}/miniforge3/etc/profile.d/conda.sh"
-#   export CONDA_ENV_BASE="${HOME}/conda_envs"
-#   export DATA_ROOT="/home/${USER}/orcd/data"
-#   export SCRATCH_ROOT="/home/${USER}/orcd/pool"
-#   export CELLRANGER_PATH="/home/${USER}/apps/cellranger-8.0.0"
-#   export CELLRANGER_REF="/home/${USER}/references/refdata-gex-GRCh38-2020-A"
+#   export CONDA_INIT_SCRIPT="/orcd/data/lhtsai/001/om2/${USER}/miniforge3/etc/profile.d/conda.sh"
+#   export CONDA_ENV_BASE="/orcd/data/lhtsai/001/om2/${USER}/conda_envs"
+#   export DATA_ROOT="/orcd/data/lhtsai/001/${USER}/ROSMAP_Data"
+#   export SCRATCH_ROOT="/orcd/data/lhtsai/001/${USER}/ROSMAP_Data"
+#   export ANALYSIS_OUTPUT_ROOT="/orcd/data/lhtsai/001/${USER}/ROSMAP_Analysis_Outputs"
+#   export CELLRANGER_PATH="/orcd/data/lhtsai/001/om2/${USER}/apps/cellranger-8.0.0"
+#   export CELLRANGER_REF="/orcd/data/lhtsai/001/om2/${USER}/references/refdata-gex-GRCh38-2020-A"
 #   export DEJAGER_WGS_DIR="/home/nkhera/orcd/pool/WGS"
 #   export SLURM_PARTITION="mit_normal"
 #   export SLURM_PARTITION_GPU="mit_normal_gpu"
 #
-# Note: Existing March 2026 data (CellBender outputs, annotated h5ad) is at:
-#   Tsai:    /home/nkhera/orcd/pool/ROSMAP_Data/Tsai_Data/
-#   DeJager: /home/nkhera/orcd/pool/ROSMAP_Data/DeJager_Data/
-# You can symlink these into your workspace or override TSAI_PREPROCESSED /
-# DEJAGER_PREPROCESSED in this file.
+# The primary data (CellBender outputs, processing outputs, annotated h5ad)
+# lives at: /orcd/data/lhtsai/001/mabdel03/ROSMAP_Data/Single_Nucleus/
+# Override working paths to point there:
+#
+#   export TSAI_PREPROCESSED="/orcd/data/lhtsai/001/${USER}/ROSMAP_Data/Single_Nucleus/Tsai/Cellbender_Output"
+#   export TSAI_PROCESSING_OUTPUTS="/orcd/data/lhtsai/001/${USER}/ROSMAP_Data/Single_Nucleus/Tsai/Processing_Outputs"
+#   export DEJAGER_PREPROCESSED="/orcd/data/lhtsai/001/${USER}/ROSMAP_Data/Single_Nucleus/DeJager/Cellbender_Output"
+#
+# Conda env name overrides (actual names may differ from paths.sh defaults):
+#   export SINGLECELL_ENV="${CONDA_ENV_BASE}/single_cell_BP4"
+#   export BATCHCORR_ENV="${CONDA_ENV_BASE}/batchCorrectionEnv"
+#   export SCCOMP_ENV="${CONDA_ENV_BASE}/sccompAnalysis"
 
 # =============================================================================
 # MIT Openmind Example (Historical — decommissioned March 2026)

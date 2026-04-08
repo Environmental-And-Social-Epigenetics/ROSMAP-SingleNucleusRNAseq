@@ -25,7 +25,7 @@
 # #Get paths to each patient's cellbender output
 # library = '{variable}'
 
-# root = '/om2/user/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/Preprocessed_Counts/ACE/'+library
+# root = os.path.join(os.environ['DATA_ROOT'], 'Data/Tsai/Preprocessing/Preprocessed_Counts/ACE/')+library
 # library1 = os.path.join(root, 'processed_feature_bc_matrix_filtered.h5')
 # library1_adata = sc.read_10x_h5(library1)
 # obj_list=[library1_adata]
@@ -95,7 +95,7 @@
 #             script_file.write(script_content)
 
 # # List of variables to iterate over
-# libraries = os.listdir('/net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts/')
+# libraries = os.listdir(os.path.join(os.environ['DATA_ROOT'], 'Data/DeJager/Preprocessed_Counts/'))
 
 # # Directory to save the generated scripts
 # output_dir = 'generated_scripts'
@@ -128,15 +128,15 @@ base_script_templateBAM ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/Preprocessed_Counts/Resilient/
+cd "${SOCISL_OUTPUT_ROOT}/Tsai"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -157,15 +157,15 @@ base_script_templateBAMDejager ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -186,15 +186,15 @@ base_script_templateBAMM ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/Preprocessed_Counts/Resilient/
+cd "${SOCISL_OUTPUT_ROOT}/Tsai"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -212,7 +212,7 @@ library(magrittr)
 library(data.table) 
 library(scran)
 library(igraph)
-setwd("/om/scratch/Mon/mabdel03/Subfolder")
+setwd(Sys.getenv("SOCISL_OUTPUT_ROOT"))
 
 celltypes <- c("Ex_L2_3","Ex_L4","Ex_L4_5","Ex_L5_6","Ex_L5","Oli","Ast","Endo","Mic","In_VIP","In_SST","In_PV (Basket)","In_PV (Chandelier)","In_Rosehip","OPC")
 sce <- readH5AD("totalAdataAnno012125.h5ad",raw = TRUE)  
@@ -465,7 +465,7 @@ library(magrittr)
 library(data.table) 
 library(scran)
 library(igraph)
-setwd("/om/scratch/Mon/mabdel03/Subfolder")
+setwd(Sys.getenv("SOCISL_OUTPUT_ROOT"))
 
 celltypes <- c("Ex_L2_3","Ex_L4","Ex_L4_5","Ex_L5_6","Ex_L5","Oli","Ast","Endo","Mic","In_VIP","In_SST","In_PV (Basket)","In_PV (Chandelier)","In_Rosehip","OPC")
 sce <- readH5AD("totalAdataAnno012125.h5ad",raw = TRUE)  
@@ -722,10 +722,10 @@ library(data.table)
 library(scran)
 library(igraph)
 
-setwd("/om/scratch/Mon/mabdel03/Subfolder")
+setwd(Sys.getenv("SOCISL_OUTPUT_ROOT"))
 
 celltypes <- c("Ex_L2_3","Ex_L4","Ex_L4_5","Ex_L5_6","Ex_L5","Oli","Ast","Endo","Mic","In_VIP","In_SST","In_PV (Basket)","In_PV (Chandelier)","In_Rosehip","OPC")
-sce <- readH5AD("/om/scratch/Mon/mabdel03/Subfolder/totalAdataAnno040825.h5ad",raw = TRUE)  
+sce <- readH5AD(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "totalAdataAnno040825.h5ad",raw = TRUE)  
 ct <- "{variable}"
 
   #loading in SCE object
@@ -985,10 +985,10 @@ library(data.table)
 library(scran)
 library(igraph)
 
-setwd("/om/scratch/Mon/mabdel03/Subfolder")
+setwd(Sys.getenv("SOCISL_OUTPUT_ROOT"))
 
 celltypes <- c("Ex_L2_3","Ex_L4","Ex_L4_5","Ex_L5_6","Ex_L5","Oli","Ast","Endo","Mic","In_VIP","In_SST","In_PV (Basket)","In_PV (Chandelier)","In_Rosehip","OPC")
-sce <- readH5AD("/om/scratch/Mon/mabdel03/Subfolder/totalAdataAnno040825.h5ad",raw = TRUE)  
+sce <- readH5AD(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "totalAdataAnno040825.h5ad",raw = TRUE)  
 ct <- "{variable}"
 
   #loading in SCE object
@@ -1254,10 +1254,10 @@ library(data.table)
 library(scran)
 library(igraph)
 
-setwd("/om/scratch/Mon/mabdel03/Subfolder")
+setwd(Sys.getenv("SOCISL_OUTPUT_ROOT"))
 
 celltypes <- c("Ex_L2_3","Ex_L4","Ex_L4_5","Ex_L5_6","Ex_L5","Oli","Ast","Endo","Mic","In_VIP","In_SST","In_PV (Basket)","In_PV (Chandelier)","In_Rosehip","OPC")
-sce <- readH5AD("/om/scratch/Mon/mabdel03/Subfolder/totalAdataAnno040825.h5ad",raw = TRUE)  
+sce <- readH5AD(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "totalAdataAnno040825.h5ad",raw = TRUE)  
 ct <- "{variable}"
 
 
@@ -1522,15 +1522,15 @@ base_script_templateBAMDejagerM ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -2000,7 +2000,7 @@ library(scran)
 library(igraph)
 
 #loading in SCE object
-sce <- readH5AD("/om/scratch/Mon/mabdel03/Subfolder/totalAdataAnno040825.h5ad",raw = TRUE)  
+sce <- readH5AD(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "totalAdataAnno040825.h5ad",raw = TRUE)  
 
 #subsetting for cell type
 sce <- sce[, colData(sce)$cell_type == "{variable}"]
@@ -2224,7 +2224,7 @@ library(scran)
 library(igraph)
 
 #loading in SCE object
-sce <- readH5AD("/om/scratch/Mon/mabdel03/Subfolder/totalAdataAnno040825.h5ad",raw = TRUE)  
+sce <- readH5AD(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "totalAdataAnno040825.h5ad",raw = TRUE)  
 
 #subsetting for cell type
 sce <- sce[, colData(sce)$cell_type == "{variable}"]
@@ -2580,9 +2580,9 @@ base_script_templateNebulaRRHO2 ="""
 
 library(RRHO)
 library(RRHO2)
-load("/om/scratch/Mon/mabdel03/Subfolder/Fnebula_analysis{variable}RVNew.rda")
+load(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "Fnebula_analysis{variable}RVNew.rda")
 df1 <- re2
-load("/om/scratch/Mon/mabdel03/Subfolder/Fdejnebula_analysis{variable}RVNew.rda")
+load(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "Fdejnebula_analysis{variable}RVNew.rda")
 df2 <- re2
 
 df1$summary$signed_stat <- df1$summary$logFC_group1 / df1$summary$se_group1
@@ -2620,9 +2620,9 @@ mtext(lab,
 
 dev.off()
 
-load("/om/scratch/Mon/mabdel03/Subfolder/Mnebula_analysis{variable}RVNew.rda")
+load(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "Mnebula_analysis{variable}RVNew.rda")
 df1M <- re2
-load("/om/scratch/Mon/mabdel03/Subfolder/dejnebula_analysis{variable}RVNew.rda")
+load(file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "dejnebula_analysis{variable}RVNew.rda")
 df2M <- re2
 
 df1M$summary$signed_stat <- df1M$summary$logFC_group1 / df1M$summary$se_group1
@@ -2761,9 +2761,9 @@ if True:
         import seaborn as sns
         import matplotlib.pyplot as plt
         #todo: put files into folder
-        rootDirectory = "/om/scratch/Mon/mabdel03/Subfolder/" 
+        rootDirectory = os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "DeJager", "") 
         os.chdir(rootDirectory)
-        folderPath="/om/scratch/Mon/mabdel03/SocialIsolation/" #change path to folder
+        folderPath=os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") #change path to folder
         db_paths = [folderPath+"hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather",
         folderPath+"hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather"]
         dbs = [RankingDatabase(fname=p, name=os.path.basename(p)) for p in db_paths]
@@ -2900,9 +2900,9 @@ if True:
         #     "10394182", "50402693", "50405042", "18414513", "44299049", "10101589", "10277308",
         #     "10502798", "11327005"]
         #todo: put files into folder
-        rootDirectory = "/om/scratch/Mon/mabdel03/Subfolder/" 
+        rootDirectory = os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "DeJager", "") 
         os.chdir(rootDirectory)
-        folderPath="/om/scratch/Mon/mabdel03/SocialIsolation/" #change path to folder
+        folderPath=os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") #change path to folder
         db_paths = [folderPath+"hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather",
         folderPath+"hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather"]
         dbs = [RankingDatabase(fname=p, name=os.path.basename(p)) for p in db_paths]
@@ -3120,9 +3120,9 @@ if True:
         #     "10394182", "50402693", "50405042", "18414513", "44299049", "10101589", "10277308",
         #     "10502798", "11327005"]
         #todo: put files into folder
-        rootDirectory = "/om/scratch/Mon/mabdel03/Subfolder/" 
+        rootDirectory = os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "DeJager", "") 
         os.chdir(rootDirectory)
-        folderPath="/om/scratch/Mon/mabdel03/SocialIsolation/" #change path to folder
+        folderPath=os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") #change path to folder
         db_paths = [folderPath+"hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather",
         folderPath+"hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather"]
         dbs = [RankingDatabase(fname=p, name=os.path.basename(p)) for p in db_paths]
@@ -3259,9 +3259,9 @@ if True:
         #     "10394182", "50402693", "50405042", "18414513", "44299049", "10101589", "10277308",
         #     "10502798", "11327005"]
         #todo: put files into folder
-        rootDirectory = "/om/scratch/Mon/mabdel03/Subfolder/" 
+        rootDirectory = os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "DeJager", "") 
         os.chdir(rootDirectory)
-        folderPath="/om/scratch/Mon/mabdel03/SocialIsolation/" #change path to folder
+        folderPath=os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") #change path to folder
         db_paths = [folderPath+"hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather",
         folderPath+"hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather"]
         dbs = [RankingDatabase(fname=p, name=os.path.basename(p)) for p in db_paths]
@@ -3386,13 +3386,13 @@ base_script_templateNebRVS ="""#!/bin/bash
 #SBATCH --mail-type=ALL
 
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 Rscript rvCalcNebulaF{variable}.Rscript
 
@@ -3408,13 +3408,13 @@ base_script_templateNebRVDS ="""#!/bin/bash
 #SBATCH --mail-type=ALL
 
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 Rscript rvCalcNebulaDF{variable}.Rscript
 
@@ -3432,13 +3432,13 @@ base_script_templateNebFDej ="""#!/bin/bash
 #SBATCH --mail-type=ALL
 
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 Rscript dej_rvCalcNebulaF{variable}.Rscript
 
@@ -3458,13 +3458,13 @@ base_script_templateNebMDej ="""#!/bin/bash
 #SBATCH --mail-type=ALL
 
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 Rscript dej_rvCalcNebulaM{variable}.Rscript
 
@@ -3482,15 +3482,15 @@ base_script_templateESM ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -3507,11 +3507,11 @@ base_script_templateScenicSh ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-conda activate /om2/user/mabdel03/conda_envs/scenicAnalysis
+activate_env "${SCENIC_ANALYSIS_ENV}"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 
@@ -3527,11 +3527,11 @@ base_script_templateScenicDejagerSh ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-conda activate /om2/user/mabdel03/conda_envs/scenicAnalysis
+activate_env "${SCENIC_ANALYSIS_ENV}"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 
@@ -3548,17 +3548,17 @@ base_script_templateCF ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 #python ver = 3.9
 
 #python3 -m pip install git+https://github.com/yoseflab/Compass.git --upgrade
 
-conda activate /om2/user/mabdel03/conda_envs/cplex_env2
+activate_env "${COMPASS_ANALYSIS_ENV}"
 
-export CPLEX_STUDIO_DIR=/om/scratch/Mon/mabdel03/SocialIsolation/opt/ibm/ILOG/CPLEX_Studio2211
+export CPLEX_STUDIO_DIR="${CPLEX_DIR}"
 export PATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PATH
 export PYTHONPATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PYTHONPATH
 
@@ -3575,17 +3575,17 @@ base_script_templateCM ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 #python ver = 3.9
 
 #python3 -m pip install git+https://github.com/yoseflab/Compass.git --upgrade
 
-conda activate /om2/user/mabdel03/conda_envs/cplex_env2
+activate_env "${COMPASS_ANALYSIS_ENV}"
 
-export CPLEX_STUDIO_DIR=/om/scratch/Mon/mabdel03/SocialIsolation/opt/ibm/ILOG/CPLEX_Studio2211
+export CPLEX_STUDIO_DIR="${CPLEX_DIR}"
 export PATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PATH
 export PYTHONPATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PYTHONPATH
 
@@ -3604,17 +3604,17 @@ base_script_templateCFT ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 #python ver = 3.9
 
 #python3 -m pip install git+https://github.com/yoseflab/Compass.git --upgrade
 
-conda activate /om2/user/mabdel03/conda_envs/cplex_env2
+activate_env "${COMPASS_ANALYSIS_ENV}"
 
-export CPLEX_STUDIO_DIR=/om/scratch/Mon/mabdel03/SocialIsolation/opt/ibm/ILOG/CPLEX_Studio2211
+export CPLEX_STUDIO_DIR="${CPLEX_DIR}"
 export PATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PATH
 export PYTHONPATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PYTHONPATH
 
@@ -3631,17 +3631,17 @@ base_script_templateCMT ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 #python ver = 3.9
 
 #python3 -m pip install git+https://github.com/yoseflab/Compass.git --upgrade
 
-conda activate /om2/user/mabdel03/conda_envs/cplex_env2
+activate_env "${COMPASS_ANALYSIS_ENV}"
 
-export CPLEX_STUDIO_DIR=/om/scratch/Mon/mabdel03/SocialIsolation/opt/ibm/ILOG/CPLEX_Studio2211
+export CPLEX_STUDIO_DIR="${CPLEX_DIR}"
 export PATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PATH
 export PYTHONPATH=$CPLEX_STUDIO_DIR/cplex/python/3.9/x86-64_linux:$PYTHONPATH
 
@@ -3659,11 +3659,11 @@ base_script_templateRS ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 Rscript nebulaRRHO2{variable}.Rscript
 
@@ -3679,10 +3679,10 @@ base_script_templateSS ="""#!/bin/bash
 #SBATCH --mail-type=ALL
 
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
-conda activate /om2/user/mabdel03/conda_envs/scenicAnalysis
+source "${CONDA_INIT_SCRIPT}"
+activate_env "${SCENIC_ANALYSIS_ENV}"
 
-cd /net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/Tsai/Preprocessing/Preprocessed_Counts/Resilient/
+cd "${SOCISL_OUTPUT_ROOT}/Tsai"
 
 python3 nebulaScenic{variable}.py
 """
@@ -3699,15 +3699,15 @@ base_script_templateES ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -3727,15 +3727,15 @@ base_script_templateEMS ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -3755,15 +3755,15 @@ base_script_templateEDS ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -3783,15 +3783,15 @@ base_script_templateEDMS ="""#!/bin/bash
 #SBATCH --mail-user=nkhera@college.harvard.edu
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+source "${CONDA_INIT_SCRIPT}"
 
 echo "Hello, 1!"
 
-cd /om/scratch/Mon/mabdel03/Subfolder
+cd "${SOCISL_OUTPUT_ROOT}/DeJager"
 
 echo "Hello, 2!"
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 echo "Hello, 3!"
 
@@ -4225,19 +4225,19 @@ def generate_scriptsNebulaRS(variables, output_dir):
 #             script_file.write(script_content)
 
 # List of variables to iterate over
-# source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+# source "${CONDA_INIT_SCRIPT}"
 
 
-# cd /om/scratch/Mon/shared_folder/ROSMAP_SC/DeJager/Preprocessing/FASTQs
+# cd "${DEJAGER_FASTQS}"
 
-# conda activate /net/vast-storage/scratch/vast/lhtsai/mabdel03/conda_envs/bcftools_env
+# activate_env "${BCFTOOLS_ENV}"
 
 
 import os
 
 # python3 notebookBaseCreate.py
 #
-output_dir = '/om/scratch/Mon/mabdel03/Subfolder/'
+output_dir = os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'DeJager', '')
 
 variables = ['Ast', 'Endo', 'Ex_L2_3', 'Ex_L4', 'Ex_L4_5', 'Ex_L5', 'Ex_L5_6', 'Ex_L5/6-CC', 'Ex_NRGN', 'In_PV(Basket)', 'In_PV(Chandelier)', 'In_Rosehip', 'In_SST', 'In_VIP', 'Mic', 'Oli', 'OPC']
 # generate_scriptsNebulaR(variables, output_dir)

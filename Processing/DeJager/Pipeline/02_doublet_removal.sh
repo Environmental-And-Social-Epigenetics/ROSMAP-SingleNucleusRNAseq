@@ -35,6 +35,11 @@ if [[ -z "${CONDA_PREFIX:-}" ]]; then
     exit 1
 fi
 
+# Prevent reticulate from trying to install Python via pyenv.
+# Must be set AFTER conda activate so CONDA_PREFIX points to the right env.
+export RETICULATE_PYTHON="${CONDA_PREFIX}/bin/python"
+export RETICULATE_PYTHON_FALLBACK=false
+
 INPUT_DIR="${DEJAGER_QC_FILTERED}"
 OUTPUT_DIR="${DEJAGER_DOUBLET_REMOVED}"
 

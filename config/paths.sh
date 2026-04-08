@@ -62,7 +62,12 @@ export SINGLECELL_ENV="${SINGLECELL_ENV:-${CONDA_ENV_BASE}/single_cell_BP}"
 export BATCHCORR_ENV="${BATCHCORR_ENV:-${CONDA_ENV_BASE}/BatchCorrection_SingleCell}"
 export QC_ENV="${QC_ENV:-${CONDA_ENV_BASE}/qcEnv}"
 export NEBULA_ENV="${NEBULA_ENV:-${CONDA_ENV_BASE}/nebulaAnalysis7}"
+export SCCOMP_ENV="${SCCOMP_ENV:-${CONDA_ENV_BASE}/sccompAnalysis}"
 export GLOBUS_ENV="${GLOBUS_ENV:-${CONDA_ENV_BASE}/globus_env}"
+export DEG_ANALYSIS_ENV="${DEG_ANALYSIS_ENV:-${CONDA_ENV_BASE}/deg_analysis}"
+export SCENIC_ANALYSIS_ENV="${SCENIC_ANALYSIS_ENV:-${CONDA_ENV_BASE}/scenic_analysis}"
+export COMPASS_ANALYSIS_ENV="${COMPASS_ANALYSIS_ENV:-${CONDA_ENV_BASE}/compass_analysis}"
+export GSEA_ANALYSIS_ENV="${GSEA_ANALYSIS_ENV:-${CONDA_ENV_BASE}/gsea_analysis}"
 
 # =============================================================================
 # BASE DATA PATHS
@@ -213,6 +218,10 @@ export DEJAGER_PROCESSING_OUTPUTS="${DEJAGER_PROCESSING_OUTPUTS:-${WORKSPACE_ROO
 export DEJAGER_QC_FILTERED="${DEJAGER_QC_FILTERED:-${DEJAGER_PROCESSING_OUTPUTS}/01_QC_Filtered}"
 export DEJAGER_DOUBLET_REMOVED="${DEJAGER_DOUBLET_REMOVED:-${DEJAGER_PROCESSING_OUTPUTS}/02_Doublet_Removed}"
 export DEJAGER_INTEGRATED="${DEJAGER_INTEGRATED:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated}"
+export DEJAGER_INTEGRATED_DERIVED_BATCH="${DEJAGER_INTEGRATED_DERIVED_BATCH:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_derived_batch}"
+export DEJAGER_INTEGRATED_PATIENT_ID="${DEJAGER_INTEGRATED_PATIENT_ID:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_patient_id}"
+export DEJAGER_INTEGRATED_POOL_BATCH="${DEJAGER_INTEGRATED_POOL_BATCH:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_pool_batch}"
+export DEJAGER_INTEGRATED_LIBRARY_ID="${DEJAGER_INTEGRATED_LIBRARY_ID:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_library_id}"
 
 # SLURM log directory
 export DEJAGER_PROCESSING_LOGS="${DEJAGER_PROCESSING_LOGS:-${DEJAGER_PROCESSING_OUTPUTS}/Logs}"
@@ -224,6 +233,14 @@ export DEJAGER_PATIENT_MAP="${DEJAGER_PATIENT_MAP:-${DEJAGER_WGS_DIR}/cell_to_pa
 # Patient ID overrides for "alone" libraries (JSON, tracked in repo)
 export DEJAGER_PATIENT_ID_OVERRIDES="${DEJAGER_PATIENT_ID_OVERRIDES:-${REPO_ROOT}/Processing/DeJager/Pipeline/Resources/patient_id_overrides.json}"
 
+# Derived batches mapping (tracked in repo)
+export DEJAGER_DERIVED_BATCHES_CSV="${DEJAGER_DERIVED_BATCHES_CSV:-${REPO_ROOT}/Processing/DeJager/Pipeline/Resources/derived_batches.csv}"
+
+# Synapse FASTQ ID mapping (used by derive_batches.py --fill-from-synapse)
+# This file is not tracked in git; set it in paths.local.sh if you need the
+# fill-from-synapse workflow.
+export DEJAGER_SYNAPSE_FASTQ_CSV="${DEJAGER_SYNAPSE_FASTQ_CSV:-__UNCONFIGURED__set_DEJAGER_SYNAPSE_FASTQ_CSV_in_paths_local_sh}"
+
 # Marker reference for ORA annotation (shared with Tsai)
 export DEJAGER_MARKERS_RDS="${DEJAGER_MARKERS_RDS:-${REPO_ROOT}/Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds}"
 
@@ -234,7 +251,41 @@ export DEJAGER_MARKERS_RDS="${DEJAGER_MARKERS_RDS:-${REPO_ROOT}/Processing/Tsai/
 export PHENOTYPE_DIR="${PHENOTYPE_DIR:-${REPO_ROOT}/Data/Phenotypes}"
 export ROSMAP_CLINICAL_CSV="${ROSMAP_CLINICAL_CSV:-${PHENOTYPE_DIR}/ROSMAP_clinical.csv}"
 export ACE_SCORES_CSV="${ACE_SCORES_CSV:-${PHENOTYPE_DIR}/TSAI_DEJAGER_all_patients_wACEscores.csv}"
+export RESILIENT_PHENOTYPE_CSV="${RESILIENT_PHENOTYPE_CSV:-${ROSMAP_CLINICAL_CSV}}"
 export DEJAGER_ID_MAP="${DEJAGER_ID_MAP:-${PHENOTYPE_DIR}/DeJager_ID_Map.csv}"
+
+# =============================================================================
+# ANALYSIS OUTPUT PATHS
+# =============================================================================
+
+# Downstream analysis outputs live outside the repo tree by default so large
+# generated objects, logs, and result tables do not bloat the checkout.
+export ANALYSIS_OUTPUT_ROOT="${ANALYSIS_OUTPUT_ROOT:-${WORKSPACE_ROOT}/Analysis_Outputs}"
+
+# Per-phenotype output roots
+export ACE_OUTPUT_ROOT="${ACE_OUTPUT_ROOT:-${ANALYSIS_OUTPUT_ROOT}/ACE}"
+export SOCISL_OUTPUT_ROOT="${SOCISL_OUTPUT_ROOT:-${ANALYSIS_OUTPUT_ROOT}/SocIsl}"
+export RESILIENT_OUTPUT_ROOT="${RESILIENT_OUTPUT_ROOT:-${ANALYSIS_OUTPUT_ROOT}/Resilient}"
+
+# =============================================================================
+# EXTERNAL TOOL PATHS (analysis-specific)
+# =============================================================================
+
+# IBM CPLEX installation directory (required for COMPASS metabolic flux analysis).
+# Obtain an academic license at https://www.ibm.com/academic/ and set this in
+# paths.local.sh.  Leave unconfigured if not running COMPASS.
+export CPLEX_DIR="${CPLEX_DIR:-__UNCONFIGURED__set_CPLEX_DIR_in_paths_local_sh}"
+
+# pySCENIC ranking databases directory (~3.5 GB).
+# Download from https://resources.aertslab.org/cistarget/ and set in
+# paths.local.sh.  Required files:
+#   hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+#   hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather
+#   motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl
+export SCENIC_RANKING_DIR="${SCENIC_RANKING_DIR:-__UNCONFIGURED__set_SCENIC_RANKING_DIR_in_paths_local_sh}"
+
+# TF names list for SCENIC (hg.txt, bundled with pySCENIC or downloadable)
+export SCENIC_TF_LIST="${SCENIC_TF_LIST:-${SCENIC_RANKING_DIR}/hg.txt}"
 
 # =============================================================================
 # SLURM SETTINGS
@@ -301,11 +352,20 @@ check_paths() {
         fi
     done
 
-    # Check DEJAGER_WGS_DIR separately (only needed for DeJager preprocessing)
-    if [[ "${DEJAGER_WGS_DIR}" == *"__UNCONFIGURED__"* ]]; then
-        echo "NOTE:  DEJAGER_WGS_DIR is not configured (only needed for DeJager Demuxlet step)."
-        echo ""
-    fi
+    # Check optional sentinels (only needed for specific workflows)
+    local optional_sentinels=(
+        "DEJAGER_WGS_DIR:DeJager Demuxlet step"
+        "CPLEX_DIR:COMPASS metabolic flux analysis"
+        "SCENIC_RANKING_DIR:pySCENIC regulatory network analysis"
+    )
+    for entry in "${optional_sentinels[@]}"; do
+        local var="${entry%%:*}"
+        local desc="${entry#*:}"
+        if [[ "${!var}" == *"__UNCONFIGURED__"* ]]; then
+            echo "NOTE:  ${var} is not configured (only needed for ${desc})."
+            echo ""
+        fi
+    done
 
     # Validate configured paths exist
     if [[ "${DATA_ROOT}" != *"__UNCONFIGURED__"* && ! -d "${DATA_ROOT}" ]]; then

@@ -1,35 +1,19 @@
-# Conda Environment Specifications
+# DeJager Processing Environment Specifications
 
-Each YAML file specifies the minimum dependencies needed for its pipeline stage.
+The DeJager processing pipeline uses the same three stage environments as the
+Tsai pipeline. Each stage now has a dedicated directory containing:
 
-## Automated Setup
+- `environment.yml` — canonical conda spec
+- `requirements.txt` — companion Python package list
+- `README.md` — exact install instructions
 
-The recommended way to create all environments is via the setup script:
+## Environments
 
-```bash
-source config/paths.sh
-bash setup/install_envs.sh
-```
+| Directory | Env name | Config variable | Pattern | Purpose |
+|-----------|----------|-----------------|---------|---------|
+| `stage1_qc/` | `qcEnv` | `QC_ENV` | requirements-complete | Stage 1 percentile-based QC filtering |
+| `stage2_doublets/` | `single_cell_BP` | `SINGLECELL_ENV` | hybrid | Stage 2 scDblFinder doublet removal |
+| `stage3_integration/` | `BatchCorrection_SingleCell` | `BATCHCORR_ENV` | hybrid | Stage 3 integration, Harmony, and ORA annotation |
 
-## Manual Setup
-
-To create an environment manually, use the `-p` flag to install it at the
-location expected by `config/paths.sh`:
-
-```bash
-source config/paths.sh
-conda env create -f stage1_qc.yml      -p "${QC_ENV}"
-conda env create -f stage2_doublets.yml -p "${SINGLECELL_ENV}"
-conda env create -f stage3_integration.yml -p "${BATCHCORR_ENV}"
-```
-
-After creating, verify the paths match what `config/paths.sh` defines (or
-update `config/paths.local.sh`).
-
-## Environment Mapping
-
-| YAML file | Env name created | `config/paths.sh` variable |
-|-----------|------------------|----------------------------|
-| `stage1_qc.yml` | `qcEnv` | `QC_ENV` |
-| `stage2_doublets.yml` | `single_cell_BP` | `SINGLECELL_ENV` |
-| `stage3_integration.yml` | `BatchCorrection_SingleCell` | `BATCHCORR_ENV` |
+Use `bash setup/install_envs.sh` for automated creation, or follow the per-env
+READMEs in this directory for manual `conda` or `requirements` setup.

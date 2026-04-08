@@ -1,3 +1,7 @@
+# DEPRECATED: Legacy data preparation script from Openmind era.
+# The current Processing pipeline (Processing/*/Pipeline/) supersedes this.
+# Paths may still reference decommissioned Openmind directories.
+#
 import anndata as ad
 import pandas as pd
 file_path_target = 'tsaiTotalAdataAnno040825.h5ad'

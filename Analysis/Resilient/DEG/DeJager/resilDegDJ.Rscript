@@ -1,0 +1,3 @@
+script_dir <- dirname(normalizePath(sys.frame(1)$ofile, mustWork = FALSE))
+if (is.null(script_dir) || script_dir == "") script_dir <- getwd()
+source(file.path(script_dir, "..", "Tsai", "resilDegT.Rscript"))

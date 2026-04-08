@@ -75,6 +75,35 @@ __pycache__/
 # SLURM logs
 slurm-*.out
 slurm-*.err
+*.out
+*.err
+
+# Generated ACE analysis outputs
+Analysis/ACE/**/logs/
+Analysis/ACE/**/results_*/
+Analysis/ACE/**/celltype_splits_*/
+Analysis/ACE/**/data/
+Analysis/ACE/**/figures/
+
+# Generated preprocessing logs / batch outputs
+Preprocessing/Tsai/02_Cellranger_Counts/Logs/Errs/*
+!Preprocessing/Tsai/02_Cellranger_Counts/Logs/Errs/README.md
+Preprocessing/Tsai/02_Cellranger_Counts/Logs/Outs/*
+!Preprocessing/Tsai/02_Cellranger_Counts/Logs/Outs/README.md
+Preprocessing/Tsai/03_Cellbender/Logs/**
+!Preprocessing/Tsai/03_Cellbender/Logs/
+!Preprocessing/Tsai/03_Cellbender/Logs/README.md
+!Preprocessing/Tsai/03_Cellbender/Logs/Errs/
+!Preprocessing/Tsai/03_Cellbender/Logs/Errs/README.md
+!Preprocessing/Tsai/03_Cellbender/Logs/Outs/
+!Preprocessing/Tsai/03_Cellbender/Logs/Outs/README.md
+Preprocessing/Tsai/03_Cellbender/Batch_Scripts/**
+!Preprocessing/Tsai/03_Cellbender/Batch_Scripts/
+!Preprocessing/Tsai/03_Cellbender/Batch_Scripts/**/
+!Preprocessing/Tsai/03_Cellbender/Batch_Scripts/**/README.md
+
+# Generated comparison reports
+batch_correction_report.pdf
 
 # R local library (auto-bootstrapped by 02_doublet_removal.Rscript)
 Processing/Tsai/Pipeline/R_libs/
@@ -106,4 +135,3 @@ results/
 
 # Local configuration overrides (keep paths.sh as template)
 config/paths.local.sh
-

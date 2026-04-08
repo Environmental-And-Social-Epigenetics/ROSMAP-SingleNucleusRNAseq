@@ -1,27 +1,31 @@
-# Analysis Conda Environment Specifications
+# Analysis Environment Specifications
 
-Environment YAML files for downstream analysis pipelines. Create environments with:
+Each supported analysis environment now has its own directory containing:
+
+- `environment.yml` — canonical conda spec
+- `requirements.txt` — companion Python package list
+- `README.md` — exact install instructions
+
+Use the automated installer:
 
 ```bash
-conda env create -f <spec.yml> -p ${CONDA_ENV_BASE}/<env_name>
-```
-
-Or use the automated installer with the `--analysis` flag:
-
-```bash
+source config/paths.sh
 bash setup/install_envs.sh --analysis
 ```
 
 ## Environments
 
-| File | Name | Purpose | Key Packages |
-|------|------|---------|-------------|
-| `deg.yml` | deg_analysis | Differential expression analysis | DESeq2, edgeR, limma, scanpy |
-| `scenic.yml` | scenic_analysis | Regulatory network inference | pySCENIC, loompy |
-| `compass.yml` | compass_analysis | Metabolic flux analysis | COMPASS (requires CPLEX) |
-| `gsea.yml` | gsea_analysis | Gene set enrichment | WebGestaltR, clusterProfiler |
+| Directory | Env name | Config variable | Pattern | Purpose |
+|-----------|----------|-----------------|---------|---------|
+| `deg/` | `deg_analysis` | `DEG_ANALYSIS_ENV` | hybrid | General differential expression analysis |
+| `scenic/` | `scenic_analysis` | `SCENIC_ANALYSIS_ENV` | requirements-complete | pySCENIC regulatory network inference |
+| `compass/` | `compass_analysis` | `COMPASS_ANALYSIS_ENV` | requirements-complete | COMPASS metabolic modeling |
+| `gsea/` | `gsea_analysis` | `GSEA_ANALYSIS_ENV` | hybrid | Gene-set enrichment in R |
+| `nebula/` | `nebulaAnalysis7` | `NEBULA_ENV` | hybrid | ACE pseudobulk DEG and H5AD preprocessing |
+| `sccomp/` | `sccompAnalysis` | `SCCOMP_ENV` | hybrid | ACE cell-type proportion modeling |
 
-## External Dependencies
+## Notes
 
-- **SCENIC**: Requires ~3.5 GB of motif ranking reference files from [aertslab](https://resources.aertslab.org/cistarget/)
-- **COMPASS**: Requires IBM CPLEX solver ([academic license](https://www.ibm.com/academic/))
+- SCENIC still requires external motif ranking reference files.
+- COMPASS still requires IBM CPLEX outside the conda environment.
+- The ACE envs are now first-class supported environments in setup and docs.

@@ -107,7 +107,10 @@ python 03_integration_annotation.py --sample-ids 10100574,10100862
 
 The per-sample stages auto-discover complete inputs and preserve metadata order from `patient_metadata.csv`.
 
-The SLURM wrappers default to `#SBATCH --array=1-476%32` for the current dataset. If that count changes, override the array range at submit time:
+The SLURM wrappers default to `#SBATCH --array=1-478%32` for the current
+CellBender-complete dataset. `patient_metadata.csv` lists 480 Tsai samples; the
+currently missing CellBender outputs are `11467746` and `20834164`. If that
+count changes, override the array range at submit time:
 
 ```bash
 sbatch --array=1-$(python 01_qc_filter.py --list-samples | wc -l) 01_qc_filter.sh

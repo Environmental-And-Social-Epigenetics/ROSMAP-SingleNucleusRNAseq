@@ -1,44 +1,88 @@
-# ACE — Adverse Childhood Experiences
+# ACE
 
-Analysis of the impact of adverse childhood experiences on gene expression in Alzheimer's disease brain tissue.
+ACE analysis studies adverse childhood experience phenotypes in the ROSMAP
+single-nucleus datasets.
 
-## Phenotype Definition
+## Official ACE Phenotype Models
 
-ACE measures early-life adversity using five components from the ROSMAP dataset:
-- **Emotional neglect** (`emotional_neglect`)
-- **Family problems/separation** (`family_pro_sep`)
-- **Financial need** (`financial_need`)
-- **Parental intimidation** (`parental_intimidation`)
-- **Parental violence** (`parental_violence`)
+These are the formalized primary models for both cohorts:
 
-Total ACE score: `tot_adverse_exp` (sum of components)
+| Model | Variable | Definition |
+|-------|----------|------------|
+| Total adversity | `tot_adverse_exp` | sum of the five ACE component scores |
+| Early household SES | `early_hh_ses` | tracked continuous SES measure from the phenotype table |
+| Aggregate score | `ace_aggregate` | `zscore(tot_adverse_exp) + zscore(early_hh_ses)` |
 
-## Patient Selection
+ACE component columns are also available for exploratory composition models:
 
-Phenotype data: `Data/Phenotypes/TSAI_DEJAGER_all_patients_wACEscores.csv` (296 patients with ACE scores)
+- `emotional_neglect`
+- `family_pro_sep`
+- `financial_need`
+- `parental_intimidation`
+- `parental_violence`
 
-| Group | Criteria | Description |
-|-------|----------|-------------|
-| ACE-exposed | `tot_adverse_exp > 0` | Patients reporting any adverse childhood experiences |
-| Non-exposed | `tot_adverse_exp == 0` | No reported adverse experiences |
+## Shared Input Contract
 
-## Key Comparisons
+### Processed AnnData
 
-- ACE-exposed vs non-exposed, stratified by cell type
-- Dose-response: correlation of total ACE score with gene expression
-- ACE component-specific effects (e.g., parental violence alone)
+- `cell_type`
+- Tsai: `sample_id` or `projid`
+- DeJager: `patient_id`
 
-## Directory Structure
+### Phenotype CSV
 
+Default: `${ACE_SCORES_CSV}`
+
+Required columns:
+
+- `projid`
+- `tot_adverse_exp`
+- `early_hh_ses`
+- `msex`
+- `age_death`
+- `pmi`
+- `niareagansc`
+- the five ACE component columns above
+
+## Supported ACE Workflows
+
+| Workflow | Tsai | DeJager |
+|----------|------|---------|
+| DEG | `DEG/Tsai/aceDegT.sh` | `DEG/DeJager/aceDegDJ.sh` |
+| Cell-type proportion | `CellTypeProportion/Tsai/acePropT.sh` | `CellTypeProportion/DeJager/acePropDJ.sh` |
+
+Canonical integration choices:
+
+- **Tsai**: `derived_batch`
+- **DeJager**: `library_id`
+
+Sensitivity integrations can still be passed explicitly to the launchers.
+
+## Output Layout
+
+All ACE outputs are written beneath:
+
+```text
+${ANALYSIS_OUTPUT_ROOT}/ACE/
+  DEG/
+    Tsai/
+    DeJager/
+  CellTypeProportion/
+    Tsai/
+    DeJager/
 ```
-ACE/
-├── DEG/
-│   ├── DeJager/
-│   └── Tsai/
-├── TF/
-│   ├── DeJager/
-│   └── Tsai/
-└── SCENIC/
-    ├── DeJager/
-    └── Tsai/
-```
+
+The repo directories store code only.
+
+## Validation Layers
+
+- Smoke: fixture-based checks that exercise the ACE prep and analysis entrypoints
+  without requiring the full processed cohort objects
+- Full: production-readiness checks against the canonical annotated cohort inputs
+
+Preflight entrypoints:
+
+- `bash config/preflight.sh ace-tsai-smoke`
+- `bash config/preflight.sh ace-dejager-smoke`
+- `bash config/preflight.sh ace-tsai-full`
+- `bash config/preflight.sh ace-dejager-full`

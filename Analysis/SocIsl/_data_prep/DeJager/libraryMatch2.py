@@ -1,3 +1,7 @@
+# DEPRECATED: Legacy data preparation script from Openmind era.
+# The current Processing pipeline (Processing/*/Pipeline/) supersedes this.
+# Paths may still reference decommissioned Openmind directories.
+#
 import csv
 import os
 result_table = []

@@ -1,0 +1,12 @@
+name: sccompAnalysis
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - r-base>=4.2
+  - r-dplyr
+  - r-tidyr
+  - r-readr
+  - r-ggplot2
+  - r-patchwork
+  - pip

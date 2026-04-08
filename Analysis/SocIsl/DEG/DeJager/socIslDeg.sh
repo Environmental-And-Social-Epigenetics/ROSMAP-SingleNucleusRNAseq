@@ -4,12 +4,15 @@
 #SBATCH --mem=600G              # GB memory needed (memory PER CORE)
 #SBATCH -o %j.out               # Standard out goes to this file
 #SBATCH -e %j.err               # Standard err goes to this file
-#SBATCH --mail-user=nkhera@college.harvard.edu
+#SBATCH --mail-user=__SET_YOUR_EMAIL__
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+# Source central configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../../../../config/paths.sh"
+init_conda
 
-cd /om/scratch/Mon/mabdel03/SocialIsolation
+cd "${SOCISL_OUTPUT_ROOT}"
 
 # conda activate /om2/user/mabdel03/conda_envs/BatchCorrection_SingleCell
 
@@ -17,7 +20,7 @@ cd /om/scratch/Mon/mabdel03/SocialIsolation
 
 # python3 processData3.py
 
-conda activate /om2/user/mabdel03/conda_envs/nebulaAnalysis7
+activate_env "${NEBULA_ENV}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 

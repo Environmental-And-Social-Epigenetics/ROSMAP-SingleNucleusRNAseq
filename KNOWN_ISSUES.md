@@ -41,7 +41,7 @@ Demuxlet-specific path variables added to `config/paths.sh`.
 
 **Severity**: Medium
 **Affected Scripts**: Cell Ranger and CellBender scripts
-**Status**: Partially resolved by Engaging migration
+**Status**: Resolved
 
 Scripts previously referenced temporary scratch directories on Openmind:
 - `/om/scratch/Mon/mabdel03/` (weekly cleanup)
@@ -51,9 +51,9 @@ Scripts previously referenced temporary scratch directories on Openmind:
 to Engaging, which uses a different storage tier model. Users should configure
 `SCRATCH_ROOT` in `paths.local.sh` to an appropriate Engaging scratch location.
 
-**Recommendation**:
-- Use Engaging scratch storage for intermediate outputs
-- Understand Engaging's storage policies before relying on scratch
+**Update (March 2026 audit)**: `config/paths.local.sh` created with `SCRATCH_ROOT`
+pointing to `/orcd/data/lhtsai/001/mabdel03/ROSMAP_Data`. All pipeline path variables
+now resolve correctly to actual data in `ROSMAP_Data/Single_Nucleus/`.
 
 ---
 
@@ -306,6 +306,104 @@ to `Data_Access/README.md` with directory trees, file counts, and Globus audit t
 
 ---
 
+### 23. paths.local.sh Missing — Pipeline Cannot Find Data
+
+**Severity**: Critical
+**Status**: Resolved
+
+`config/paths.local.sh` was never created after the Openmind-to-Engaging migration.
+All path variables defaulted to nonexistent locations (`__UNCONFIGURED__` sentinels
+or `${WORKSPACE_ROOT}/Tsai_Data/...` which does not exist on Engaging). The in-repo
+`Data/Transcriptomics/` directories are empty placeholders. The 4.8 TB of actual
+data at `/orcd/data/lhtsai/001/mabdel03/ROSMAP_Data/Single_Nucleus/` was unreachable
+by the pipeline.
+
+**Fix**: Created `config/paths.local.sh` mapping all path variables to the correct
+Engaging locations. Verified with `check_paths` (PASS) and `preflight.sh tsai-stage1`
+(all green).
+
+---
+
+### 24. copy_data.sbatch Hardcoded Openmind Paths
+
+**Severity**: Medium
+**Status**: Resolved
+
+`Data/Transcriptomics/copy_data.sbatch` had hardcoded `REPO_ROOT` pointing to
+`/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq` and all 6 source paths
+pointed to decommissioned Openmind scratch directories.
+
+**Fix**: Rewrote to auto-detect `REPO_ROOT` from `BASH_SOURCE`, source
+`config/paths.sh`, and use config variables for all source paths.
+
+---
+
+### 25. Conda Environment Name Mismatches on Engaging
+
+**Severity**: Medium
+**Status**: Resolved
+
+Two conda environment names in `config/paths.sh` defaults do not match the actual
+environment names on Engaging:
+- `SINGLECELL_ENV`: default `single_cell_BP` vs actual `single_cell_BP4`
+- `BATCHCORR_ENV`: default `BatchCorrection_SingleCell` vs actual `batchCorrectionEnv`
+
+**Fix**: Overridden in `config/paths.local.sh`. Additionally, `batchCorrectionEnv` is
+missing packages needed for Stage 3 (scanpy, harmonypy, decoupler, rpy2) and
+`single_cell_BP4` is missing `zellkonverter` for Stage 2.
+
+---
+
+### 26. Analysis/SocIsl Scripts Have Hardcoded Openmind Paths
+
+**Severity**: Medium
+**Status**: Resolved
+
+All ~60 production scripts in `Analysis/SocIsl/` (DEG, SCENIC, COMPASS, GSEA,
+TF) have been migrated to use `config/paths.sh`:
+
+- Shell wrappers: source `config/paths.sh`, use `init_conda`, `activate_env`,
+  and config variables (`$SOCISL_OUTPUT_ROOT`, `$NEBULA_ENV`, `$CPLEX_DIR`, etc.)
+- R scripts: use `Sys.getenv("SOCISL_OUTPUT_ROOT")` for working directories
+- Python scripts: use `os.environ["SOCISL_OUTPUT_ROOT"]` for paths
+- SBATCH email headers: replaced with `__SET_YOUR_EMAIL__` placeholder
+
+The `_data_prep/` scripts are marked as DEPRECATED with header comments and a
+README. They retain original Openmind paths as they are historical reference
+only (the Processing pipeline supersedes them).
+
+New config variables added to `config/paths.sh`:
+- `SOCISL_OUTPUT_ROOT`, `ACE_OUTPUT_ROOT`, `RESILIENT_OUTPUT_ROOT`
+- `CPLEX_DIR`, `SCENIC_RANKING_DIR`, `SCENIC_TF_LIST`
+
+---
+
+### 27. Conda Environments Missing Packages for Stages 2-3
+
+**Severity**: Medium
+**Status**: Resolved
+
+Preflight checks revealed missing packages in existing legacy conda environments
+(`batchCorrectionEnv`, `single_cell_BP4`). These are old environments from the
+Openmind era that do not match the current pipeline specs.
+
+**Resolution**: The canonical environment specifications in
+`Processing/Tsai/Pipeline/envs/` (and the identical DeJager copies) already
+contain all required packages. The fix is to rebuild environments from the
+official specs rather than patching the legacy envs:
+
+```bash
+source config/paths.sh
+bash setup/install_envs.sh --processing --method=conda
+```
+
+This creates fresh environments at `${CONDA_ENV_BASE}/` with the correct names
+and all required packages. After rebuilding, update `config/paths.local.sh` to
+point `SINGLECELL_ENV` and `BATCHCORR_ENV` at the new environments, then
+validate with `bash config/preflight.sh tsai-stage2 && bash config/preflight.sh tsai-stage3`.
+
+---
+
 ## Resolution Tracking
 
 | Issue | Status | Date Fixed |
@@ -313,10 +411,10 @@ to `Data_Access/README.md` with directory trees, file counts, and Globus audit t
 | 1. Hardcoded paths (pipeline) | Resolved | 2026-03-08 |
 | 1. Hardcoded paths (preprocessing) | Resolved | 2026-03-08 |
 | 2. Demuxlet cleanup | Resolved | 2026-03-11 |
-| 3. Scratch dependencies | Partially resolved | 2026-03-16 |
+| 3. Scratch dependencies | Resolved | 2026-03-18 |
 | 4. Pipeline naming | Open | - |
 | 5. Conda paths | Resolved | 2026-03-08 |
-| 6. SocIsl scripts | Partially resolved | 2026-03-16 |
+| 6. SocIsl scripts | Resolved | 2026-04-08 |
 | 10. .gitignore blocking files | Resolved | 2026-03-08 |
 | 11. Hemoglobin regex bug | Resolved | 2026-03-08 |
 | 12. No QC summary tracking | Resolved | 2026-03-08 |
@@ -326,10 +424,15 @@ to `Data_Access/README.md` with directory trees, file counts, and Globus audit t
 | 16. Untracked files | Resolved | 2026-03-14 |
 | 17. Hardcoded mabdel03 paths | Resolved | 2026-03-14 |
 | 18. Archive scripts non-portable | By design | - |
-| 19. DeJager processing not run | Open | - |
+| 19. DeJager processing not run | Documented | 2026-04-08 |
 | 20. No preprocessing env specs | Resolved | 2026-03-16 |
 | 21. No analysis env specs | Resolved | 2026-03-16 |
 | 22. Engaging data undocumented | Resolved | 2026-03-16 |
+| 23. paths.local.sh missing | Resolved | 2026-03-18 |
+| 24. copy_data.sbatch Openmind paths | Resolved | 2026-03-18 |
+| 25. Conda env name mismatches | Resolved | 2026-03-18 |
+| 26. Analysis/SocIsl hardcoded paths | Resolved | 2026-04-08 |
+| 27. Conda envs missing packages | Resolved | 2026-04-08 |
 
 ---
 

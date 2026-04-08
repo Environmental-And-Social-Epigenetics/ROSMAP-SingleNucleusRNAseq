@@ -45,18 +45,19 @@ CellBender uses a deep generative model to distinguish true cell-associated RNA 
 
 The pipeline uses `--fpr 0` (or `0.01`) for a stringent false positive rate, aggressively removing ambient signal.
 
-## Why MAD-Based QC Filtering?
+## Why Percentile-Based QC Filtering?
 
-After ambient RNA removal, individual cells are filtered to remove low-quality observations. The pipeline uses **Median Absolute Deviation (MAD)** as a robust measure of variability:
+After ambient RNA removal, individual nuclei are filtered to remove clear
+technical outliers before integration. The current tracked pipeline uses simple,
+dataset-stable percentile thresholds rather than a MAD-based rule:
 
-- **Why MAD instead of standard deviation?** MAD is less sensitive to extreme outliers, making it more appropriate for distributions with long tails (common in single-cell data).
-- **What is filtered?** Cells with metrics that fall beyond N MADs from the median are flagged as outliers:
-  - `log1p_total_counts` (4 MADs) — removes cells with abnormally high or low total RNA counts
-  - `log1p_n_genes_by_counts` (4 MADs) — removes cells expressing too many or too few genes
-  - `pct_counts_in_top_20_genes` (4 MADs) — removes cells dominated by a handful of genes
-  - `pct_counts_mt` (3 MADs or >7.5%) — removes cells with high mitochondrial content, a marker of cell damage
+- `log1p_total_counts`: below the 4.5th percentile or above the 96th percentile
+- `log1p_n_genes_by_counts`: below the 5th percentile
+- `pct_counts_mt`: above 10%
 
-These thresholds balance removing damaged/dying cells against retaining genuine biological variation. The 4-MAD threshold for counts and genes is relatively permissive; the stricter 3-MAD + 7.5% cap for mitochondrial percentage reflects the stronger association between mitochondrial content and cell death.
+This keeps the QC rule transparent and consistent across both cohorts while
+still removing low-information nuclei, extreme count outliers, and nuclei with
+high mitochondrial signal.
 
 ## Why Harmony for Batch Correction?
 
@@ -83,7 +84,9 @@ Even with identical protocols, technical differences between sequencing runs (re
 - **Source**: Located on the MIT Engaging cluster
 - **Key characteristic**: Patient assignments are **known** from sequencing metadata (one patient per library)
 - **No demultiplexing needed**: Cell-to-patient assignment comes directly from the library metadata
-- **Scale**: 480 patients, 5,197 FASTQ files (~9 TB), processed in 16 batches of 30 patients
+- **Scale**: `patient_metadata.csv` lists 480 Tsai samples; the current
+  CellBender-complete set contains 478 outputs, with `11467746` and `20834164`
+  still missing
 - **Cohorts**: Patients are drawn from three study arms:
   - **ACE** — Adverse Childhood Experiences
   - **Resilient** — Cognitive Resilience (maintained cognitive function despite AD pathology)

@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 #Figure settings --> can adjust as desired but these were the ones used in SC Best Practices
 sc.settings.verbosity = 0
-os.chdir('/net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts/')
+os.chdir(os.path.join(os.environ['DATA_ROOT'], 'Data/DeJager/Preprocessed_Counts/'))
 
 sc.set_figure_params(figsize=(6, 6), frameon=False)
 sns.set_theme()
@@ -34,12 +34,12 @@ import os
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 # Replace 'your_directory_path' with the path to the directory you want to scan
-directory_path = '/net/vast-storage/scratch/vast/lhtsai/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts/'
+directory_path = os.path.join(os.environ['DATA_ROOT'], 'Data/DeJager/Preprocessed_Counts/')
 
 # List all folders in the directory
 libraries = ['200313-B22-B', '200225-B10-B', '200316-B24-B', '200305-B15-B', '190409-B5-B', '200317-B26-B', '200306-B16-B', '191219-B9-B', '200713-B33-B', '200312-B20-B', '201007-B57-B', '200810-B47-B', '200317-B27-B', '190403-B4-B', '200707-B30-B', '200226-B11-B', '200730-B41-B', '201007-B58-B', '200303-B14-B', '200701-B28-B', '200313-B23-B', '200715-B35-B', '200804-B42-B', '200708-B31-B', '200310-B18-B', '200810-B46-B', '200930-B55-B', '201022-B61-B', '201024-B59-B', '200728-B39-B', '201002-B56-B', '200702-B29-B', '200806-B44-B', '200311-B19-B', '191122-B6-R7090624-alone', '190403-B4-A', '191121-B6', '191213-B7-A', '191213-B7-B', '191217-B8-A', '191217-B8-B', '200309-B17-B', '200312-B21-B', '200316-B24-A', '200316-B25-A', '200317-B26-A', '200317-B27-A', '200707-B30-A', '200708-B31-A', '200714-B34-B', '200720-B36-A', '200720-B36-B', '200721-B37-A', '200722-B38-A', '200722-B38-B', '200729-B40-A', '200729-B40-B', '200804-B42-A', '200805-B43-A', '200805-B43-B', '200806-B44-A', '200810-B45-A', '200810-B46-A', '200810-B47-A', '200825-B48-A', '200825-B48-B', '200826-B49-A', '200908-B50-A', '200908-B50-B', '200909-B51-B', '200910-B52-B', '200915-B53-A', '200915-B53-B', '200916-B54-A', '201002-B56-A', '201021-B60-A', '201028-B62-A', '201207-B63-A', '201207-B63-B']
 
-mapping_csv = pd.read_csv("/om/scratch/Mon/mabdel03/SocialIsolation/newCellAnno.csv")
+mapping_csv = pd.read_csv(os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'newCellAnno.csv'))
 mapping_csv.rename(columns={"Cell Barcode": "barcode"}, inplace=True)
 mapping_csv.rename(columns={"Assigned Patient": "patient_id"}, inplace=True)
 mapping_csv['barcode'] = mapping_csv['barcode'].astype(str)
@@ -80,7 +80,7 @@ for library in libraries:
             adataList.append(library_adata)
             print(f"Number of overlapping barcodes: {len(overlap)}")
 
-os.chdir('/om/scratch/Mon/mabdel03/SocialIsolation')
+os.chdir(os.environ['SOCISL_OUTPUT_ROOT'])
 
 CSVPatient = pd.read_csv('dataset_652_basic_03-23-2022.csv')
 
@@ -158,7 +158,7 @@ sc.pl.umap(adata,
 #            save='umapLeidenTotalPatientQCFinal.png')
 
 # saving object
-adata.write('/om/scratch/Mon/mabdel03/SocialIsolation/totalAdata2D.h5ad')
+adata.write(os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'totalAdata2D.h5ad')
 
 # cell type assignment
 import pandas as pd
@@ -192,7 +192,7 @@ for cell_type_name, genes in zip(cell_type_names, cell_types):
 markers_df = pd.DataFrame(data)
 
 # load in h5ad
-adata = ad.read_h5ad('/om/scratch/Mon/mabdel03/SocialIsolation/totalAdata2D.h5ad')
+adata = ad.read_h5ad(os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'totalAdata2D.h5ad')
 
 adata = adata[adata.obs["leiden_res0_5"] != 0].copy()
 
@@ -262,7 +262,7 @@ adata.obsm['ora_estimate'].columns = [
 
 
 
-adata.write('/om/scratch/Mon/mabdel03/SocialIsolation/totalAdataAnno2D.h5ad')
+adata.write(os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'totalAdataAnno2D.h5ad')
 
 #cell type graph
 import anndata as ad
@@ -277,7 +277,7 @@ import pandas as pd
 #            legend_loc="on data",
 #            save='umapLeidenTotalPatientCellType.png')
 
-adata_target = ad.read_h5ad('/om/scratch/Mon/mabdel03/SocialIsolation/totalAdataAnno2D.h5ad')
+adata_target = ad.read_h5ad(os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'totalAdataAnno2D.h5ad')
 patients = ["32383679","66406040","51400993"]
 
 adata_target = adata_target[~adata_target.obs['patient_id'].isin(patients)]
@@ -301,5 +301,5 @@ if adata.raw is not None:
     adata.raw = adata.raw.to_adata()[:, combined_mask].copy()
 adata = adata[:, combined_mask]
 
-adata.write('/om/scratch/Mon/mabdel03/SocialIsolation/totalAdataAnno3HVGD.h5ad')
-adata_target.write('/om/scratch/Mon/mabdel03/SocialIsolation/totalAdataAnno3D.h5ad')
+adata.write(os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'totalAdataAnno3HVGD.h5ad')
+adata_target.write(os.path.join(os.environ['SOCISL_OUTPUT_ROOT'], 'totalAdataAnno3D.h5ad')

@@ -1,23 +1,35 @@
-# Preprocessing Conda Environment Specifications
+# Preprocessing Environment Specifications
 
-Environment YAML files for the preprocessing pipeline. Create environments with:
+Each supported preprocessing environment now lives in its own directory with:
+
+- `environment.yml` — canonical conda spec
+- `requirements.txt` — companion Python package list
+- `README.md` — exact setup instructions
+
+Use the automated installer:
 
 ```bash
-conda env create -f <spec.yml> -p ${CONDA_ENV_BASE}/<env_name>
+source config/paths.sh
+bash setup/install_envs.sh --preprocessing
 ```
+
+Manual setup is also supported. Each env README documents two paths:
+
+- `conda`: `conda env create -f environment.yml -p <env-path>`
+- `requirements`: create a fresh env, install any required conda/system packages, then `pip install -r requirements.txt`
 
 ## Environments
 
-| File | Name | Config Variable | Purpose |
-|------|------|----------------|---------|
-| `cellbender.yml` | Cellbender_env | `$CELLBENDER_ENV` | Ambient RNA removal (GPU required) |
-| `synapse.yml` | synapse_env | `$SYNAPSE_ENV` | DeJager FASTQ download from Synapse |
-| `bcftools.yml` | bcftools_env | `$BCFTOOLS_ENV` | BAM/VCF filtering for Demuxlet |
-| `globus.yml` | globus_env | `$GLOBUS_ENV` | Globus data transfers between clusters |
+| Directory | Env name | Config variable | Pattern | Purpose |
+|-----------|----------|-----------------|---------|---------|
+| `cellbender/` | `Cellbender_env` | `CELLBENDER_ENV` | hybrid | Ambient RNA removal with CUDA-enabled PyTorch |
+| `synapse/` | `synapse_env` | `SYNAPSE_ENV` | requirements-complete | DeJager FASTQ downloads from Synapse |
+| `bcftools/` | `bcftools_env` | `BCFTOOLS_ENV` | hybrid | BAM/VCF filtering for Demuxlet |
+| `globus/` | `globus_env` | `GLOBUS_ENV` | requirements-complete | Globus data transfers between clusters |
 
 ## Notes
 
-- **CellBender** requires a GPU. Install PyTorch with CUDA support matching your cluster.
-- **Synapse** requires a personal access token from [synapse.org](https://www.synapse.org/).
-- **Globus** requires MIT Kerberos authentication via `globus login`.
-- **Cell Ranger** (v8.0.0) is distributed as a standalone binary, not via conda. Download from [10x Genomics](https://www.10xgenomics.com/support/software/cell-ranger).
+- CellBender still requires a GPU and a matching CUDA runtime.
+- Synapse requires a personal access token from [synapse.org](https://www.synapse.org/).
+- Globus requires interactive `globus login`.
+- Cell Ranger is distributed separately from conda; keep using `CELLRANGER_PATH`.

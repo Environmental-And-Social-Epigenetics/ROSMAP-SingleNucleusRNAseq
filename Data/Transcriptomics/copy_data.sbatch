@@ -1,16 +1,17 @@
 #!/bin/bash
 #SBATCH --job-name=copy_data
-#SBATCH --partition=normal
 #SBATCH --time=2-00:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=4G
 #SBATCH --array=0-5
-#SBATCH --output=/home/mabdel03/copy_data_%A_%a.out
-#SBATCH --error=/home/mabdel03/copy_data_%A_%a.err
 
 # Copy transcriptomics data into the canonical Data/Transcriptomics/ layout.
 # Each array task handles one dataset. Rsync is used so re-running is safe
 # (only copies new/changed files).
+#
+# NOTE: The original Openmind->repo copy (March 2026) is complete. This script
+# is retained for future use if data needs to be re-synced from the primary
+# storage at ROSMAP_Data/Single_Nucleus/ into the in-repo layout.
 #
 # Usage:
 #   sbatch copy_data.sbatch
@@ -21,17 +22,25 @@
 
 set -euo pipefail
 
-REPO_ROOT="/om/scratch/Mon/mabdel03/ROSMAP-SingleNucleusRNAseq"
+# Source centralized config for all paths
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${_SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/config/paths.sh"
+
 DEST_BASE="${REPO_ROOT}/Data/Transcriptomics"
 
+# SLURM log location (set dynamically since we can't use variables in #SBATCH)
+# Submit with: sbatch --output="${HOME}/copy_data_%A_%a.out" --error="${HOME}/copy_data_%A_%a.err" copy_data.sbatch
+
 # Define source -> destination pairs (indexed by SLURM_ARRAY_TASK_ID)
+# Sources use config variables pointing to ROSMAP_Data/Single_Nucleus/
 declare -a SOURCES=(
-    "/om/scratch/Mon/mabdel03/Tsai_Data/FASTQs/"
-    "/om/scratch/Mon/mabdel03/Tsai_Data/Cellranger_Outputs/"
-    "/om/scratch/Mon/mabdel03/Tsai_Data/Cellbender_Outputs/"
-    "/om/scratch/Mon/mabdel03/FASTQs/"
-    "/om/scratch/Mon/mabdel03/Counts/"
-    "/om2/user/mabdel03/files/ACE_Analysis/Data/DeJager/Preprocessed_Counts/"
+    "${TSAI_FASTQS_DIR}/"
+    "${TSAI_CELLRANGER}/"
+    "${TSAI_CELLBENDER}/"
+    "${DEJAGER_FASTQS}/"
+    "${DEJAGER_CELLRANGER}/"
+    "${DEJAGER_CELLBENDER}/"
 )
 
 declare -a DESTS=(

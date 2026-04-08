@@ -2,6 +2,13 @@
 
 Sys.setenv(HDF5_USE_FILE_LOCKING = "FALSE")
 
+# Initialize reticulate BEFORE any package that might trigger basilisk/pyenv.
+# RETICULATE_PYTHON must be set by the calling shell script.
+if (nzchar(Sys.getenv("RETICULATE_PYTHON"))) {
+  library(reticulate)
+  use_python(Sys.getenv("RETICULATE_PYTHON"), required = TRUE)
+}
+
 get_script_dir <- function() {
   args <- commandArgs(trailingOnly = FALSE)
   file_arg <- grep("^--file=", args, value = TRUE)
@@ -53,16 +60,111 @@ ensure_runtime_packages <- function() {
   ensure_r_package("GenomeInfoDbData", local_r_lib)
   ensure_r_package("SingleCellExperiment", local_r_lib)
   ensure_r_package("scDblFinder", local_r_lib)
-  ensure_r_package("zellkonverter", local_r_lib)
   ensure_r_package("ggplot2", local_r_lib, bioc = FALSE)
 
   suppressPackageStartupMessages({
     library(BiocParallel)
     library(scDblFinder)
     library(SingleCellExperiment)
-    library(zellkonverter)
     library(ggplot2)
   })
+}
+
+
+# ---------- h5ad I/O via reticulate + Python anndata ----------
+# This replaces zellkonverter (which requires basilisk to build its own
+# Python environment, failing on systems without dev headers).
+
+read_h5ad_to_sce <- function(path) {
+  # Do all Python work via py_run_string to avoid reticulate conversion issues.
+  py_run_string(sprintf("
+import anndata, scipy.sparse, numpy as np, json
+
+_adata = anndata.read_h5ad('%s')
+_obs_names = list(_adata.obs_names)
+_var_names = list(_adata.var_names)
+
+_x = _adata.X
+if scipy.sparse.issparse(_x):
+    _x_csc = scipy.sparse.csc_matrix(_x.T)
+    _indices = np.array(_x_csc.indices, dtype=np.int64)
+    _indptr = np.array(_x_csc.indptr, dtype=np.int64)
+    _data = np.array(_x_csc.data, dtype=np.float64)
+    _is_sparse = True
+else:
+    _x_dense = np.array(_x.T, dtype=np.float64)
+    _is_sparse = False
+
+_obs_cols = list(_adata.obs.columns)
+_obs_dict = {}
+for _c in _obs_cols:
+    _obs_dict[_c] = [str(v) for v in _adata.obs[_c].tolist()]
+", path))
+
+  obs_names <- py_to_r(py_eval("_obs_names"))
+  var_names <- py_to_r(py_eval("_var_names"))
+
+  is_sparse <- py_to_r(py_eval("_is_sparse"))
+  if (is_sparse) {
+    x_r <- Matrix::sparseMatrix(
+      i = as.integer(py_to_r(py_eval("_indices"))) + 1L,
+      p = as.integer(py_to_r(py_eval("_indptr"))),
+      x = as.numeric(py_to_r(py_eval("_data"))),
+      dims = c(length(var_names), length(obs_names)),
+      dimnames = list(var_names, obs_names)
+    )
+  } else {
+    x_r <- py_to_r(py_eval("_x_dense"))
+    rownames(x_r) <- var_names
+    colnames(x_r) <- obs_names
+  }
+
+  obs_cols <- py_to_r(py_eval("_obs_cols"))
+  obs_dict <- py_to_r(py_eval("_obs_dict"))
+  obs_df <- as.data.frame(obs_dict, stringsAsFactors = FALSE)
+  rownames(obs_df) <- obs_names
+
+  py_run_string("del _adata, _x, _obs_names, _var_names, _obs_cols, _obs_dict, _is_sparse")
+
+  SingleCellExperiment(
+    assays = list(X = x_r),
+    colData = obs_df
+  )
+}
+
+write_sce_to_h5ad <- function(sce, path) {
+  x_mat <- assay(sce, "X")
+  obs_df <- as.data.frame(colData(sce))
+  for (col in colnames(obs_df)) {
+    if (is.factor(obs_df[[col]])) obs_df[[col]] <- as.character(obs_df[[col]])
+  }
+
+  # Write sparse matrix and metadata to temp files, then assemble in Python.
+  # This avoids slow R-to-Python array transfer via reticulate.
+  tmp_dir <- tempfile("h5ad_write_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+  x_mat <- as(x_mat, "CsparseMatrix")  # genes x cells, CSC
+  Matrix::writeMM(x_mat, file.path(tmp_dir, "X.mtx"))
+  writeLines(rownames(sce), file.path(tmp_dir, "var_names.txt"))
+  writeLines(colnames(sce), file.path(tmp_dir, "obs_names.txt"))
+  write.csv(obs_df, file.path(tmp_dir, "obs.csv"), row.names = TRUE)
+
+  py_run_string(sprintf("
+import anndata, scipy.io, pandas as pd
+
+_tmp = '%s'
+_x = scipy.io.mmread(_tmp + '/X.mtx').T.tocsr()  # cells x genes
+_var_names = open(_tmp + '/var_names.txt').read().strip().split('\\n')
+_obs_names = open(_tmp + '/obs_names.txt').read().strip().split('\\n')
+_obs = pd.read_csv(_tmp + '/obs.csv', index_col=0, dtype=str)
+
+_adata_out = anndata.AnnData(X=_x, obs=_obs, var=pd.DataFrame(index=_var_names))
+_adata_out.obs_names = _obs_names
+_adata_out.write_h5ad('%s')
+del _adata_out, _x, _obs
+", tmp_dir, path))
 }
 
 default_paths <- function() {
@@ -301,7 +403,7 @@ process_sample <- function(sample_id, args) {
     return(invisible(output_path))
   }
 
-  sce <- readH5AD(input_path)
+  sce <- read_h5ad_to_sce(input_path)
   if (!"counts" %in% assayNames(sce)) {
     assay(sce, "counts") <- assay(sce, "X")
   }
@@ -324,7 +426,7 @@ process_sample <- function(sample_id, args) {
   filtered_sce <- sce[, colData(sce)$scDblFinder.class == "singlet"]
   n_after <- ncol(filtered_sce)
   dir.create(args$output_dir, recursive = TRUE, showWarnings = FALSE)
-  writeH5AD(filtered_sce, output_path)
+  write_sce_to_h5ad(filtered_sce, output_path)
 
   summary_path <- file.path(args$output_dir, "doublet_summary.csv")
   append_doublet_summary(summary_path, sample_id, n_before, n_after, n_before - n_after)

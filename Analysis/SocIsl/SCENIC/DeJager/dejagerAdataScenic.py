@@ -84,9 +84,9 @@ for x in variables:
 		#todo: put files into folder
 		cellTypeToSubset =x
 		#defining paths to files
-		rootDirectory = "/om/scratch/Mon/mabdel03/SocialIsolation/" 
+		rootDirectory = os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") 
 		os.chdir(rootDirectory)
-		folderPath="/om/scratch/Mon/mabdel03/SocialIsolation/" #change path to folder
+		folderPath=os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") #change path to folder
 		db_paths = [folderPath+"hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather",
 		folderPath+"hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather"]
 		dbs = [RankingDatabase(fname=p, name=os.path.basename(p)) for p in db_paths]
@@ -212,9 +212,9 @@ for x in variables:
 		#todo: put files into folder
 		cellTypeToSubset =x
 		#defining paths to files
-		rootDirectory = "/om/scratch/Mon/mabdel03/SocialIsolation/" 
+		rootDirectory = os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") 
 		os.chdir(rootDirectory)
-		folderPath="/om/scratch/Mon/mabdel03/SocialIsolation/" #change path to folder
+		folderPath=os.path.join(os.environ["SOCISL_OUTPUT_ROOT"], "") #change path to folder
 		db_paths = [folderPath+"hg38_500bp_up_100bp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather",
 		folderPath+"hg38_10kbp_up_10kbp_down_full_tx_v10_clust.genes_vs_motifs.rankings.feather"]
 		dbs = [RankingDatabase(fname=p, name=os.path.basename(p)) for p in db_paths]

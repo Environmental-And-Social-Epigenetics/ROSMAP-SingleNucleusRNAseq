@@ -4,14 +4,17 @@
 #SBATCH --mem=600G              # Total memory (not per core!)
 #SBATCH -o tsaiAdataScenic.out
 #SBATCH -e %j.err
-#SBATCH --mail-user=nkhera@college.harvard.edu
+#SBATCH --mail-user=__SET_YOUR_EMAIL__
 #SBATCH --mail-type=ALL
 
-source /om2/user/mabdel03/anaconda/etc/profile.d/conda.sh
+# Source central configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../../../../config/paths.sh"
+init_conda
 
-conda activate /om2/user/mabdel03/conda_envs/scenicAnalysis
+activate_env "${SCENIC_ANALYSIS_ENV}"
 
-cd /om/scratch/Mon/mabdel03/SocialIsolation/Tsai
+cd "${SOCISL_OUTPUT_ROOT}/Tsai"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 

@@ -281,8 +281,8 @@ for (ct in cell_types) {
 	plots[[ct]] <- stacked
 	library(RRHO)
 	library(RRHO2)
-	dfMale <- read.csv(paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.male.tsv"), sep = "\t")
-	dfFemale <- read.csv(paste0("/om/scratch/Mon/mabdel03/SocialIsolation/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.female.tsv"), sep = "\t")
+	dfMale <- read.csv(paste0(paste0(Sys.getenv("SOCISL_OUTPUT_ROOT"), "/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.male.tsv"), sep = "\t")
+	dfFemale <- read.csv(paste0(paste0(Sys.getenv("SOCISL_OUTPUT_ROOT"), "/Carles_DEGs/psbulk_DEseq2.",ct,"__social_isolation_avg.female.tsv"), sep = "\t")
 
 	print(str(resF))
 	print(str(dfFemale))

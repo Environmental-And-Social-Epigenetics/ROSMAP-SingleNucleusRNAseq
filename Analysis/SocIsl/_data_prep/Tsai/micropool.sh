@@ -1,3 +1,7 @@
+# DEPRECATED: Legacy data preparation script from Openmind era.
+# The current Processing pipeline (Processing/*/Pipeline/) supersedes this.
+# Paths may still reference decommissioned Openmind directories.
+#
 #!/bin/bash
 #SBATCH -n 40                    # Reduce cores to reduce thread/memory pressure
 #SBATCH -t 30:00:00

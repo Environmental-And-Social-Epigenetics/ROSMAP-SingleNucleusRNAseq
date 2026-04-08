@@ -8,6 +8,9 @@
 # Usage (standalone):
 #   bash config/preflight.sh tsai-stage1       # Check Tsai Processing Stage 1
 #   bash config/preflight.sh dejager-04-demuxlet  # Check DeJager Demuxlet step
+#   bash config/preflight.sh env-specs         # Verify official env directories
+#   bash config/preflight.sh ace-tsai-smoke    # Verify ACE smoke-test prerequisites
+#   bash config/preflight.sh ace-tsai-full     # Verify ACE full-run prerequisites
 #   bash config/preflight.sh all               # Check everything
 #
 # Usage (sourced from submit_pipeline.sh):
@@ -83,6 +86,16 @@ _pf_check_file() {
         _pf_fail "${label} not found: ${file_path}" \
                  "Ensure the file exists or update the path in config/paths.sh"
     fi
+}
+
+_pf_check_env_spec_dir() {
+    local env_dir="$1"
+    local label="$2"
+
+    _pf_check_dir "${env_dir}" "${label} directory"
+    _pf_check_file "${env_dir}/environment.yml" "${label} environment.yml"
+    _pf_check_file "${env_dir}/requirements.txt" "${label} requirements.txt"
+    _pf_check_file "${env_dir}/README.md" "${label} README.md"
 }
 
 _pf_check_conda_env() {
@@ -597,6 +610,140 @@ preflight_processing_stage3() {
 }
 
 # =============================================================================
+# ENVIRONMENT SPECS
+# =============================================================================
+
+preflight_env_specs() {
+    echo "--- Environment Spec Completeness ---"
+
+    local env_dirs=(
+        "${REPO_ROOT}/Preprocessing/envs/cellbender"
+        "${REPO_ROOT}/Preprocessing/envs/synapse"
+        "${REPO_ROOT}/Preprocessing/envs/bcftools"
+        "${REPO_ROOT}/Preprocessing/envs/globus"
+        "${REPO_ROOT}/Processing/Tsai/Pipeline/envs/stage1_qc"
+        "${REPO_ROOT}/Processing/Tsai/Pipeline/envs/stage2_doublets"
+        "${REPO_ROOT}/Processing/Tsai/Pipeline/envs/stage3_integration"
+        "${REPO_ROOT}/Processing/DeJager/Pipeline/envs/stage1_qc"
+        "${REPO_ROOT}/Processing/DeJager/Pipeline/envs/stage2_doublets"
+        "${REPO_ROOT}/Processing/DeJager/Pipeline/envs/stage3_integration"
+        "${REPO_ROOT}/Analysis/envs/deg"
+        "${REPO_ROOT}/Analysis/envs/nebula"
+        "${REPO_ROOT}/Analysis/envs/sccomp"
+        "${REPO_ROOT}/Analysis/envs/scenic"
+        "${REPO_ROOT}/Analysis/envs/compass"
+        "${REPO_ROOT}/Analysis/envs/gsea"
+    )
+
+    local env_dir
+    for env_dir in "${env_dirs[@]}"; do
+        _pf_check_env_spec_dir "${env_dir}" "${env_dir#${REPO_ROOT}/}"
+    done
+}
+
+# =============================================================================
+# ACE ANALYSIS
+# =============================================================================
+
+preflight_analysis_ace_common() {
+    local dataset="${1:?Usage: preflight_analysis_ace_common tsai|dejager}"
+    local cohort_dir
+    local deg_dir
+    local prop_dir
+    local smoke_dir
+
+    _pf_check_var ANALYSIS_OUTPUT_ROOT
+
+    local analysis_parent
+    analysis_parent="$(dirname "${ANALYSIS_OUTPUT_ROOT}")"
+    _pf_check_dir "${analysis_parent}" "ANALYSIS_OUTPUT_ROOT parent"
+
+    if [[ "${ANALYSIS_OUTPUT_ROOT}" == "${REPO_ROOT}"* ]]; then
+        _pf_fail "ANALYSIS_OUTPUT_ROOT points inside the repo" \
+                 "Set ANALYSIS_OUTPUT_ROOT to a directory outside ${REPO_ROOT}"
+    else
+        _pf_pass "ANALYSIS_OUTPUT_ROOT is outside the repo tree"
+    fi
+
+    smoke_dir="${REPO_ROOT}/Analysis/ACE/_smoke"
+    _pf_check_dir "${smoke_dir}" "ACE smoke fixture directory"
+    _pf_check_file "${smoke_dir}/generate_fixtures.py" "ACE smoke fixture generator"
+
+    _pf_check_var NEBULA_ENV
+    _pf_check_var SCCOMP_ENV
+    _pf_check_conda_env "${NEBULA_ENV}" "ACE DEG / prep (nebula)"
+    _pf_check_conda_env "${SCCOMP_ENV}" "ACE sccomp"
+    if [[ -d "${NEBULA_ENV}" ]]; then
+        _pf_check_python_pkg "${NEBULA_ENV}" "anndata"
+        _pf_check_python_pkg "${NEBULA_ENV}" "h5py"
+        _pf_check_python_pkg "${NEBULA_ENV}" "pandas"
+        _pf_check_r_pkg "${NEBULA_ENV}" "DESeq2"
+    fi
+    if [[ -d "${SCCOMP_ENV}" ]]; then
+        _pf_check_r_pkg "${SCCOMP_ENV}" "sccomp"
+        _pf_check_r_pkg "${SCCOMP_ENV}" "readr"
+        _pf_check_r_pkg "${SCCOMP_ENV}" "ggplot2"
+    fi
+
+    if [[ "${dataset}" == "tsai" ]]; then
+        canonical_annotated="${TSAI_INTEGRATED}/tsai_annotated.h5ad"
+        split_input_dir="${TSAI_DOUBLET_REMOVED}"
+        deg_dir="${REPO_ROOT}/Analysis/ACE/DEG/Tsai"
+        prop_dir="${REPO_ROOT}/Analysis/ACE/CellTypeProportion/Tsai"
+    else
+        canonical_annotated="${DEJAGER_INTEGRATED}/dejager_annotated.h5ad"
+        split_input_dir="${DEJAGER_DOUBLET_REMOVED}"
+        deg_dir="${REPO_ROOT}/Analysis/ACE/DEG/DeJager"
+        prop_dir="${REPO_ROOT}/Analysis/ACE/CellTypeProportion/DeJager"
+    fi
+
+    _pf_check_file "${deg_dir}/README.md" "ACE DEG README"
+    _pf_check_file "${prop_dir}/README.md" "ACE proportion README"
+
+    if [[ "${dataset}" == "tsai" ]]; then
+        _pf_check_file "${deg_dir}/aceDegT.sh" "ACE Tsai DEG launcher"
+        _pf_check_file "${deg_dir}/smoke_test.sh" "ACE Tsai DEG smoke test"
+        _pf_check_file "${prop_dir}/acePropT.sh" "ACE Tsai sccomp launcher"
+        _pf_check_file "${prop_dir}/smoke_test.sh" "ACE Tsai sccomp smoke test"
+    else
+        _pf_check_file "${deg_dir}/aceDegDJ.sh" "ACE DeJager DEG launcher"
+        _pf_check_file "${deg_dir}/smoke_test.sh" "ACE DeJager DEG smoke test"
+        _pf_check_file "${prop_dir}/acePropDJ.sh" "ACE DeJager sccomp launcher"
+        _pf_check_file "${prop_dir}/smoke_test.sh" "ACE DeJager sccomp smoke test"
+    fi
+}
+
+preflight_analysis_ace_smoke() {
+    local dataset="${1:?Usage: preflight_analysis_ace_smoke tsai|dejager}"
+
+    echo "--- $(_pf_dataset_dir "${dataset}") ACE Smoke Tests ---"
+    preflight_analysis_ace_common "${dataset}"
+}
+
+preflight_analysis_ace_full() {
+    local dataset="${1:?Usage: preflight_analysis_ace_full tsai|dejager}"
+    local canonical_annotated
+    local split_input_dir
+
+    echo "--- $(_pf_dataset_dir "${dataset}") ACE Full Run ---"
+    preflight_analysis_ace_common "${dataset}"
+
+    _pf_check_var ACE_SCORES_CSV
+    _pf_check_file "${ACE_SCORES_CSV}" "ACE phenotype CSV"
+
+    if [[ "${dataset}" == "tsai" ]]; then
+        canonical_annotated="${TSAI_INTEGRATED}/tsai_annotated.h5ad"
+        split_input_dir="${TSAI_DOUBLET_REMOVED}"
+    else
+        canonical_annotated="${DEJAGER_INTEGRATED}/dejager_annotated.h5ad"
+        split_input_dir="${DEJAGER_DOUBLET_REMOVED}"
+    fi
+
+    _pf_check_file "${canonical_annotated}" "Canonical annotated ACE input"
+    _pf_check_dir "${split_input_dir}" "Doublet-removed input directory"
+}
+
+# =============================================================================
 # DISPATCHER
 # =============================================================================
 
@@ -635,6 +782,11 @@ preflight_check() {
         dejager-stage1|dejager-qc)           preflight_processing_stage1 dejager ;;
         dejager-stage2|dejager-doublets)     preflight_processing_stage2 dejager ;;
         dejager-stage3|dejager-integrate)    preflight_processing_stage3 dejager ;;
+        env-specs)                           preflight_env_specs ;;
+        ace-tsai-smoke)                      preflight_analysis_ace_smoke tsai ;;
+        ace-dejager-smoke)                   preflight_analysis_ace_smoke dejager ;;
+        ace-tsai-full|ace-tsai)              preflight_analysis_ace_full tsai ;;
+        ace-dejager-full|ace-dejager)        preflight_analysis_ace_full dejager ;;
 
         # Batch
         all-tsai)
@@ -642,7 +794,8 @@ preflight_check() {
             preflight_tsai_02_cellranger_counts; echo ""
             preflight_processing_stage1 tsai; echo ""
             preflight_processing_stage2 tsai; echo ""
-            preflight_processing_stage3 tsai
+            preflight_processing_stage3 tsai; echo ""
+            preflight_analysis_ace_full tsai
             ;;
         all-dejager)
             preflight_dejager_01_fastq_download; echo ""
@@ -651,9 +804,11 @@ preflight_check() {
             preflight_dejager_04_demuxlet; echo ""
             preflight_processing_stage1 dejager; echo ""
             preflight_processing_stage2 dejager; echo ""
-            preflight_processing_stage3 dejager
+            preflight_processing_stage3 dejager; echo ""
+            preflight_analysis_ace_full dejager
             ;;
         all)
+            preflight_env_specs; echo ""
             preflight_tsai_01_fastq_location; echo ""
             preflight_tsai_02_cellranger_counts; echo ""
             preflight_dejager_01_fastq_download; echo ""
@@ -663,9 +818,11 @@ preflight_check() {
             preflight_processing_stage1 tsai; echo ""
             preflight_processing_stage2 tsai; echo ""
             preflight_processing_stage3 tsai; echo ""
+            preflight_analysis_ace_full tsai; echo ""
             preflight_processing_stage1 dejager; echo ""
             preflight_processing_stage2 dejager; echo ""
-            preflight_processing_stage3 dejager
+            preflight_processing_stage3 dejager; echo ""
+            preflight_analysis_ace_full dejager
             ;;
         *)
             echo "ERROR: Unknown step '${step}'"
@@ -686,6 +843,11 @@ preflight_check() {
             echo "    dejager-stage1         DeJager QC filtering"
             echo "    dejager-stage2         DeJager doublet removal"
             echo "    dejager-stage3         DeJager integration & annotation"
+            echo "    env-specs              Official env directory completeness"
+            echo "    ace-tsai-smoke         ACE smoke-test prerequisites for Tsai"
+            echo "    ace-dejager-smoke      ACE smoke-test prerequisites for DeJager"
+            echo "    ace-tsai-full          ACE full-run prerequisites for Tsai"
+            echo "    ace-dejager-full       ACE full-run prerequisites for DeJager"
             echo ""
             echo "  Batch:"
             echo "    all-tsai               All Tsai steps"

@@ -1,7 +1,8 @@
 #!/usr/bin/env Rscript
 
 require(WebGestaltR)
-setwd("/om/scratch/Tue/mabdel03/SocialIsolation/Tsai")
+setwd(Sys.getenv("SOCISL_OUTPUT_ROOT", unset = "."))
+setwd(file.path(getwd(), "Tsai"))
 library(ggplot2)
 library(dplyr)
 library(readr)
@@ -15,7 +16,7 @@ for(type in types){
 	all_results <- data.frame()
 	for(ct in cell_types){
 	  # assuming files are in a directory
-	  files <- list.files(path="/om/scratch/Tue/mabdel03/SocialIsolation/Tsai/", 
+	  files <- list.files(path=file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "Tsai"), 
 	                      pattern=paste0("overallWebGestaltRResultFem",ct,".rds"), full.names=TRUE)
 	  print(ct)
 	  for(f in files){
@@ -56,7 +57,7 @@ for(type in types){
 	all_results <- data.frame()
 	for(ct in cell_types){
 	  # assuming files are in a directory
-	  files <- list.files(path="/om/scratch/Tue/mabdel03/SocialIsolation/Tsai/", 
+	  files <- list.files(path=file.path(Sys.getenv("SOCISL_OUTPUT_ROOT"), "Tsai"), 
 	                      pattern=paste0("overallWebGestaltRResult",ct,".rds"), full.names=TRUE)
 	  print(ct)
 	  for(f in files){
