@@ -1,0 +1,53 @@
+datasets:
+  tsai:
+    canonical: "derived_batch"
+    variants:
+      derived_batch:
+        role: "canonical"
+        harmony_batch_key: "derived_batch"
+        output_env: "TSAI_INTEGRATED"
+        description: "Flowcell-derived batch correction; current preferred Tsai integration."
+      projid:
+        role: "sensitivity"
+        harmony_batch_key: "projid"
+        output_env: "TSAI_INTEGRATED_PROJID"
+        description: "Patient-level Harmony key used by an earlier Tsai integration."
+      no_harmony:
+        role: "sensitivity"
+        skip_harmony: true
+        output_env: "TSAI_INTEGRATED_NO_HARMONY"
+        description: "No batch correction baseline; PCA embedding is used directly."
+  dejager:
+    canonical: "library_id"
+    variants:
+      library_id:
+        role: "canonical"
+        harmony_batch_key: "library_id"
+        output_env: "DEJAGER_INTEGRATED"
+        description: "Per-library correction; captures library preparation and sequencing effects."
+      patient_id:
+        role: "sensitivity"
+        harmony_batch_key: "patient_id"
+        output_env: "DEJAGER_INTEGRATED_PATIENT_ID"
+        description: "Patient-level correction sensitivity analysis."
+      pool_batch:
+        role: "sensitivity"
+        harmony_batch_key: "pool_batch"
+        output_env: "DEJAGER_INTEGRATED_POOL_BATCH"
+        description: "B-number pool batch correction sensitivity analysis."
+      derived_batch:
+        role: "sensitivity"
+        harmony_batch_key: "derived_batch"
+        output_env: "DEJAGER_INTEGRATED_DERIVED_BATCH"
+        description: "Flowcell-derived correction based on derive_batches.py output."
+      sequencing_date:
+        role: "sensitivity"
+        harmony_batch_key: "sequencing_date"
+        output_env: "DEJAGER_INTEGRATED_SEQUENCING_DATE"
+        description: "YYMMDD library-name prefix correction sensitivity analysis."
+      no_harmony:
+        role: "sensitivity"
+        skip_harmony: true
+        output_env: "DEJAGER_INTEGRATED_NO_HARMONY"
+        description: "No batch correction baseline; PCA embedding is used directly."
+

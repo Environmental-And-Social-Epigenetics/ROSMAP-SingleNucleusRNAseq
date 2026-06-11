@@ -1,0 +1,15 @@
+name: single_cell_BP
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3.10
+  - pyyaml>=6.0
+  - r-base>=4.2
+  - r-ggplot2
+  - bioconductor-biocparallel
+  - bioconductor-genomeinfodbdata
+  - bioconductor-singlecellexperiment
+  - bioconductor-scdblfinder
+  - bioconductor-zellkonverter

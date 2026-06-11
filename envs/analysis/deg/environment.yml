@@ -1,0 +1,22 @@
+name: deg_analysis
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - r-base>=4.2
+  - pandas>=2.0
+  - numpy>=1.24
+  - pip
+  - bioconductor-deseq2
+  - bioconductor-edger
+  - bioconductor-limma
+  - bioconductor-biocparallel
+  - r-ggplot2
+  - r-dplyr
+  - r-tidyr
+  - r-pheatmap
+  - pip:
+      - scanpy>=1.9
+      - anndata>=0.9

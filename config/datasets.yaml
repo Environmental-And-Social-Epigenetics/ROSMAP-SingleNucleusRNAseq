@@ -1,0 +1,41 @@
+datasets:
+  tsai:
+    label: "Tsai"
+    sequenced_by: "Li-Huei Tsai lab"
+    unit: "projid"
+    canonical_data_root: "${TRANSCRIPTOMICS_DATA_ROOT}/Tsai"
+    paths:
+      fastqs: "${TSAI_FASTQS}"
+      cellranger: "${TSAI_CELLRANGER}"
+      cellbender: "${TSAI_CELLBENDER}"
+      processing_outputs: "${TSAI_PROCESSING_OUTPUTS}"
+      metadata_csv: "${TSAI_METADATA_CSV}"
+      derived_batches_csv: "${TSAI_DERIVED_BATCHES_CSV}"
+      markers_rds: "${TSAI_MARKERS_RDS}"
+    expected_counts:
+      samples_with_fastqs: 480
+      cellbender_outputs: 478
+    notes:
+      - "Canonical Stage 3 integration corrects on derived_batch."
+      - "projid integration is retained as a sensitivity run."
+  dejager:
+    label: "DeJager"
+    sequenced_by: "Phil De Jager lab"
+    unit: "library_id"
+    canonical_data_root: "${TRANSCRIPTOMICS_DATA_ROOT}/DeJager"
+    paths:
+      fastqs: "${DEJAGER_FASTQS_DIR}"
+      cellranger: "${DEJAGER_CELLRANGER}"
+      cellbender: "${DEJAGER_CELLBENDER}"
+      processing_outputs: "${DEJAGER_PROCESSING_OUTPUTS}"
+      patient_map_csv: "${DEJAGER_PATIENT_MAP}"
+      patient_id_overrides_json: "${DEJAGER_PATIENT_ID_OVERRIDES}"
+      derived_batches_csv: "${DEJAGER_DERIVED_BATCHES_CSV}"
+      markers_rds: "${DEJAGER_MARKERS_RDS}"
+    expected_counts:
+      libraries_with_fastqs: 127
+      cellbender_outputs: 131
+    notes:
+      - "Canonical Stage 3 integration corrects on library_id."
+      - "Full DeJager processing may still be pending; docs should not imply completed biological results unless outputs exist."
+

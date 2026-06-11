@@ -1,0 +1,33 @@
+ace:
+  status:
+    official:
+      - "sex_stratified_ace"
+      - "sex_stratified_ace_by_ad"
+    exploratory:
+      - "pooled_ace"
+      - "pvbasket_targeted"
+      - "cellchat"
+      - "tf_activity"
+      - "scenic"
+      - "hdwgcna"
+      - "mouse_overlap"
+  covariates:
+    base:
+      - "age_death"
+      - "pmi"
+      - "msex"
+      - "braaksc"
+      - "ceradsc"
+    technical:
+      - "batch"
+      - "n_cells"
+  sex_stratification:
+    enabled: true
+    strata:
+      - "male"
+      - "female"
+  thresholds:
+    min_cells_per_donor_celltype: 10
+    min_donors_per_group: 3
+  output_template: "${ACE_OUTPUT_ROOT}/{workflow}/{cohort}/{variant}/{model}"
+

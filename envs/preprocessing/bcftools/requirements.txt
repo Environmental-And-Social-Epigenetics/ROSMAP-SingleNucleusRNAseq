@@ -1,0 +1,2 @@
+# No pip packages are required for this environment.
+# Use the conda bootstrap command from README.md.

@@ -1,0 +1,2 @@
+# No pip packages are required for this environment.
+# Install CRAN package 'sccomp' after the conda bootstrap command in README.md.

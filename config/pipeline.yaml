@@ -1,0 +1,24 @@
+stage1:
+  qc_filter:
+    counts_low_pct: 4.5
+    counts_high_pct: 96.0
+    genes_low_pct: 5.0
+    mt_pct_threshold: 10.0
+
+stage2:
+  doublet_removal:
+    method: "scDblFinder"
+    threads: 4
+
+stage3:
+  integration:
+    n_hvgs: 3000
+    n_pcs: 30
+    n_neighbors: 30
+    neighbor_metric: "cosine"
+    umap_min_dist: 0.15
+    harmony_theta: 2.0
+    annotation_cluster_key: "leiden_res0_5"
+    leiden_resolutions: [0.2, 0.5, 1.0]
+    ora_marker_reference: "Brain_Human_PFC_Markers_Mohammadi2020.rds"
+
