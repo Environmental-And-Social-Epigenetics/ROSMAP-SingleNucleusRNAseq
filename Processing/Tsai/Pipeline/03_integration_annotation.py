@@ -492,7 +492,15 @@ def main() -> None:
         raw_path = args.output_dir / "_raw_normalized.h5ad"
         combined.write_h5ad(raw_path)
 
-        sc.pp.highly_variable_genes(combined, flavor="seurat_v3", n_top_genes=args.n_hvgs, layer="counts")
+        # Batch-aware HVG selection (kept identical to the DeJager pipeline so the
+        # two cohorts remain method-aligned discovery/validation sets). When Harmony
+        # is skipped, batch_key is None and HVGs are selected globally.
+        hvg_batch_key = args.harmony_batch_key if not args.skip_harmony else None
+        print(f"[hvg] selecting {args.n_hvgs} HVGs (batch_key={hvg_batch_key}) ...")
+        sc.pp.highly_variable_genes(
+            combined, flavor="seurat_v3", n_top_genes=args.n_hvgs, layer="counts",
+            batch_key=hvg_batch_key,
+        )
         combined = combined[:, combined.var["highly_variable"]].copy()
         sc.tl.pca(combined, svd_solver="arpack", n_comps=args.n_pcs, use_highly_variable=True)
         if "counts" in combined.layers:
@@ -540,9 +548,14 @@ def main() -> None:
             n_pcs=args.n_pcs,
             metric=args.neighbor_metric,
         )
-        sc.tl.leiden(combined, key_added="leiden_res0_2", resolution=0.2)
-        sc.tl.leiden(combined, key_added="leiden_res0_5", resolution=0.5)
-        sc.tl.leiden(combined, key_added="leiden_res1", resolution=1.0)
+        # Use the future-proof igraph Leiden backend (kept identical to the DeJager
+        # pipeline; the legacy leidenalg default is deprecated in scanpy).
+        sc.tl.leiden(combined, key_added="leiden_res0_2", resolution=0.2,
+                     flavor="igraph", n_iterations=2, directed=False)
+        sc.tl.leiden(combined, key_added="leiden_res0_5", resolution=0.5,
+                     flavor="igraph", n_iterations=2, directed=False)
+        sc.tl.leiden(combined, key_added="leiden_res1", resolution=1.0,
+                     flavor="igraph", n_iterations=2, directed=False)
         sc.tl.umap(combined, min_dist=args.umap_min_dist, random_state=0)
 
         # Reload full-gene normalized data as .raw (needed for ORA annotation
