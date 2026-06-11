@@ -17,6 +17,7 @@ Usage:
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -263,6 +264,45 @@ def submit_scripts(scripts, label=""):
 # Main
 # ---------------------------------------------------------------------------
 
+def _staged_barcode_path(lib_id):
+    """Destination path for a library's barcode file inside DEJAGER_WGS_DIR."""
+    return os.path.join(
+        DEJAGER_WGS_DIR,
+        f"processed_feature_bc_matrix_cell_barcodes_{lib_id}.csv",
+    )
+
+
+def stage_barcodes(libraries):
+    """Copy each library's CellBender barcode CSV into DEJAGER_WGS_DIR with the
+    library-suffixed name the demux scripts expect. Idempotent: skips files that
+    are already staged. Replaces the manual copy loop previously in the README."""
+    staged, missing = 0, []
+    for lib_id in libraries:
+        src = os.path.join(
+            DEJAGER_PREPROCESSED, lib_id, "processed_feature_bc_matrix_cell_barcodes.csv"
+        )
+        dst = _staged_barcode_path(lib_id)
+        if os.path.exists(dst):
+            continue
+        if not os.path.exists(src):
+            missing.append((lib_id, src))
+            continue
+        shutil.copy2(src, dst)
+        staged += 1
+    print(f"  Staged {staged} barcode file(s) into {DEJAGER_WGS_DIR}")
+    if missing:
+        print(f"  WARNING: {len(missing)} libraries missing CellBender barcode files:")
+        for lib_id, src in missing[:10]:
+            print(f"    {lib_id}: {src}")
+    return staged, missing
+
+
+def check_barcodes_staged(libraries):
+    """Preflight: confirm every library's barcode file is staged in DEJAGER_WGS_DIR.
+    Returns the list of libraries whose barcode file is missing."""
+    return [lib for lib in libraries if not os.path.exists(_staged_barcode_path(lib))]
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate and optionally submit demuxlet batch scripts."
@@ -274,6 +314,8 @@ def main():
                       help="Generate BAM filtering scripts only")
     mode.add_argument("--demux-only", action="store_true",
                       help="Generate pileup+demuxlet scripts only")
+    mode.add_argument("--stage-barcodes", action="store_true",
+                      help="Copy CellBender barcode CSVs into DEJAGER_WGS_DIR (run before --demux-only/--all)")
 
     parser.add_argument("--submit", action="store_true",
                         help="Submit generated scripts to SLURM")
@@ -282,7 +324,7 @@ def main():
     args = parser.parse_args()
 
     required = ["DEJAGER_WGS_DIR", "DEJAGER_DEMUX_VCF", "DEMUXAFY_SIF", "DEJAGER_PATIENT_IDS_DIR"]
-    if args.all or args.bam_only:
+    if args.all or args.bam_only or args.stage_barcodes:
         required.extend(["DEJAGER_COUNTS", "DEJAGER_PREPROCESSED", "CONDA_INIT_SCRIPT", "BCFTOOLS_ENV"])
     require_configured(required)
 
@@ -293,6 +335,23 @@ def main():
         return
 
     print(f"Found {len(libraries)} libraries to process.")
+
+    if args.stage_barcodes:
+        print("\nStaging CellBender barcode files into DEJAGER_WGS_DIR ...")
+        stage_barcodes(libraries)
+        return
+
+    # Preflight: the pileup/demuxlet step reads the staged barcode files. Fail
+    # loudly (with the exact fix) instead of letting popscle error on missing input.
+    if args.all or args.demux_only:
+        unstaged = check_barcodes_staged(libraries)
+        if unstaged:
+            print(f"\nERROR: {len(unstaged)} libraries are missing staged barcode files in "
+                  f"{DEJAGER_WGS_DIR}.")
+            print("       Run barcode staging first:")
+            print("         python Demuxlet_DeJager.py --stage-barcodes")
+            print(f"       Missing (first 10): {', '.join(unstaged[:10])}")
+            sys.exit(1)
 
     if args.all or args.bam_only:
         print(f"\nGenerating BAM filtering scripts...")

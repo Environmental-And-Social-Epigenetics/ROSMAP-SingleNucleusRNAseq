@@ -243,18 +243,17 @@ directory root** with a specific naming convention:
 ${DEJAGER_WGS_DIR}/processed_feature_bc_matrix_cell_barcodes_{LibraryID}.csv
 ```
 
-You must copy (or symlink) each library's CellBender barcode file there before
-running Step B:
+Stage each library's CellBender barcode file there before running Step B with
+the built-in helper (idempotent — it skips already-staged files):
 
 ```bash
-for LIB in $(ls "${DEJAGER_PATIENT_IDS_DIR}" | sed 's/individPat//;s/.txt//'); do
-    cp "${DEJAGER_PREPROCESSED}/${LIB}/processed_feature_bc_matrix_cell_barcodes.csv" \
-       "${DEJAGER_WGS_DIR}/processed_feature_bc_matrix_cell_barcodes_${LIB}.csv"
-done
+python Demuxlet_DeJager.py --stage-barcodes
 ```
 
-The batch script (`Demuxlet_DeJager.py`) does **not** do this automatically —
-it assumes the barcode files are already in place.
+This replaces the old manual copy loop. `Demuxlet_DeJager.py --demux-only`/`--all`
+also runs an automatic preflight check and refuses to proceed (with the exact
+fix command) if any barcode file is missing, so you cannot accidentally run the
+pileup step against unstaged input.
 
 ### 7. Preflight Check (Recommended)
 
