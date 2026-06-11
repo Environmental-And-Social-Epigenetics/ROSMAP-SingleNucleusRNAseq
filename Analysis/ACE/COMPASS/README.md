@@ -26,7 +26,7 @@ implementation in `Analysis/SocIsl/TF/`.
 
 ```bash
 source config/paths.sh
-cd Analysis/ACE/TF/Tsai
+cd Analysis/ACE/COMPASS/Tsai
 sbatch compassRun_{celltype}.sh
 ```
 

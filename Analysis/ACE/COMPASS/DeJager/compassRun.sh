@@ -29,7 +29,7 @@ export CPLEX_STUDIO_DIR="${CPLEX_DIR}"
 export PATH="${CPLEX_STUDIO_DIR}/cplex/python/3.9/x86-64_linux:${PATH}"
 export PYTHONPATH="${CPLEX_STUDIO_DIR}/cplex/python/3.9/x86-64_linux:${PYTHONPATH:-}"
 
-OUTPUT_DIR="${ACE_OUTPUT_ROOT}/TF/Tsai"
+OUTPUT_DIR="${ACE_OUTPUT_ROOT}/COMPASS/DeJager"
 mkdir -p "${OUTPUT_DIR}"
 cd "${OUTPUT_DIR}"
 
