@@ -46,17 +46,25 @@ Required columns:
 
 ## Supported ACE Workflows
 
-| Workflow | Tsai | DeJager | Status |
-|----------|------|---------|--------|
-| DEG | `DEG/Tsai/aceDegT.sh` | `DEG/DeJager/aceDegDJ.sh` | Complete |
-| Cell-type proportion | `CellTypeProportion/Tsai/acePropT.sh` | `CellTypeProportion/DeJager/acePropDJ.sh` | Complete |
-| GSEA | `GSEA/Tsai/aceGseaT.sh` | `GSEA/DeJager/aceGseaDJ.sh` | Ready |
-| TF Activity | `TFActivity/Tsai/aceTfActT.sh` | `TFActivity/DeJager/aceTfActDJ.sh` | Ready |
-| SCENIC | `SCENIC/Tsai/aceScenicT.sh` | `SCENIC/DeJager/aceScenicDJ.sh` | Ready |
-| CellChat | `CellChat/Tsai/aceCellChatT.sh` | `CellChat/DeJager/aceCellChatDJ.sh` | **Blocked** (see below) |
-| hdWGCNA | `hdWGCNA/Tsai/aceWgcnaT.sh` | `hdWGCNA/DeJager/aceWgcnaDJ.sh` | **Blocked** (see below) |
-| Mic State | `MicState/Tsai/aceMicStateT.sh` | `MicState/DeJager/aceMicStateDJ.sh` | Ready |
-| Epigenomic Integration | `EpigenomicIntegration/Tsai/aceEpiIntT.sh` | — | Ready (no DeJager scaffold) |
+Status vocabulary (consistent across all READMEs in this repo):
+
+- `production` — fully implemented and run for the applicable cohort(s); trustworthy
+- `implemented` — code complete and runnable but not yet validated/run end-to-end
+- `scaffold` — directory/structure exists but the analysis is not implemented
+- `migrated` — ported from legacy (e.g. SocIsl) with paths updated, not re-validated
+
+| Workflow | Tsai | DeJager | Status | Notes |
+|----------|------|---------|--------|-------|
+| DEG | `DEG/Tsai/aceDegT.sh` | `DEG/DeJager/aceDegDJ.sh` | `production` | Both cohorts |
+| Cell-type proportion | `CellTypeProportion/Tsai/acePropT.sh` | `CellTypeProportion/DeJager/acePropDJ.sh` | `production` | Both cohorts |
+| GSEA | `GSEA/Tsai/aceGseaT.sh` | Tsai only | `implemented` | No DeJager launcher |
+| TF Activity | `TFActivity/Tsai/aceTfActT.sh` | Tsai only | `implemented` | No DeJager launcher (DeJager arm empty) |
+| SCENIC | `SCENIC/Tsai/aceScenicT.sh` | `SCENIC/DeJager/aceScenicDJ.sh` | `implemented` | Both cohorts; requires SCENIC ranking databases |
+| COMPASS (metabolic flux) | `COMPASS/Tsai/compassRun.sh` | `COMPASS/DeJager/compassRun.sh` | `implemented` | Both cohorts; requires IBM CPLEX license (`${CPLEX_DIR}`) |
+| CellChat | `CellChat/Tsai/aceCellChatT.sh` | Tsai only | `scaffold` | DeJager arm empty; Tsai blocked on h5ad input format (see below) |
+| hdWGCNA | `hdWGCNA/Tsai/aceWgcnaT.sh` | Tsai only | `scaffold` | DeJager arm empty; Tsai blocked on h5ad sparse-matrix encoding (see below) |
+| Mic State | `MicState/Tsai/aceMicStateT.sh` | Tsai only | `implemented` | No DeJager launcher (DeJager arm empty) |
+| Epigenomic Integration | `EpigenomicIntegration/Tsai/aceEpiIntT.sh` | Tsai only | `implemented` | No DeJager arm |
 
 ### Known issues
 
@@ -110,25 +118,20 @@ ${ANALYSIS_OUTPUT_ROOT}/ACE/
     Tsai/
     DeJager/
   GSEA/
-    Tsai/
-    DeJager/
+    Tsai/            # Tsai only
   TFActivity/
-    Tsai/
-    DeJager/
+    Tsai/            # Tsai only
   SCENIC/
     Tsai/
     DeJager/
   CellChat/
-    Tsai/
-    DeJager/
+    Tsai/            # Tsai only
   hdWGCNA/
-    Tsai/
-    DeJager/
+    Tsai/            # Tsai only
   MicState/
-    Tsai/
-    DeJager/
+    Tsai/            # Tsai only
   EpigenomicIntegration/
-    Tsai/
+    Tsai/            # Tsai only
 ```
 
 The repo directories store code only.

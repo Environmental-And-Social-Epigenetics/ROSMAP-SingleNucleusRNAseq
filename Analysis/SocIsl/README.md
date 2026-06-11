@@ -125,8 +125,26 @@ sbatch compassRunAstTsai.sh   # one cell type at a time
 
 The `_data_prep/` scripts are **NOT needed** if you have the annotated h5ad from
 the Processing pipeline. They were the original ad-hoc preprocessing workflow
-used before the standardized Processing pipeline existed. They are preserved
-for historical reference only.
+used before the standardized Processing pipeline existed. They are **deprecated**
+and preserved for historical reference only — every script carries a one-line
+`DEPRECATED` header and contains hardcoded Openmind paths that will not run on
+Engaging without manual updates. See
+[`_data_prep/LEGACY_DEPRECATED.md`](_data_prep/LEGACY_DEPRECATED.md) for the full
+rationale and the "Updating Hardcoded Paths" table below for the path mapping.
+
+### About `figures/`
+
+Generated plots (volcano, heatmap, RRHO, AUCell, COMPASS) are **output**, not
+source, and per repository policy live **outside the repo** under
+`${SOCISL_OUTPUT_ROOT}` (defined in `config/paths.sh`, default
+`${ANALYSIS_OUTPUT_ROOT}/SocIsl`). New analysis runs should write figures there,
+e.g. `${SOCISL_OUTPUT_ROOT}/figures/`.
+
+The PNGs currently tracked under `Analysis/SocIsl/figures/` are **legacy
+snapshots** migrated from the Openmind analysis and are retained only for
+reference. They are intentionally whitelisted in `.gitignore` (see the
+`!Analysis/SocIsl/figures/` entry); do **not** add new generated figures to this
+tracked directory.
 
 ## Updating Hardcoded Paths
 

@@ -1,6 +1,10 @@
 ace:
+  # NOTE: this `status` block is a MODEL-TIER concept — it declares which
+  # statistical MODELS are production-grade vs exploratory. It is distinct from
+  # the workflow-implementation status (production/implemented/scaffold/migrated)
+  # used in the READMEs.
   status:
-    official:
+    production:
       - "sex_stratified_ace"
       - "sex_stratified_ace_by_ad"
     exploratory:

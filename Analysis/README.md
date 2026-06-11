@@ -21,13 +21,20 @@ Generated outputs belong under `ANALYSIS_OUTPUT_ROOT`, not inside the repo tree.
 
 ## Current Workflow Status
 
+Status vocabulary (consistent across all READMEs in this repo):
+
+- `production` — fully implemented and run for the applicable cohort(s); trustworthy
+- `implemented` — code complete and runnable but not yet validated/run end-to-end
+- `scaffold` — directory/structure exists but the analysis is not implemented
+- `migrated` — ported from legacy (e.g. SocIsl) with paths updated, not re-validated
+
 | Phenotype / analysis | Status | Notes |
 |----------------------|--------|-------|
-| ACE DEG | `official` | Tsai + DeJager |
-| ACE cell-type proportion | `official` | Tsai + DeJager, sccomp |
-| SocIsl | `legacy` | older scripts retained for reference |
-| Resilient | `scaffold-only` | structure present, not yet formalized |
-| TF / SCENIC outside legacy areas | `scaffold-only` | directories exist, but setup and contracts are incomplete |
+| ACE DEG | `production` | Tsai + DeJager |
+| ACE cell-type proportion | `production` | Tsai + DeJager, sccomp |
+| SocIsl | `migrated` | older scripts ported from legacy, not re-validated |
+| Resilient | `scaffold` | structure present, not yet formalized |
+| TF / SCENIC outside migrated areas | `scaffold` | directories exist, but setup and contracts are incomplete |
 
 ## Environments
 

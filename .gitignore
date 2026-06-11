@@ -156,7 +156,12 @@ output/
 outputs/
 results/
 
-# Whitelist SocIsl analysis figures (migrated from legacy Openmind analysis)
+# Whitelist SocIsl analysis figures (migrated from legacy Openmind analysis).
+# NOTE: these are LEGACY SNAPSHOTS retained for reference only. Generated output
+# violates the "outputs live outside the repo" policy — new figures must be
+# written under ${SOCISL_OUTPUT_ROOT}, NOT added here. The whitelist is left in
+# place because removing already-tracked files is a separate history decision
+# (see Analysis/SocIsl/README.md "About figures/").
 !Analysis/SocIsl/figures/
 
 # Local configuration overrides (keep paths.sh as template)

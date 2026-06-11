@@ -59,16 +59,22 @@ now resolve correctly to actual data in `ROSMAP_Data/Single_Nucleus/`.
 
 ## Moderate Issues
 
-### 4. Pipeline Naming Confusion
+### 4. Pipeline Naming Confusion — RESOLVED
 
-**Severity**: Low  
-**Affected Files**: `Processing/DeJager/` scripts
+**Severity**: Low
+**Status**: Resolved
+**Affected Files**: `Processing/{Tsai,DeJager}/Pipeline/` scripts
 
-Scripts are named "TsaiPipeline" (e.g., `firstStageTsaiPipeline.py`) even though they work for both datasets.
+Scripts were previously named "TsaiPipeline" (e.g., `firstStageTsaiPipeline.py`)
+even though they work for both datasets.
 
 **Reason**: Pipeline was developed on Tsai data first.
 
-**Recommendation**: Consider renaming for clarity (e.g., `stage1_processing.py`).
+**Fix**: The production pipeline scripts have been renamed to stage-numbered,
+dataset-neutral names: `01_qc_filter.py`, `02_doublet_removal.Rscript`, and
+`03_integration_annotation.py` under `Processing/Tsai/Pipeline/` and
+`Processing/DeJager/Pipeline/`. The old `*TsaiPipeline*` names remain only under
+`Processing/DeJager/_legacy/` for historical reference.
 
 ---
 
@@ -439,7 +445,7 @@ FATAL: "popscle_pileup.py": executable file not found in $PATH
 | 1. Hardcoded paths (preprocessing) | Resolved | 2026-03-08 |
 | 2. Demuxlet cleanup | Resolved | 2026-03-11 |
 | 3. Scratch dependencies | Resolved | 2026-03-18 |
-| 4. Pipeline naming | Open | - |
+| 4. Pipeline naming | Resolved | 2026-03-18 |
 | 5. Conda paths | Resolved | 2026-03-08 |
 | 6. SocIsl scripts | Resolved | 2026-04-08 |
 | 10. .gitignore blocking files | Resolved | 2026-03-08 |

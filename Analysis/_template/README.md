@@ -2,6 +2,11 @@
 
 > Copy this template directory to create a new phenotype analysis.
 > Rename the directory and fill in the sections below.
+>
+> **New here?** Read [`HOWTO_START.md`](HOWTO_START.md) first — it walks through
+> copying the template, the `<AnalysisType>/<Cohort>` layout, the launcher
+> pattern, where outputs go, and how to add a smoke test. A ready-to-edit
+> launcher skeleton lives at `DEG/Tsai/run_analysis.sh.template`.
 
 ## Phenotype Definition
 

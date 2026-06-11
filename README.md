@@ -19,17 +19,24 @@ cohorts.
 
 ## Supported Workflows
 
+Status vocabulary (used consistently across all READMEs in this repo):
+
+- `production` — fully implemented and run for the applicable cohort(s); trustworthy
+- `implemented` — code complete and runnable but not yet validated/run end-to-end
+- `scaffold` — directory/structure exists but the analysis is not implemented
+- `migrated` — ported from legacy (e.g. SocIsl) with paths updated, not re-validated
+
 | Area | Status | Notes |
 |------|--------|-------|
-| Tsai preprocessing | `official` | FASTQ discovery, Cell Ranger batching, CellBender |
-| DeJager preprocessing | `official` | Synapse download, Cell Ranger, scripted CellBender, Demuxlet/Freemuxlet |
-| Tsai processing | `official` | Canonical Stage 3 Harmony key: `derived_batch` |
-| DeJager processing | `official` | Canonical Stage 3 Harmony key: `library_id`; not yet run (see KNOWN_ISSUES #19) |
-| ACE DEG | `official` | Tsai and DeJager; outputs under `ANALYSIS_OUTPUT_ROOT` |
-| ACE cell-type proportion | `official` | sccomp workflow for Tsai and DeJager |
+| Tsai preprocessing | `production` | FASTQ discovery, Cell Ranger batching, CellBender |
+| DeJager preprocessing | `production` | Synapse download, Cell Ranger, scripted CellBender, Demuxlet/Freemuxlet |
+| Tsai processing | `production` | Canonical Stage 3 Harmony key: `derived_batch` |
+| DeJager processing | `implemented` | Code ready; canonical Stage 3 Harmony key: `library_id`. Never run end-to-end (see KNOWN_ISSUES #19) |
+| ACE DEG | `production` | Tsai and DeJager; outputs under `ANALYSIS_OUTPUT_ROOT` |
+| ACE cell-type proportion | `production` | sccomp workflow for Tsai and DeJager |
 | ACE SCENIC | `implemented` | Ported from SocIsl; requires SCENIC ranking databases |
 | ACE TF/COMPASS | `implemented` | Ported from SocIsl; requires IBM CPLEX license |
-| ACE GSEA | `implemented` | WebGestaltR pathway enrichment |
+| ACE GSEA | `implemented` | WebGestaltR pathway enrichment; Tsai launcher only |
 | Resilient DEG | `implemented` | Ported from ACE with resilience group derivation |
 | Resilient cell-type proportion | `implemented` | sccomp with resilience groups |
 | SocIsl DEG | `migrated` | Paths migrated to config/paths.sh |
@@ -42,11 +49,15 @@ cohorts.
 
 | | DEG | SCENIC | TF/COMPASS | GSEA | CellTypeProportion |
 |---|---|---|---|---|---|
-| **ACE** | official | implemented | implemented | implemented | official |
+| **ACE** | production | implemented | implemented | implemented | production |
 | **SocIsl** | migrated | migrated | migrated | migrated | implemented |
 | **Resilient** | implemented | scaffold | scaffold | scaffold | implemented |
 
 ## Quick Start
+
+**New here? Start with [GOLDEN_PATH.md](GOLDEN_PATH.md)** — one linear tutorial
+that walks a novice from clone to a verified end-to-end run (including a
+no-lab-data smoke path) without assembling the steps from scattered READMEs.
 
 1. Read [setup/README.md](setup/README.md).
 2. Copy `config/paths.local.sh.template` to `config/paths.local.sh`.
