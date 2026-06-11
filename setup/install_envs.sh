@@ -57,9 +57,9 @@ for arg in "$@"; do
 done
 
 ENV_BASE="${ENV_BASE_OVERRIDE:-${CONDA_ENV_BASE}}"
-PROC_ENVS_DIR="${REPO_ROOT}/Processing/Tsai/Pipeline/envs"
-ANALYSIS_ENVS_DIR="${REPO_ROOT}/Analysis/envs"
-PREPROC_ENVS_DIR="${REPO_ROOT}/Preprocessing/envs"
+PROC_ENVS_DIR="${REPO_ROOT}/envs/processing"
+ANALYSIS_ENVS_DIR="${REPO_ROOT}/envs/analysis"
+PREPROC_ENVS_DIR="${REPO_ROOT}/envs/preprocessing"
 
 if [[ -f "${CONDA_INIT_SCRIPT}" ]]; then
     # shellcheck disable=SC1090

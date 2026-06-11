@@ -22,6 +22,11 @@ Alternative DeJager Stage 3 batch keys remain available as sensitivity analyses:
 - `patient_id`
 - `pool_batch`
 - `derived_batch`
+- `sequencing_date`
+- `no_harmony`
+
+Variant IDs are declared in `config/variants.yaml` and documented in
+`docs/VARIANTS.md`.
 
 ## Shared Stage Parameters
 
@@ -57,6 +62,14 @@ Alternative DeJager Stage 3 batch keys remain available as sensitivity analyses:
 ```bash
 cd Processing/Tsai/Pipeline && ./submit_pipeline.sh all
 cd Processing/DeJager/Pipeline && ./submit_pipeline.sh all
+```
+
+Direct shared-launcher examples:
+
+```bash
+PYTHONPATH=src python -m rosmap_tx.processing --dataset tsai --stage 1 --variant canonical
+PYTHONPATH=src python -m rosmap_tx.processing --dataset dejager --stage 3 --variant library_id
+PYTHONPATH=src python -m rosmap_tx.processing --dataset dejager --stage 3 --variant no_harmony
 ```
 
 See:

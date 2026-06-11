@@ -129,8 +129,8 @@ tractable.
 Generates allele count matrices at SNP positions for each cell, then runs demuxlet
 to probabilistically assign cells to patients using genotype likelihoods.
 
-**Tool**: Demuxafy Singularity container (`Demuxafy.sif`) with popscle toolkit
-**Dependencies**: Singularity
+**Tool**: Demuxafy container (`Demuxafy.sif`) with popscle toolkit (invoked via `/opt/popscle/bin/popscle dsc-pileup` and `/opt/popscle/bin/popscle demuxlet`)
+**Dependencies**: Apptainer (or Singularity with apptainer-compatible CLI)
 
 ### Step C: Post-processing
 
@@ -183,8 +183,8 @@ The Demuxafy container provides the popscle toolkit (pileup and demuxlet):
 ls "${DEMUXAFY_SIF}"
 
 # To build from scratch:
-module load ${SINGULARITY_MODULE}
-singularity build Demuxafy.sif docker://drneavin/demuxafy:latest
+module load ${SINGULARITY_MODULE}   # e.g. apptainer/1.4.2 on Engaging
+apptainer build Demuxafy.sif docker://drneavin/demuxafy:latest
 ```
 
 ### 2. WGS VCF

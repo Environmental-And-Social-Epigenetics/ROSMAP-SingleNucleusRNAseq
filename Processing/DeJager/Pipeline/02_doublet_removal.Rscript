@@ -25,7 +25,7 @@ ensure_r_package <- function(package_name, local_lib, bioc = TRUE) {
 
   # Fallback: attempt to install the missing package.  This requires internet
   # access and may fail on compute nodes.  The recommended approach is to create
-  # the conda environment from envs/stage2_doublets.yml, which includes all
+  # the conda environment from envs/processing/stage2_doublets/environment.yml, which includes all
   # required R packages.
   message(sprintf(
     "[WARN] Package '%s' not found in conda env — attempting install to %s",
@@ -46,7 +46,7 @@ ensure_r_package <- function(package_name, local_lib, bioc = TRUE) {
 
   if (!requireNamespace(package_name, quietly = TRUE)) {
     stop(sprintf(
-      "Unable to load required package: %s. Ensure the conda environment was created from envs/stage2_doublets.yml",
+      "Unable to load required package: %s. Ensure the conda environment was created from envs/processing/stage2_doublets/environment.yml",
       package_name
     ), call. = FALSE)
   }
@@ -170,10 +170,10 @@ del _adata_out, _x, _obs
 default_paths <- function() {
   script_dir <- get_script_dir()
   repo_root <- normalizePath(file.path(script_dir, "..", "..", ".."))
-  workspace_root <- normalizePath(file.path(repo_root, ".."))
+  processing_root <- file.path(repo_root, "Data", "Transcriptomics", "DeJager", "Processing_Outputs")
   list(
-    input_dir = file.path(workspace_root, "DeJager_Data", "Processing_Outputs", "01_QC_Filtered"),
-    output_dir = file.path(workspace_root, "DeJager_Data", "Processing_Outputs", "02_Doublet_Removed")
+    input_dir = Sys.getenv("DEJAGER_QC_FILTERED", file.path(processing_root, "01_QC_Filtered")),
+    output_dir = Sys.getenv("DEJAGER_DOUBLET_REMOVED", file.path(processing_root, "02_Doublet_Removed"))
   )
 }
 

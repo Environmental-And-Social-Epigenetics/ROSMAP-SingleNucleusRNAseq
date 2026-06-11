@@ -77,12 +77,15 @@ Transcriptomics/
 ├── Preprocessing/     FASTQ -> CellBender workflows
 ├── Processing/        QC, doublet removal, Harmony integration, annotation
 ├── Analysis/          phenotype analyses
+├── envs/              canonical conda environment specs
+├── src/rosmap_tx/     shared launch, config, manifest, and validation code
 ├── Data/Phenotypes/   tracked phenotype and ID-map inputs
 └── Data_Access/       download / transfer helpers
 ```
 
-Large generated outputs are expected to live **outside** the repo tree. By
-default:
+Large generated outputs are never tracked. By default, transcriptomics data and
+processing outputs resolve under `Data/Transcriptomics/{Tsai,DeJager}/`; those
+directories may also be symlinks to external storage.
 
 - processing outputs go under the configured `*_PROCESSING_OUTPUTS` roots
 - downstream analysis outputs go under `ANALYSIS_OUTPUT_ROOT`
@@ -163,14 +166,26 @@ conda bootstrap before `pip install -r requirements.txt`.
 
 The shared path contract lives in [config/paths.sh](config/paths.sh). Local
 machine- or user-specific overrides belong in `config/paths.local.sh`.
+Processing parameters and variants are declared in:
+
+- [config/datasets.yaml](config/datasets.yaml)
+- [config/pipeline.yaml](config/pipeline.yaml)
+- [config/variants.yaml](config/variants.yaml)
+- [config/analysis_models.yaml](config/analysis_models.yaml)
 
 Important variables:
 
-- `TSAI_INTEGRATED`, `TSAI_INTEGRATED_PROJID`
-- `DEJAGER_INTEGRATED`, `DEJAGER_INTEGRATED_PATIENT_ID`, `DEJAGER_INTEGRATED_POOL_BATCH`, `DEJAGER_INTEGRATED_DERIVED_BATCH`
+- `TSAI_INTEGRATED`, `TSAI_INTEGRATED_PROJID`, `TSAI_INTEGRATED_NO_HARMONY`
+- `DEJAGER_INTEGRATED`, `DEJAGER_INTEGRATED_PATIENT_ID`, `DEJAGER_INTEGRATED_POOL_BATCH`, `DEJAGER_INTEGRATED_DERIVED_BATCH`, `DEJAGER_INTEGRATED_SEQUENCING_DATE`, `DEJAGER_INTEGRATED_NO_HARMONY`
 - `ACE_SCORES_CSV`
 - `ANALYSIS_OUTPUT_ROOT`
 - `NEBULA_ENV`, `SCCOMP_ENV`
+
+Validate the repository contract with:
+
+```bash
+PYTHONPATH=src python -m rosmap_tx.validate paths data envs variants tracked-files
+```
 
 ## Next Reads
 

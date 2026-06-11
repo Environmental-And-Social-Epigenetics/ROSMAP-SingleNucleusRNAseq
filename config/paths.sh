@@ -68,16 +68,22 @@ export DEG_ANALYSIS_ENV="${DEG_ANALYSIS_ENV:-${CONDA_ENV_BASE}/deg_analysis}"
 export SCENIC_ANALYSIS_ENV="${SCENIC_ANALYSIS_ENV:-${CONDA_ENV_BASE}/scenic_analysis}"
 export COMPASS_ANALYSIS_ENV="${COMPASS_ANALYSIS_ENV:-${CONDA_ENV_BASE}/compass_analysis}"
 export GSEA_ANALYSIS_ENV="${GSEA_ANALYSIS_ENV:-${CONDA_ENV_BASE}/gsea_analysis}"
+export DECOUPLER_ENV="${DECOUPLER_ENV:-${CONDA_ENV_BASE}/decoupler_compat}"
+export CELLCHAT_ENV="${CELLCHAT_ENV:-${CONDA_ENV_BASE}/cellchat_analysis}"
+export WGCNA_ENV="${WGCNA_ENV:-${CONDA_ENV_BASE}/wgcna_analysis}"
 
 # =============================================================================
 # BASE DATA PATHS
 # =============================================================================
 
-# Permanent storage (home/project directory) — MUST be set in paths.local.sh
-export DATA_ROOT="${DATA_ROOT:-__UNCONFIGURED__set_DATA_ROOT_in_paths_local_sh}"
+# Permanent storage root. By default this is the repository root so that
+# Data/Transcriptomics is the canonical namespace after clone.
+export DATA_ROOT="${DATA_ROOT:-${REPO_ROOT}}"
+export TRANSCRIPTOMICS_DATA_ROOT="${TRANSCRIPTOMICS_DATA_ROOT:-${REPO_ROOT}/Data/Transcriptomics}"
 
-# Scratch/temporary storage — MUST be set in paths.local.sh
-export SCRATCH_ROOT="${SCRATCH_ROOT:-__UNCONFIGURED__set_SCRATCH_ROOT_in_paths_local_sh}"
+# Scratch/temporary storage. Override in paths.local.sh on clusters with a
+# dedicated scratch filesystem.
+export SCRATCH_ROOT="${SCRATCH_ROOT:-${REPO_ROOT}/Data/.scratch}"
 
 # =============================================================================
 # REFERENCE DATA
@@ -94,13 +100,13 @@ export CELLRANGER_PATH="${CELLRANGER_PATH:-__UNCONFIGURED__set_CELLRANGER_PATH_i
 # =============================================================================
 
 # Input FASTQs (downloaded from Synapse)
-export DEJAGER_FASTQS="${DEJAGER_FASTQS:-${SCRATCH_ROOT}/FASTQs}"
+export DEJAGER_FASTQS="${DEJAGER_FASTQS:-${TRANSCRIPTOMICS_DATA_ROOT}/DeJager/FASTQs}"
 
 # Cell Ranger output counts
-export DEJAGER_COUNTS="${DEJAGER_COUNTS:-${SCRATCH_ROOT}/Counts}"
+export DEJAGER_COUNTS="${DEJAGER_COUNTS:-${TRANSCRIPTOMICS_DATA_ROOT}/DeJager/Cellranger_Output}"
 
 # Preprocessed counts (CellBender output) - permanent storage
-export DEJAGER_PREPROCESSED="${DEJAGER_PREPROCESSED:-${DATA_ROOT}/Data/DeJager/Preprocessed_Counts}"
+export DEJAGER_PREPROCESSED="${DEJAGER_PREPROCESSED:-${TRANSCRIPTOMICS_DATA_ROOT}/DeJager/Cellbender_Output}"
 
 # =============================================================================
 # DEJAGER DEMUXLET PATHS
@@ -111,6 +117,7 @@ export DEJAGER_PREPROCESSED="${DEJAGER_PREPROCESSED:-${DATA_ROOT}/Data/DeJager/P
 export DEJAGER_WGS_DIR="${DEJAGER_WGS_DIR:-__UNCONFIGURED__set_DEJAGER_WGS_DIR_in_paths_local_sh}"
 
 # SNP VCF for demuxlet (SNP-only, concatenated, lifted to GRCh38, ~84GB)
+export DEJAGER_FULL_WGS_VCF="${DEJAGER_FULL_WGS_VCF:-${DEJAGER_WGS_DIR}/fixedconcatenated_liftedROSMAP.vcf.gz}"
 export DEJAGER_DEMUX_VCF="${DEJAGER_DEMUX_VCF:-${DEJAGER_WGS_DIR}/snp_fixedconcatenated_liftedROSMAP.vcf.gz}"
 
 # Demuxafy Singularity container
@@ -122,9 +129,10 @@ export DEJAGER_PATIENT_IDS_DIR="${DEJAGER_PATIENT_IDS_DIR:-${DEJAGER_WGS_DIR}/in
 # Bcftools conda environment (for BAM filtering)
 export BCFTOOLS_ENV="${BCFTOOLS_ENV:-${CONDA_ENV_BASE}/bcftools_env}"
 
-# Singularity module (cluster-specific; override in paths.local.sh if needed)
-# Default is generic; on Engaging use "singularity/3.x" (check `module avail singularity`)
-export SINGULARITY_MODULE="${SINGULARITY_MODULE:-singularity/3.10.4}"
+# Container runtime module (cluster-specific; override in paths.local.sh if needed)
+# On Engaging only apptainer/1.4.2 is available (singularity is decommissioned).
+# Check available modules with `module avail apptainer`.
+export SINGULARITY_MODULE="${SINGULARITY_MODULE:-apptainer/1.4.2}"
 
 # =============================================================================
 # CANONICAL DATA PATHS (under repo Data/Transcriptomics/)
@@ -139,14 +147,14 @@ export SINGULARITY_MODULE="${SINGULARITY_MODULE:-singularity/3.10.4}"
 #   (a) Symlink these directories to your actual data locations, or
 #   (b) Override the WORKING PATHS below in paths.local.sh
 
-export TSAI_FASTQS="${TSAI_FASTQS:-${REPO_ROOT}/Data/Transcriptomics/Tsai/FASTQs}"
-export TSAI_CELLRANGER="${TSAI_CELLRANGER:-${REPO_ROOT}/Data/Transcriptomics/Tsai/Cellranger_Output}"
-export TSAI_CELLBENDER="${TSAI_CELLBENDER:-${REPO_ROOT}/Data/Transcriptomics/Tsai/Cellbender_Output}"
-export DEJAGER_FASTQS_DIR="${DEJAGER_FASTQS_DIR:-${REPO_ROOT}/Data/Transcriptomics/DeJager/FASTQs}"
-export DEJAGER_CELLRANGER="${DEJAGER_CELLRANGER:-${REPO_ROOT}/Data/Transcriptomics/DeJager/Cellranger_Output}"
-export DEJAGER_CELLBENDER="${DEJAGER_CELLBENDER:-${REPO_ROOT}/Data/Transcriptomics/DeJager/Cellbender_Output}"
-export TSAI_PROCESSING="${TSAI_PROCESSING:-${REPO_ROOT}/Data/Transcriptomics/Tsai/Processing_Outputs}"
-export DEJAGER_PROCESSING="${DEJAGER_PROCESSING:-${REPO_ROOT}/Data/Transcriptomics/DeJager/Processing_Outputs}"
+export TSAI_FASTQS="${TSAI_FASTQS:-${TRANSCRIPTOMICS_DATA_ROOT}/Tsai/FASTQs}"
+export TSAI_CELLRANGER="${TSAI_CELLRANGER:-${TRANSCRIPTOMICS_DATA_ROOT}/Tsai/Cellranger_Output}"
+export TSAI_CELLBENDER="${TSAI_CELLBENDER:-${TRANSCRIPTOMICS_DATA_ROOT}/Tsai/Cellbender_Output}"
+export DEJAGER_FASTQS_DIR="${DEJAGER_FASTQS_DIR:-${TRANSCRIPTOMICS_DATA_ROOT}/DeJager/FASTQs}"
+export DEJAGER_CELLRANGER="${DEJAGER_CELLRANGER:-${TRANSCRIPTOMICS_DATA_ROOT}/DeJager/Cellranger_Output}"
+export DEJAGER_CELLBENDER="${DEJAGER_CELLBENDER:-${TRANSCRIPTOMICS_DATA_ROOT}/DeJager/Cellbender_Output}"
+export TSAI_PROCESSING="${TSAI_PROCESSING:-${TRANSCRIPTOMICS_DATA_ROOT}/Tsai/Processing_Outputs}"
+export DEJAGER_PROCESSING="${DEJAGER_PROCESSING:-${TRANSCRIPTOMICS_DATA_ROOT}/DeJager/Processing_Outputs}"
 
 # =============================================================================
 # TSAI WORKING PATHS (for active processing on scratch/fast storage)
@@ -160,10 +168,10 @@ export DEJAGER_PROCESSING="${DEJAGER_PROCESSING:-${REPO_ROOT}/Data/Transcriptomi
 export TSAI_FASTQS_CSV="${TSAI_FASTQS_CSV:-${DATA_ROOT}/Data/Tsai/Preprocessing/FASTQ_Transfer/New/CSVs/All_ROSMAP_FASTQs.csv}"
 
 # Tsai FASTQs (Openmind transfer destination)
-export TSAI_FASTQS_DIR="${TSAI_FASTQS_DIR:-${SCRATCH_ROOT}/Tsai_Data/FASTQs}"
+export TSAI_FASTQS_DIR="${TSAI_FASTQS_DIR:-${TSAI_FASTQS}}"
 
 # Cell Ranger output (per projid)
-export TSAI_CELLRANGER_OUTPUT="${TSAI_CELLRANGER_OUTPUT:-${SCRATCH_ROOT}/Tsai_Data/Cellranger_Outputs}"
+export TSAI_CELLRANGER_OUTPUT="${TSAI_CELLRANGER_OUTPUT:-${TSAI_CELLRANGER}}"
 
 # Temporary Cell Ranger output (scratch - deleted after CellBender)
 export TSAI_CELLRANGER_SCRATCH="${TSAI_CELLRANGER_SCRATCH:-${TSAI_CELLRANGER_OUTPUT}}"
@@ -172,7 +180,7 @@ export TSAI_CELLRANGER_SCRATCH="${TSAI_CELLRANGER_SCRATCH:-${TSAI_CELLRANGER_OUT
 export TSAI_CELLBENDER_SCRATCH="${TSAI_CELLBENDER_SCRATCH:-${SCRATCH_ROOT}/Tsai/Cellbender_Output}"
 
 # Preprocessed counts (CellBender output — used as input to Processing pipeline)
-export TSAI_PREPROCESSED="${TSAI_PREPROCESSED:-${WORKSPACE_ROOT}/Tsai_Data/Cellbender_Outputs}"
+export TSAI_PREPROCESSED="${TSAI_PREPROCESSED:-${TSAI_CELLBENDER}}"
 
 # Legacy cohort-specific paths (DEPRECATED — kept for backward compatibility only)
 export TSAI_COUNTS_ACE="${TSAI_COUNTS_ACE:-${SCRATCH_ROOT}/Tsai/ACE/Counts}"
@@ -184,13 +192,14 @@ export TSAI_COUNTS_SOCISL="${TSAI_COUNTS_SOCISL:-${SCRATCH_ROOT}/Tsai/SocIsl/Cou
 # =============================================================================
 
 # Base output directory for the three-stage processing pipeline
-export TSAI_PROCESSING_OUTPUTS="${TSAI_PROCESSING_OUTPUTS:-${WORKSPACE_ROOT}/Tsai_Data/Processing_Outputs}"
+export TSAI_PROCESSING_OUTPUTS="${TSAI_PROCESSING_OUTPUTS:-${TSAI_PROCESSING}}"
 
 # Per-stage I/O directories
 export TSAI_QC_FILTERED="${TSAI_QC_FILTERED:-${TSAI_PROCESSING_OUTPUTS}/01_QC_Filtered}"
 export TSAI_DOUBLET_REMOVED="${TSAI_DOUBLET_REMOVED:-${TSAI_PROCESSING_OUTPUTS}/02_Doublet_Removed}"
-export TSAI_INTEGRATED="${TSAI_INTEGRATED:-${TSAI_PROCESSING_OUTPUTS}/03_Integrated}"
-export TSAI_INTEGRATED_PROJID="${TSAI_INTEGRATED_PROJID:-${TSAI_PROCESSING_OUTPUTS}/03_Integrated_projid}"
+export TSAI_INTEGRATED="${TSAI_PROCESSING_OUTPUTS}/03_Integrated/derived_batch"
+export TSAI_INTEGRATED_PROJID="${TSAI_PROCESSING_OUTPUTS}/03_Integrated/projid"
+export TSAI_INTEGRATED_NO_HARMONY="${TSAI_PROCESSING_OUTPUTS}/03_Integrated/no_harmony"
 
 # Derived batches mapping (tracked in repo)
 export TSAI_DERIVED_BATCHES_CSV="${TSAI_DERIVED_BATCHES_CSV:-${REPO_ROOT}/Processing/Tsai/Pipeline/Resources/derived_batches.csv}"
@@ -212,16 +221,18 @@ export TSAI_MARKERS_RDS="${TSAI_MARKERS_RDS:-${REPO_ROOT}/Processing/Tsai/Pipeli
 # =============================================================================
 
 # Base output directory for the three-stage processing pipeline
-export DEJAGER_PROCESSING_OUTPUTS="${DEJAGER_PROCESSING_OUTPUTS:-${WORKSPACE_ROOT}/DeJager_Data/Processing_Outputs}"
+export DEJAGER_PROCESSING_OUTPUTS="${DEJAGER_PROCESSING_OUTPUTS:-${DEJAGER_PROCESSING}}"
 
 # Per-stage I/O directories
 export DEJAGER_QC_FILTERED="${DEJAGER_QC_FILTERED:-${DEJAGER_PROCESSING_OUTPUTS}/01_QC_Filtered}"
 export DEJAGER_DOUBLET_REMOVED="${DEJAGER_DOUBLET_REMOVED:-${DEJAGER_PROCESSING_OUTPUTS}/02_Doublet_Removed}"
-export DEJAGER_INTEGRATED="${DEJAGER_INTEGRATED:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated}"
-export DEJAGER_INTEGRATED_DERIVED_BATCH="${DEJAGER_INTEGRATED_DERIVED_BATCH:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_derived_batch}"
-export DEJAGER_INTEGRATED_PATIENT_ID="${DEJAGER_INTEGRATED_PATIENT_ID:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_patient_id}"
-export DEJAGER_INTEGRATED_POOL_BATCH="${DEJAGER_INTEGRATED_POOL_BATCH:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_pool_batch}"
-export DEJAGER_INTEGRATED_LIBRARY_ID="${DEJAGER_INTEGRATED_LIBRARY_ID:-${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated_library_id}"
+export DEJAGER_INTEGRATED="${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/library_id"
+export DEJAGER_INTEGRATED_DERIVED_BATCH="${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/derived_batch"
+export DEJAGER_INTEGRATED_PATIENT_ID="${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/patient_id"
+export DEJAGER_INTEGRATED_POOL_BATCH="${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/pool_batch"
+export DEJAGER_INTEGRATED_LIBRARY_ID="${DEJAGER_INTEGRATED}"
+export DEJAGER_INTEGRATED_SEQUENCING_DATE="${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/sequencing_date"
+export DEJAGER_INTEGRATED_NO_HARMONY="${DEJAGER_PROCESSING_OUTPUTS}/03_Integrated/no_harmony"
 
 # SLURM log directory
 export DEJAGER_PROCESSING_LOGS="${DEJAGER_PROCESSING_LOGS:-${DEJAGER_PROCESSING_OUTPUTS}/Logs}"
@@ -337,8 +348,6 @@ check_paths() {
 
     # Check for unconfigured sentinel values
     local sentinel_vars=(
-        "DATA_ROOT"
-        "SCRATCH_ROOT"
         "CELLRANGER_REF"
         "CELLRANGER_PATH"
     )

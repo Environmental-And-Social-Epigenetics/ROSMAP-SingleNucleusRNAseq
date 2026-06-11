@@ -64,11 +64,11 @@ source /etc/profile.d/modules.sh
 module load "${SINGULARITY_MODULE}"
 unset SINGULARITY_VERIFY_CHECKS
 
-singularity exec \
+apptainer exec \
     --pwd "${DEJAGER_WGS_DIR}" \
     --bind "${DEJAGER_WGS_DIR}:/mnt" \
     "${DEMUXAFY_SIF}" \
-    popscle_pileup.py \
+    /opt/popscle/bin/popscle dsc-pileup \
         --sam "/mnt/${LIBRARY_ID}/BAMOutput1.bam" \
         --vcf "/mnt/${VCF_BASENAME}" \
         --group-list "/mnt/processed_feature_bc_matrix_cell_barcodes_${LIBRARY_ID}.csv" \
@@ -85,11 +85,11 @@ echo "=== Step B complete ==="
 
 echo "=== Step C: Running demuxlet for ${LIBRARY_ID} ==="
 
-singularity exec \
+apptainer exec \
     --pwd "${DEJAGER_WGS_DIR}" \
     --bind "${DEJAGER_WGS_DIR}:/mnt" \
     "${DEMUXAFY_SIF}" \
-    popscle demuxlet \
+    /opt/popscle/bin/popscle demuxlet \
         --plp "/mnt/${LIBRARY_ID}/plpDemux1" \
         --vcf "/mnt/${VCF_BASENAME}" \
         --field "PL" \

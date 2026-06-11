@@ -48,7 +48,8 @@ Official analysis env variables:
 - `GSEA_ANALYSIS_ENV`
 
 Each env now has its own directory with `environment.yml`, `requirements.txt`,
-and `README.md`. See [Analysis/envs/README.md](envs/README.md).
+and `README.md`. See [envs/README.md](../envs/README.md) (analysis specs live
+under `envs/analysis/`).
 
 ## ACE Entry Points
 

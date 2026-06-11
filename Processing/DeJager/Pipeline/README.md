@@ -23,10 +23,13 @@ from CellBender outputs to an integrated, annotated AnnData object.
 ${DEJAGER_PROCESSING_OUTPUTS}/
   01_QC_Filtered/
   02_Doublet_Removed/
-  03_Integrated/                 canonical library_id integration
-  03_Integrated_patient_id/      sensitivity analysis
-  03_Integrated_pool_batch/      sensitivity analysis
-  03_Integrated_derived_batch/   sensitivity analysis
+  03_Integrated/
+    library_id/                  canonical integration
+    patient_id/                  sensitivity analysis
+    pool_batch/                  sensitivity analysis
+    derived_batch/               sensitivity analysis
+    sequencing_date/             sensitivity analysis
+    no_harmony/                  no-correction baseline
   03_Evaluation/                 comparison outputs
   Logs/
 ```
@@ -37,20 +40,20 @@ ${DEJAGER_PROCESSING_OUTPUTS}/
 
 - script: `01_qc_filter.py`
 - wrapper: `01_qc_filter.sh`
-- env: `envs/stage1_qc/`
+- env: `envs/processing/stage1_qc/`
 - output: `{library}_qc.h5ad`
 
 ### Stage 2
 
 - script: `02_doublet_removal.Rscript`
 - wrapper: `02_doublet_removal.sh`
-- env: `envs/stage2_doublets/`
+- env: `envs/processing/stage2_doublets/`
 - output: `{library}_singlets.h5ad`
 
 ### Stage 3
 
 - canonical wrapper: `03_integration_annotation.sh`
-- env: `envs/stage3_integration/`
+- env: `envs/processing/stage3_integration/`
 - canonical output: `${DEJAGER_INTEGRATED}`
 
 Sensitivity wrappers:
@@ -58,6 +61,13 @@ Sensitivity wrappers:
 - `03_integration_annotation_patient_id.sh`
 - `03_integration_annotation_pool_batch.sh`
 - `03_integration_annotation_derived_batch.sh`
+- `03_integration_annotation_sequencing_date.sh`
+
+Additional variants can be run with the shared launcher:
+
+```bash
+PYTHONPATH=../../../src python -m rosmap_tx.processing --dataset dejager --stage 3 --variant no_harmony
+```
 
 ## Quick Start
 
@@ -75,7 +85,7 @@ Submit selected stages:
 ```bash
 ./submit_pipeline.sh 1
 ./submit_pipeline.sh 2 3
-./submit_pipeline.sh 3 3b 3c 3d 3e
+./submit_pipeline.sh 3 3b 3c 3d 3f 3e
 ```
 
 Stage meanings:
@@ -84,6 +94,7 @@ Stage meanings:
 - `3b`: `patient_id`
 - `3c`: `pool_batch`
 - `3d`: `derived_batch`
+- `3f`: `sequencing_date`
 - `3e`: comparison report
 
 ## Direct Test Runs
@@ -107,11 +118,11 @@ outputs (47 libraries) are on Engaging and ready to process.
 
 1. **Patient assignment CSV** (`DEJAGER_PATIENT_MAP`):
    - File: `cell_to_patient_assignmentsFinal1.csv` (~155 MB)
-   - Location: `/home/nkhera/orcd/pool/WGS/` on Engaging
+   - Location: external WGS workspace on Engaging
    - This file maps cell barcodes to patient IDs from Demuxlet/Freemuxlet
    - Set in `config/paths.local.sh`:
      ```bash
-     export DEJAGER_PATIENT_MAP="/home/nkhera/orcd/pool/WGS/cell_to_patient_assignmentsFinal1.csv"
+     export DEJAGER_PATIENT_MAP="/path/to/cell_to_patient_assignmentsFinal1.csv"
      ```
 
 2. **CellBender outputs** (`DEJAGER_PREPROCESSED`):

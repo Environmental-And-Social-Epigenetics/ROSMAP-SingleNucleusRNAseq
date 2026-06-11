@@ -23,6 +23,7 @@ source "${REPO_ROOT}/config/paths.sh"
 mkdir -p "${DEJAGER_PROCESSING_LOGS}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
+export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
 # Temporarily relax nounset for conda activation (some activate.d scripts
 # reference unset variables like ADDR2LINE).
@@ -44,8 +45,9 @@ INPUT_DIR="${DEJAGER_QC_FILTERED}"
 OUTPUT_DIR="${DEJAGER_DOUBLET_REMOVED}"
 
 mapfile -t SAMPLE_IDS < <(
-    Rscript "${SCRIPT_DIR}/02_doublet_removal.Rscript" \
-        --input-dir "${INPUT_DIR}" \
+    python -m rosmap_tx.processing \
+        --dataset dejager \
+        --stage 2 \
         --list-samples
 )
 
@@ -63,8 +65,8 @@ fi
 SAMPLE_ID="${SAMPLE_IDS[${INDEX}]}"
 echo "Running Stage 2 doublet removal for library ${SAMPLE_ID}"
 
-Rscript "${SCRIPT_DIR}/02_doublet_removal.Rscript" \
-    --input-dir "${INPUT_DIR}" \
-    --output-dir "${OUTPUT_DIR}" \
+python -m rosmap_tx.processing \
+    --dataset dejager \
+    --stage 2 \
     --sample-ids "${SAMPLE_ID}" \
     --threads 4

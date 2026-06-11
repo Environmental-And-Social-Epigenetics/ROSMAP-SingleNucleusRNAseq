@@ -18,6 +18,7 @@
 #   ./submit_pipeline.sh 3b           # submit Stage 3b (integration, patient_id)
 #   ./submit_pipeline.sh 3c           # submit Stage 3c (integration, pool_batch)
 #   ./submit_pipeline.sh 3d           # submit Stage 3d (integration, derived_batch)
+#   ./submit_pipeline.sh 3f           # submit Stage 3f (integration, sequencing_date)
 #   ./submit_pipeline.sh 3e           # submit Stage 3e (comprehensive comparison + report)
 #   ./submit_pipeline.sh 1 2          # submit Stages 1 and 2 (2 waits for 1)
 #   ./submit_pipeline.sh all          # submit all stages (3/3b/3c/3d in parallel, 3e after)
@@ -62,6 +63,7 @@ STAGE3_JOB_ID=""
 STAGE3B_JOB_ID=""
 STAGE3C_JOB_ID=""
 STAGE3D_JOB_ID=""
+STAGE3F_JOB_ID=""
 
 parse_job_id() {
     # sbatch outputs: "Submitted batch job 12345"
@@ -107,7 +109,7 @@ submit_stage() {
                 --output="${LOG_DIR}/dej_qc_aggregate_%j.out" \
                 --error="${LOG_DIR}/dej_qc_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python ${SCRIPT_DIR}/01_qc_filter.py --output-dir ${DEJAGER_QC_FILTERED} --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python -m rosmap_tx.processing --dataset dejager --stage 1 --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
@@ -132,7 +134,7 @@ submit_stage() {
                 --output="${LOG_DIR}/dej_doublets_aggregate_%j.out" \
                 --error="${LOG_DIR}/dej_doublets_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && Rscript ${SCRIPT_DIR}/02_doublet_removal.Rscript --output-dir ${DEJAGER_DOUBLET_REMOVED} --input-dir ${DEJAGER_QC_FILTERED} --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && python -m rosmap_tx.processing --dataset dejager --stage 2 --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
@@ -184,10 +186,22 @@ submit_stage() {
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             STAGE3D_JOB_ID="${LAST_JOB_ID}"
             ;;
+        3f)
+            echo "Submitting Stage 3f — Integration & annotation (sequencing_date) ..."
+            sbatch_output=$(sbatch \
+                --output="${LOG_DIR}/dej_integrate_seqdate_%j.out" \
+                --error="${LOG_DIR}/dej_integrate_seqdate_%j.err" \
+                "${dep_flags[@]+"${dep_flags[@]}"}" \
+                "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
+                "${SCRIPT_DIR}/03_integration_annotation_sequencing_date.sh")
+            echo "  ${sbatch_output}"
+            LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
+            STAGE3F_JOB_ID="${LAST_JOB_ID}"
+            ;;
         3e)
-            # Stage 3e depends on ALL four Stage 3 variants completing.
+            # Stage 3e depends on all submitted Stage 3 variants completing.
             local eval_dep_ids=()
-            for jid in "${STAGE3_JOB_ID}" "${STAGE3B_JOB_ID}" "${STAGE3C_JOB_ID}" "${STAGE3D_JOB_ID}"; do
+            for jid in "${STAGE3_JOB_ID}" "${STAGE3B_JOB_ID}" "${STAGE3C_JOB_ID}" "${STAGE3D_JOB_ID}" "${STAGE3F_JOB_ID}"; do
                 [[ -n "${jid}" ]] && eval_dep_ids+=("${jid}")
             done
             local eval_dep_flags=()
@@ -211,12 +225,12 @@ submit_stage() {
                 --error="${LOG_DIR}/dej_compare_%j.err" \
                 "${eval_dep_flags[@]+"${eval_dep_flags[@]}"}" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="export HDF5_USE_FILE_LOCKING=FALSE && export PYTHONUNBUFFERED=1 && source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${BATCHCORR_ENV} && set -u && export PATH=\${CONDA_PREFIX}/bin:\${PATH} && python ${SCRIPT_DIR}/03c_compare_corrections.py --input ${DEJAGER_INTEGRATED}/dejager_integrated.h5ad ${DEJAGER_INTEGRATED_PATIENT_ID}/dejager_integrated.h5ad ${DEJAGER_INTEGRATED_POOL_BATCH}/dejager_integrated.h5ad ${DEJAGER_INTEGRATED_DERIVED_BATCH}/dejager_integrated.h5ad --labels 'library_id (canonical)' 'patient_id (439)' 'pool_batch (60)' 'derived_batch (24)' --clinical-csv ${ROSMAP_CLINICAL_CSV} --output-dir ${DEJAGER_PROCESSING_OUTPUTS}/03_Evaluation")
+                --wrap="export HDF5_USE_FILE_LOCKING=FALSE && export PYTHONUNBUFFERED=1 && source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${BATCHCORR_ENV} && set -u && export PATH=\${CONDA_PREFIX}/bin:\${PATH} && python ${SCRIPT_DIR}/03c_compare_corrections.py --input ${DEJAGER_INTEGRATED}/dejager_integrated.h5ad ${DEJAGER_INTEGRATED_PATIENT_ID}/dejager_integrated.h5ad ${DEJAGER_INTEGRATED_POOL_BATCH}/dejager_integrated.h5ad ${DEJAGER_INTEGRATED_DERIVED_BATCH}/dejager_integrated.h5ad ${DEJAGER_INTEGRATED_SEQUENCING_DATE}/dejager_integrated.h5ad --labels 'library_id (canonical)' 'patient_id' 'pool_batch' 'derived_batch' 'sequencing_date' --clinical-csv ${ROSMAP_CLINICAL_CSV} --output-dir ${DEJAGER_PROCESSING_OUTPUTS}/03_Evaluation")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
         *)
-            echo "ERROR: Unknown stage '${stage}'. Use 1, 2, 3, 3b, 3c, 3d, 3e, or 'all'."
+            echo "ERROR: Unknown stage '${stage}'. Use 1, 2, 3, 3b, 3c, 3d, 3f, 3e, or 'all'."
             exit 1
             ;;
     esac
@@ -226,7 +240,8 @@ if [[ $# -eq 0 ]]; then
     echo "Usage: $0 [--no-preflight] <stage> [stage ...]"
     echo "  Stages: 1 (QC), 2 (doublets), 3 (integration, library_id),"
     echo "          3b (integration, patient_id), 3c (integration, pool_batch),"
-    echo "          3d (integration, derived_batch), 3e (comparison + report), all"
+    echo "          3d (integration, derived_batch), 3f (integration, sequencing_date),"
+    echo "          3e (comparison + report), all"
     echo "  --no-preflight   Skip preflight checks before submission"
     exit 1
 fi
@@ -235,7 +250,7 @@ for arg in "$@"; do
     if [[ "${arg}" == "all" ]]; then
         submit_stage 1
         submit_stage 2
-        # All four Stage 3 variants depend on Stage 2 and run in parallel.
+        # All Stage 3 variants depend on Stage 2 and run in parallel.
         # Note: all jobs load the same 122 singlet files simultaneously,
         # which may cause I/O contention. To avoid this, submit them
         # separately (e.g., ./submit_pipeline.sh 3 then 3b after it finishes).
@@ -247,7 +262,9 @@ for arg in "$@"; do
         submit_stage 3c
         LAST_JOB_ID="${STAGE2_JOB_ID}"
         submit_stage 3d
-        # Stage 3e depends on all four variants (handled inside submit_stage 3e).
+        LAST_JOB_ID="${STAGE2_JOB_ID}"
+        submit_stage 3f
+        # Stage 3e depends on all variants (handled inside submit_stage 3e).
         submit_stage 3e
     else
         submit_stage "${arg}"

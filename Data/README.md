@@ -2,6 +2,8 @@
 
 Canonical local location for all pipeline data. After cloning the repository, only `Phenotypes/` is available immediately (small CSVs tracked in git). All transcriptomics data must be populated using the scripts in [`Data_Access/`](../Data_Access/).
 
+`manifest.tsv` is the machine-readable data contract. It records the expected roots, file patterns, approximate counts, required status, and provenance for each pipeline stage.
+
 ## Contents
 
 | Directory | Description | Git-tracked? |
@@ -36,4 +38,5 @@ See [`Data_Access/README.md`](../Data_Access/README.md) for the full reference o
 ## Notes
 
 - All path variables (e.g., `$TSAI_FASTQS`, `$TSAI_CELLBENDER`) are defined in [`config/paths.sh`](../config/paths.sh)
+- The transcriptomics directories can contain real data or symlinks to external storage such as `/orcd/data/lhtsai/001/mabdel03/ROSMAP_Data/Single_Nucleus/`
 - Gene marker references are in `Processing/Tsai/Pipeline/Resources/`

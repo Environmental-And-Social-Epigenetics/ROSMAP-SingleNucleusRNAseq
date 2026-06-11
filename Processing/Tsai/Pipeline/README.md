@@ -4,19 +4,22 @@ This directory contains a self-contained three-stage processing pipeline for the
 
 ## Inputs
 
-- CellBender outputs: `Tsai_Data/Cellbender_Outputs/{projid}/processed_feature_bc_matrix_filtered.h5`
+- CellBender outputs: `${TSAI_PREPROCESSED}/{projid}/processed_feature_bc_matrix_filtered.h5`
 - Sample metadata: `Preprocessing/Tsai/02_Cellranger_Counts/Tracking/patient_metadata.csv`
 - Marker reference copied into this repo: `Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds`
 
 ## Outputs
 
-The pipeline writes data outside the repo into `Tsai_Data/Processing_Outputs/`:
+The pipeline writes data into `${TSAI_PROCESSING_OUTPUTS}`:
 
 ```text
-Tsai_Data/Processing_Outputs/
+${TSAI_PROCESSING_OUTPUTS}/
   01_QC_Filtered/         per-sample QC-filtered h5ad files + qc_summary.csv
   02_Doublet_Removed/     per-sample singlet-only h5ad files + doublet_summary.csv
-  03_Integrated/          integrated and annotated h5ad files
+  03_Integrated/
+    derived_batch/        canonical integrated and annotated h5ad files
+    projid/               sensitivity integration
+    no_harmony/           no-correction baseline
   Logs/                   SLURM stdout/stderr
 ```
 
@@ -29,7 +32,7 @@ track per-sample cell counts before/after filtering across all array tasks.
 
 - Script: `01_qc_filter.py`
 - Wrapper: `01_qc_filter.sh`
-- Environment: `QC_ENV` (see `config/paths.sh`; env spec in `envs/stage1_qc.yml`)
+- Environment: `QC_ENV` (see `config/paths.sh`; canonical spec in `envs/processing/stage1_qc/`)
 - Input: CellBender `processed_feature_bc_matrix_filtered.h5`
 - Output: `{projid}_qc.h5ad`
 
@@ -45,7 +48,7 @@ Filtering rules (percentile-based):
 
 - Script: `02_doublet_removal.Rscript`
 - Wrapper: `02_doublet_removal.sh`
-- Environment: `SINGLECELL_ENV` (see `config/paths.sh`; env spec in `envs/stage2_doublets.yml`)
+- Environment: `SINGLECELL_ENV` (see `config/paths.sh`; canonical spec in `envs/processing/stage2_doublets/`)
 - Method: `scDblFinder` (seed=123, 4 workers)
 - Input: `{projid}_qc.h5ad`
 - Output: `{projid}_singlets.h5ad`
@@ -56,7 +59,7 @@ If the active R environment is missing a required Bioconductor package such as `
 
 - Script: `03_integration_annotation.py`
 - Wrapper: `03_integration_annotation.sh`
-- Environment: `BATCHCORR_ENV` (see `config/paths.sh`; env spec in `envs/stage3_integration.yml`)
+- Environment: `BATCHCORR_ENV` (see `config/paths.sh`; canonical spec in `envs/processing/stage3_integration/`)
 - Input: all Stage 2 singlet files
 - Outputs:
   - `tsai_integrated.h5ad`
@@ -123,4 +126,4 @@ single source of truth for conda environments, data directories, and SLURM log
 paths.  To adapt the pipeline for a new cluster, edit `config/paths.sh` only —
 no changes to the pipeline scripts are needed.
 
-Conda environment specs are in `envs/` for recreating environments from scratch.
+Conda environment specs are in the root `envs/` directory for recreating environments from scratch.

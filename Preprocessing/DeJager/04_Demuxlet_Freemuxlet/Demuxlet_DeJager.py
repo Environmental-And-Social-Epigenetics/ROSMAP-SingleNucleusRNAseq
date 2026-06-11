@@ -29,18 +29,16 @@ from pathlib import Path
 # Compute repo/workspace roots from script location (depth 4 from repo root)
 _script_path = Path(__file__).resolve()
 _repo_root = _script_path.parents[3]
-_workspace_root = _repo_root.parent
+_dejager_root = _repo_root / "Data" / "Transcriptomics" / "DeJager"
 
-DEJAGER_WGS_DIR = os.environ.get(
-    "DEJAGER_WGS_DIR", "/om/scratch/Mon/shared_folder/WGS"
-)
+DEJAGER_WGS_DIR = os.environ.get("DEJAGER_WGS_DIR", "__UNCONFIGURED__set_DEJAGER_WGS_DIR")
 DEJAGER_COUNTS = os.environ.get(
     "DEJAGER_COUNTS",
-    str(_workspace_root / "DeJager_Data" / "Counts"),
+    os.environ.get("DEJAGER_CELLRANGER", str(_dejager_root / "Cellranger_Output")),
 )
 DEJAGER_PREPROCESSED = os.environ.get(
     "DEJAGER_PREPROCESSED",
-    str(_workspace_root / "DeJager_Data" / "Preprocessed_Counts"),
+    os.environ.get("DEJAGER_CELLBENDER", str(_dejager_root / "Cellbender_Output")),
 )
 DEJAGER_DEMUX_VCF = os.environ.get(
     "DEJAGER_DEMUX_VCF",
@@ -60,7 +58,7 @@ BCFTOOLS_ENV = os.environ.get(
     "BCFTOOLS_ENV",
     os.path.join(os.environ.get("HOME", ""), "conda_envs/bcftools_env"),
 )
-SINGULARITY_MODULE = os.environ.get("SINGULARITY_MODULE", "openmind/singularity/3.10.4")
+SINGULARITY_MODULE = os.environ.get("SINGULARITY_MODULE", "singularity/3.10.4")
 SLURM_MAIL_USER = os.environ.get("SLURM_MAIL_USER", "")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -83,7 +81,8 @@ def _mail_line():
 BAM_TEMPLATE = """#!/bin/bash
 #SBATCH -n 45
 #SBATCH -t 3:00:00
-#SBATCH --mem=400G
+#SBATCH --mem=350G
+#SBATCH --partition=pi_lhtsai
 #SBATCH -o {logs_dir}/bam-%j.out
 #SBATCH -e {logs_dir}/bam-%j.err
 {mail_line}
@@ -109,8 +108,9 @@ mkdir -p {wgs_dir}/{lib_id} || exit 1
 
 DEMUX_TEMPLATE = """#!/bin/bash
 #SBATCH -n 10
-#SBATCH -t 36:00:00
-#SBATCH --mem=500G
+#SBATCH -t 2-00:00:00
+#SBATCH --mem=350G
+#SBATCH --partition=pi_lhtsai
 #SBATCH -o {logs_dir}/demux-%j.out
 #SBATCH -e {logs_dir}/demux-%j.err
 {mail_line}
@@ -126,22 +126,22 @@ module load {singularity_module}
 
 unset SINGULARITY_VERIFY_CHECKS
 
-singularity exec \\
+apptainer exec \\
     --pwd {wgs_dir} \\
     --bind {wgs_dir}:/mnt \\
     {sif} \\
-    popscle_pileup.py \\
+    /opt/popscle/bin/popscle dsc-pileup \\
         --sam /mnt/{lib_id}/BAMOutput1.bam \\
         --vcf /mnt/{vcf_basename} \\
         --group-list /mnt/processed_feature_bc_matrix_cell_barcodes_{lib_id}.csv \\
         --out /mnt/{lib_id}/plpDemux1 \\
         --sm-list /mnt/individ/individPat{lib_id}.txt
 
-singularity exec \\
+apptainer exec \\
     --pwd {wgs_dir} \\
     --bind {wgs_dir}:/mnt \\
     {sif} \\
-    popscle demuxlet \\
+    /opt/popscle/bin/popscle demuxlet \\
         --plp /mnt/{lib_id}/plpDemux1 \\
         --vcf /mnt/{vcf_basename} \\
         --field "PL" \\
@@ -177,6 +177,21 @@ def discover_libraries(force=False):
                     continue
             libraries.append(lib_id)
     return libraries
+
+
+def require_configured(names):
+    """Fail early when cluster-specific Demuxlet paths were not configured."""
+    missing = []
+    for name in names:
+        value = globals()[name]
+        if not value or "__UNCONFIGURED__" in str(value):
+            missing.append(name)
+    if missing:
+        print("ERROR: DeJager demuxlet paths are not configured.")
+        print("Source config/paths.sh and set these variables in config/paths.local.sh:")
+        for name in missing:
+            print(f"  - {name}")
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -265,6 +280,11 @@ def main():
     parser.add_argument("--force", action="store_true",
                         help="Regenerate scripts even if demux1.best already exists")
     args = parser.parse_args()
+
+    required = ["DEJAGER_WGS_DIR", "DEJAGER_DEMUX_VCF", "DEMUXAFY_SIF", "DEJAGER_PATIENT_IDS_DIR"]
+    if args.all or args.bam_only:
+        required.extend(["DEJAGER_COUNTS", "DEJAGER_PREPROCESSED", "CONDA_INIT_SCRIPT", "BCFTOOLS_ENV"])
+    require_configured(required)
 
     libraries = discover_libraries(force=args.force)
     if not libraries:

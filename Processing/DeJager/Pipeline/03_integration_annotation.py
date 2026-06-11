@@ -29,12 +29,11 @@ def _log(msg: str) -> None:
 def default_paths() -> dict[str, Path]:
     script_path = Path(__file__).resolve()
     repo_root = script_path.parents[3]
-    workspace_root = repo_root.parent
+    dejager_processing = repo_root / "Data" / "Transcriptomics" / "DeJager" / "Processing_Outputs"
     return {
         "repo_root": repo_root,
-        "workspace_root": workspace_root,
-        "input_dir": workspace_root / "DeJager_Data" / "Processing_Outputs" / "02_Doublet_Removed",
-        "output_dir": workspace_root / "DeJager_Data" / "Processing_Outputs" / "03_Integrated",
+        "input_dir": Path(os.environ.get("DEJAGER_DOUBLET_REMOVED", str(dejager_processing / "02_Doublet_Removed"))),
+        "output_dir": Path(os.environ.get("DEJAGER_INTEGRATED", str(dejager_processing / "03_Integrated" / "library_id"))),
         "markers_rds": repo_root / "Processing" / "Tsai" / "Pipeline" / "Resources" / "Brain_Human_PFC_Markers_Mohammadi2020.rds",
     }
 
@@ -79,6 +78,7 @@ def parse_args() -> argparse.Namespace:
         "both prep and sequencing effects), "
         "'derived_batch' (flowcell-based from derive_batches.py, ~20 groups), "
         "'pool_batch' (pool-based B-number from library name, ~60 groups), "
+        "'sequencing_date' (YYMMDD from library name, ~62 dates), "
         "'patient_id' (per-patient), "
         "or any other obs column.",
     )
@@ -216,6 +216,12 @@ def run_annotation(
         del adata.obsm["ora_estimate"]
 
     dc.run_ora(adata, markers_df, source="source", target="target", use_raw=True)
+    if "ora_estimate" not in adata.obsm:
+        raise RuntimeError(
+            "dc.run_ora() produced no 'ora_estimate' in obsm. "
+            f"Check that marker genes overlap with adata.raw.var_names "
+            f"({adata.raw.n_vars if adata.raw is not None else 'NO .raw'} genes)."
+        )
     acts = dc.get_acts(adata, obsm_key="ora_estimate")
 
     acts_values = np.asarray(acts.X)
@@ -253,10 +259,21 @@ def save_figures(
     output_dir: Path,
     cluster_key: str,
     markers_df: pd.DataFrame,
+    max_cells_for_plots: int = 100_000,
 ) -> None:
     figures_dir = output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     sc.settings.figdir = str(figures_dir)
+
+    # Subsample for scatter plots — plotting 2M+ points is extremely slow.
+    # The subsampled view preserves obs, obsm, and .raw for all plot types.
+    if adata.n_obs > max_cells_for_plots:
+        rng = np.random.default_rng(42)
+        idx = np.sort(rng.choice(adata.n_obs, size=max_cells_for_plots, replace=False))
+        adata_plot = adata[idx].copy()
+        print(f"[figures] Subsampled {adata.n_obs:,} -> {adata_plot.n_obs:,} cells for plotting")
+    else:
+        adata_plot = adata
 
     # --- 1. PCA elbow plot ---
     if "pca" in adata.uns:
@@ -272,16 +289,16 @@ def save_figures(
         plt.close(fig)
 
     # --- 2. Pre/post Harmony comparison ---
-    if "X_umap_pca" in adata.obsm:
-        batch_values = adata.obs["batch"].astype(str)
+    if "X_umap_pca" in adata_plot.obsm:
+        batch_values = adata_plot.obs["batch"].astype(str)
         unique_batches = sorted(batch_values.unique())
-        cmap = plt.cm.get_cmap("tab20", len(unique_batches))
+        cmap = plt.colormaps.get_cmap("tab20").resampled(len(unique_batches))
         batch_colors = {b: cmap(i) for i, b in enumerate(unique_batches)}
         colors = [batch_colors[b] for b in batch_values]
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
         ax1.scatter(
-            adata.obsm["X_umap_pca"][:, 0], adata.obsm["X_umap_pca"][:, 1],
+            adata_plot.obsm["X_umap_pca"][:, 0], adata_plot.obsm["X_umap_pca"][:, 1],
             c=colors, s=1, alpha=0.3, rasterized=True,
         )
         ax1.set_title("Before Harmony (PCA)")
@@ -290,7 +307,7 @@ def save_figures(
         ax1.set_aspect("equal")
 
         ax2.scatter(
-            adata.obsm["X_umap"][:, 0], adata.obsm["X_umap"][:, 1],
+            adata_plot.obsm["X_umap"][:, 0], adata_plot.obsm["X_umap"][:, 1],
             c=colors, s=1, alpha=0.3, rasterized=True,
         )
         ax2.set_title("After Harmony")
@@ -304,19 +321,19 @@ def save_figures(
         plt.close(fig)
 
     # --- 3. QC metrics on UMAP ---
-    qc_cols = [c for c in ["total_counts", "n_genes_by_counts", "pct_counts_mt"] if c in adata.obs.columns]
+    qc_cols = [c for c in ["total_counts", "n_genes_by_counts", "pct_counts_mt"] if c in adata_plot.obs.columns]
     if qc_cols:
-        sc.pl.umap(adata, color=qc_cols, show=False, save="_qc_metrics.png")
+        sc.pl.umap(adata_plot, color=qc_cols, show=False, save="_qc_metrics.png")
 
     # --- 4. Multi-resolution clustering ---
-    res_keys = [k for k in ["leiden_res0_2", "leiden_res0_5", "leiden_res1"] if k in adata.obs.columns]
+    res_keys = [k for k in ["leiden_res0_2", "leiden_res0_5", "leiden_res1"] if k in adata_plot.obs.columns]
     if res_keys:
-        sc.pl.umap(adata, color=res_keys, show=False, save="_multi_resolution.png")
+        sc.pl.umap(adata_plot, color=res_keys, show=False, save="_multi_resolution.png")
 
     # --- 5 & 6. Integration + cell type UMAPs ---
-    sc.pl.umap(adata, color=["batch", cluster_key], show=False, save="_dejager_integration.png")
-    if "cell_type" in adata.obs.columns:
-        sc.pl.umap(adata, color=["cell_type"], legend_loc="on data", show=False, save="_dejager_celltypes.png")
+    sc.pl.umap(adata_plot, color=["batch", cluster_key], show=False, save="_dejager_integration.png")
+    if "cell_type" in adata_plot.obs.columns:
+        sc.pl.umap(adata_plot, color=["cell_type"], legend_loc="on data", show=False, save="_dejager_celltypes.png")
 
     # --- 7. Cluster-batch composition ---
     if "batch" in adata.obs.columns and cluster_key in adata.obs.columns:
@@ -356,14 +373,14 @@ def save_figures(
         plt.close(fig)
 
     # --- 9. Marker dot plot ---
-    if adata.raw is not None and not markers_df.empty and "cell_type" in adata.obs.columns:
-        raw_genes = set(adata.raw.var_names)
+    if adata_plot.raw is not None and not markers_df.empty and "cell_type" in adata_plot.obs.columns:
+        raw_genes = set(adata_plot.raw.var_names)
         top_markers = markers_df.groupby("source").head(5)
         top_markers = top_markers[top_markers["target"].isin(raw_genes)]
         if not top_markers.empty:
             marker_genes = top_markers["target"].unique().tolist()
             sc.pl.dotplot(
-                adata, var_names=marker_genes, groupby="cell_type",
+                adata_plot, var_names=marker_genes, groupby="cell_type",
                 use_raw=True, show=False, save="_markers.png",
             )
 
@@ -445,6 +462,15 @@ def main() -> None:
         combined.obs["pool_batch"] = (
             combined.obs["library_id"]
             .map(derive_batch_from_library_id)
+            .astype("category")
+        )
+
+        # Always add sequencing_date (YYMMDD prefix from library name) for reference.
+        combined.obs["sequencing_date"] = (
+            combined.obs["library_id"]
+            .astype(str)
+            .str.extract(r"^(\d{6})", expand=False)
+            .fillna("UNKNOWN")
             .astype("category")
         )
 

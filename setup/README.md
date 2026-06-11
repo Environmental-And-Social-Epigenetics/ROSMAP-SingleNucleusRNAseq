@@ -15,13 +15,14 @@ Set at minimum:
 
 - `CONDA_INIT_SCRIPT`
 - `CONDA_ENV_BASE`
-- `DATA_ROOT`
-- `SCRATCH_ROOT`
 - `CELLRANGER_PATH`
 - `CELLRANGER_REF`
 
 Optional but commonly needed:
 
+- `TRANSCRIPTOMICS_DATA_ROOT`
+- `DATA_ROOT`
+- `SCRATCH_ROOT`
 - `ANALYSIS_OUTPUT_ROOT`
 - `DEJAGER_PATIENT_MAP`
 - `DEJAGER_SYNAPSE_FASTQ_CSV`
@@ -94,9 +95,7 @@ when you need to rebuild a stale env from the tracked specs.
 
 See the env READMEs in:
 
-- [Preprocessing/envs/README.md](../Preprocessing/envs/README.md)
-- [Processing/Tsai/Pipeline/envs/README.md](../Processing/Tsai/Pipeline/envs/README.md)
-- [Analysis/envs/README.md](../Analysis/envs/README.md)
+- [envs/README.md](../envs/README.md)
 
 ## 3. External Tools
 
@@ -118,8 +117,9 @@ Needed for DeJager Demuxlet/Freemuxlet helper workflows. Configure
 
 ## 4. External Data Contracts
 
-The repo tracks phenotype tables and lightweight metadata, but several large or
-protected inputs stay external:
+The repo tracks phenotype tables, manifests, and lightweight metadata, but
+large or protected inputs stay external or under gitignored
+`Data/Transcriptomics` directories:
 
 - DeJager Synapse FASTQs
 - DeJager barcode-to-patient map
@@ -161,7 +161,7 @@ bash smoke_test.sh
 
 Generated outputs should not be written into the repo tree.
 
-- processing outputs: the configured `*_PROCESSING_OUTPUTS` directories
+- processing outputs: the configured `*_PROCESSING_OUTPUTS` directories under `Data/Transcriptomics` or an external override
 - downstream analysis outputs: `ANALYSIS_OUTPUT_ROOT`
 
 If you leave `ANALYSIS_OUTPUT_ROOT` unset, it defaults to a sibling

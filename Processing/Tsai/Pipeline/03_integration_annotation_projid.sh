@@ -23,6 +23,7 @@ source "${REPO_ROOT}/config/paths.sh"
 mkdir -p "${TSAI_PROCESSING_LOGS}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
+export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
 # Temporarily relax nounset for conda activation (some activate.d scripts
 # reference unset variables like ADDR2LINE).
@@ -35,14 +36,7 @@ if [[ -z "${CONDA_PREFIX:-}" ]]; then
     exit 1
 fi
 
-INPUT_DIR="${TSAI_DOUBLET_REMOVED}"
-OUTPUT_DIR="${TSAI_PROCESSING_OUTPUTS}/03_Integrated_projid"
-METADATA_CSV="${TSAI_METADATA_CSV}"
-MARKERS_RDS="${TSAI_MARKERS_RDS}"
-
-python "${SCRIPT_DIR}/03_integration_annotation.py" \
-    --input-dir "${INPUT_DIR}" \
-    --output-dir "${OUTPUT_DIR}" \
-    --metadata-csv "${METADATA_CSV}" \
-    --markers-rds "${MARKERS_RDS}" \
-    --harmony-batch-key projid
+python -m rosmap_tx.processing \
+    --dataset tsai \
+    --stage 3 \
+    --variant projid

@@ -21,6 +21,7 @@ mkdir -p "${DEJAGER_PROCESSING_LOGS}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 export PYTHONUNBUFFERED=1
+export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
 # Temporarily relax nounset for conda activation (some activate.d scripts
 # reference unset variables like ADDR2LINE).
@@ -34,12 +35,7 @@ if [[ -z "${CONDA_PREFIX:-}" ]]; then
 fi
 export PATH="${CONDA_PREFIX}/bin:${PATH}"
 
-INPUT_DIR="${DEJAGER_DOUBLET_REMOVED}"
-OUTPUT_DIR="${DEJAGER_INTEGRATED_LIBRARY_ID}"
-MARKERS_RDS="${DEJAGER_MARKERS_RDS}"
-
-python "${SCRIPT_DIR}/03_integration_annotation.py" \
-    --input-dir "${INPUT_DIR}" \
-    --output-dir "${OUTPUT_DIR}" \
-    --markers-rds "${MARKERS_RDS}" \
-    --harmony-batch-key library_id
+python -m rosmap_tx.processing \
+    --dataset dejager \
+    --stage 3 \
+    --variant library_id

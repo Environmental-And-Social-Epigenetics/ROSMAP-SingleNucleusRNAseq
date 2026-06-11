@@ -77,7 +77,7 @@ def main():
     )
     parser.add_argument(
         "--wgs-dir",
-        default=os.environ.get("DEJAGER_WGS_DIR", "/om/scratch/Mon/shared_folder/WGS"),
+        default=os.environ.get("DEJAGER_WGS_DIR"),
         help="Directory containing per-library demuxlet outputs (default: $DEJAGER_WGS_DIR)",
     )
     parser.add_argument(
@@ -86,6 +86,10 @@ def main():
         help="Output CSV path (default: cell_to_patient_assignments.csv)",
     )
     args = parser.parse_args()
+
+    if not args.wgs_dir or "__UNCONFIGURED__" in args.wgs_dir:
+        print("ERROR: WGS directory is not configured. Source config/paths.sh and set DEJAGER_WGS_DIR.")
+        sys.exit(1)
 
     if not os.path.isdir(args.wgs_dir):
         print(f"ERROR: WGS directory not found: {args.wgs_dir}")

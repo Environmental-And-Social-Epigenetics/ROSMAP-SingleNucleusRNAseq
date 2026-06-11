@@ -23,12 +23,11 @@ sc.set_figure_params(figsize=(6, 6), frameon=False)
 def default_paths() -> dict[str, Path]:
     script_path = Path(__file__).resolve()
     repo_root = script_path.parents[3]
-    workspace_root = repo_root.parent
+    tsai_processing = repo_root / "Data" / "Transcriptomics" / "Tsai" / "Processing_Outputs"
     return {
         "repo_root": repo_root,
-        "workspace_root": workspace_root,
-        "input_dir": workspace_root / "Tsai_Data" / "Processing_Outputs" / "02_Doublet_Removed",
-        "output_dir": workspace_root / "Tsai_Data" / "Processing_Outputs" / "03_Integrated",
+        "input_dir": Path(os.environ.get("TSAI_DOUBLET_REMOVED", str(tsai_processing / "02_Doublet_Removed"))),
+        "output_dir": Path(os.environ.get("TSAI_INTEGRATED", str(tsai_processing / "03_Integrated" / "derived_batch"))),
         "metadata_csv": repo_root
         / "Preprocessing"
         / "Tsai"

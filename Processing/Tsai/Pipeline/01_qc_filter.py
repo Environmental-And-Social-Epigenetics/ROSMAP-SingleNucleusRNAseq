@@ -20,12 +20,11 @@ sc.settings.verbosity = 0
 def default_paths() -> dict[str, Path]:
     script_path = Path(__file__).resolve()
     repo_root = script_path.parents[3]
-    workspace_root = repo_root.parent
+    tsai_root = repo_root / "Data" / "Transcriptomics" / "Tsai"
     return {
         "repo_root": repo_root,
-        "workspace_root": workspace_root,
-        "input_dir": workspace_root / "Tsai_Data" / "Cellbender_Outputs",
-        "output_dir": workspace_root / "Tsai_Data" / "Processing_Outputs" / "01_QC_Filtered",
+        "input_dir": Path(os.environ.get("TSAI_PREPROCESSED", str(tsai_root / "Cellbender_Output"))),
+        "output_dir": Path(os.environ.get("TSAI_QC_FILTERED", str(tsai_root / "Processing_Outputs" / "01_QC_Filtered"))),
         "metadata_csv": repo_root
         / "Preprocessing"
         / "Tsai"

@@ -17,9 +17,9 @@ and a compiled PDF.
 Usage:
     python 03c_compare_corrections.py \\
         --input  03_Integrated/dejager_integrated.h5ad \\
-                 03_Integrated_patient_id/dejager_integrated.h5ad \\
-                 03_Integrated_pool_batch/dejager_integrated.h5ad \\
-                 03_Integrated_library_id/dejager_integrated.h5ad \\
+                 03_Integrated/patient_id/dejager_integrated.h5ad \\
+                 03_Integrated/pool_batch/dejager_integrated.h5ad \\
+                 03_Integrated/library_id/dejager_integrated.h5ad \\
         --labels "derived_batch (24)" "patient_id (439)" \\
                  "pool_batch (60)" "library_id (122)" \\
         --clinical-csv Data/Phenotypes/ROSMAP_clinical.csv \\
@@ -635,14 +635,22 @@ def main() -> None:
             embedding_key = "X_pca"
         print(f"  Embedding: {embedding_key}")
 
-        # Ensure derived_batch exists for cross-approach batch evaluation
+        # Ensure batch_eval_key exists for cross-approach batch evaluation.
+        # If not present, try to reconstruct from library_id (pool_batch only).
         if args.batch_eval_key not in adata.obs.columns:
-            # Try to reconstruct from library_id
-            if "library_id" in adata.obs.columns:
-                from Processing.DeJager.Pipeline import _derive_pool  # won't work — inline it
-                pass
-            print(f"  [WARN] {args.batch_eval_key} not in obs — batch metrics will use harmony batch key")
-            batch_eval_key = harmony_params.get("batch_key", "batch")
+            if args.batch_eval_key == "pool_batch" and "library_id" in adata.obs.columns:
+                import re as _re
+                _pat = _re.compile(r"^\d{6}-(B\d+)")
+                adata.obs["pool_batch"] = (
+                    adata.obs["library_id"].astype(str)
+                    .map(lambda s: (_pat.match(s).group(1) if _pat.match(s) else s))
+                    .astype("category")
+                )
+                batch_eval_key = "pool_batch"
+                print(f"  [info] reconstructed pool_batch from library_id")
+            else:
+                print(f"  [WARN] {args.batch_eval_key} not in obs — batch metrics will use harmony batch key")
+                batch_eval_key = harmony_params.get("batch_key", "batch")
         else:
             batch_eval_key = args.batch_eval_key
 

@@ -28,8 +28,13 @@ __pycache__/
 *.tsv
 *.mtx
 *.mtx.gz
+*.zarr
+*.zarr/
+*.loom
+*.pdf
 
 # Whitelist small metadata/resource files required by the pipeline
+!Data/manifest.tsv
 !Preprocessing/Tsai/02_Cellranger_Counts/Tracking/patient_metadata.csv
 !Preprocessing/Tsai/02_Cellranger_Counts/Tracking/batch_assignments.csv
 !Processing/Tsai/Pipeline/Resources/Brain_Human_PFC_Markers_Mohammadi2020.rds
@@ -77,6 +82,13 @@ slurm-*.out
 slurm-*.err
 *.out
 *.err
+*.log
+*.Rout
+
+# Generated run directories and checkpoints
+Project_*/
+**/Project_*/
+ckpt.tar.gz
 
 # Generated ACE analysis outputs
 Analysis/ACE/**/logs/
@@ -84,12 +96,25 @@ Analysis/ACE/**/results_*/
 Analysis/ACE/**/celltype_splits_*/
 Analysis/ACE/**/data/
 Analysis/ACE/**/figures/
+Analysis/ACE/**/tables/
+Analysis/ACE/**/reports/
+Analysis/ACE/**/report/
+Analysis/ACE/**/Report/
+Analysis/ACE/**/*_report.md
 
 # Generated preprocessing logs / batch outputs
+Preprocessing/Tsai/01_FASTQ_Location/03_Globus_Transfer/Logs/**
+Preprocessing/Tsai/01_FASTQ_Location/03_Globus_Transfer/Batch_Files/*
+!Preprocessing/Tsai/01_FASTQ_Location/03_Globus_Transfer/Batch_Files/README.md
 Preprocessing/Tsai/02_Cellranger_Counts/Logs/Errs/*
 !Preprocessing/Tsai/02_Cellranger_Counts/Logs/Errs/README.md
 Preprocessing/Tsai/02_Cellranger_Counts/Logs/Outs/*
 !Preprocessing/Tsai/02_Cellranger_Counts/Logs/Outs/README.md
+Preprocessing/Tsai/02_Cellranger_Counts/Batch_Scripts/**
+!Preprocessing/Tsai/02_Cellranger_Counts/Batch_Scripts/
+!Preprocessing/Tsai/02_Cellranger_Counts/Batch_Scripts/**/
+!Preprocessing/Tsai/02_Cellranger_Counts/Batch_Scripts/**/README.md
+Preprocessing/Tsai/02_Cellranger_Counts/Scripts/resubmit_fixed.sh
 Preprocessing/Tsai/03_Cellbender/Logs/**
 !Preprocessing/Tsai/03_Cellbender/Logs/
 !Preprocessing/Tsai/03_Cellbender/Logs/README.md
@@ -101,6 +126,7 @@ Preprocessing/Tsai/03_Cellbender/Batch_Scripts/**
 !Preprocessing/Tsai/03_Cellbender/Batch_Scripts/
 !Preprocessing/Tsai/03_Cellbender/Batch_Scripts/**/
 !Preprocessing/Tsai/03_Cellbender/Batch_Scripts/**/README.md
+Preprocessing/Tsai/03_Cellbender/Batch_Scripts/**/cellbender/README.md
 
 # Generated comparison reports
 batch_correction_report.pdf

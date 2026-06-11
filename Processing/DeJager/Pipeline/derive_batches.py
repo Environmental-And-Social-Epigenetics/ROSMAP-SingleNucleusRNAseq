@@ -48,27 +48,25 @@ def default_paths():
     # type: () -> Dict[str, Path]
     script_dir = Path(__file__).resolve().parent
     repo_root = script_dir.parents[2]
-    workspace_root = repo_root.parent
+    dejager_root = repo_root / "Data" / "Transcriptomics" / "DeJager"
     return {
         "cellranger_dir": Path(
             os.environ.get(
                 "DEJAGER_CELLRANGER",
-                str(workspace_root / "DeJager_Data" / "Cellranger_Output"),
+                os.environ.get("DEJAGER_COUNTS", str(dejager_root / "Cellranger_Output")),
             )
         ),
         "cellbender_dir": Path(
             os.environ.get(
                 "DEJAGER_PREPROCESSED",
-                str(workspace_root / "DeJager_Data" / "Cellbender_Output"),
+                os.environ.get("DEJAGER_CELLBENDER", str(dejager_root / "Cellbender_Output")),
             )
         ),
         "output": script_dir / "Resources" / "derived_batches.csv",
         "synapse_csv": Path(
             os.environ.get(
                 "DEJAGER_SYNAPSE_FASTQ_CSV",
-                "/orcd/data/lhtsai/001/om2/mabdel03/files/ACE_Analysis"
-                "/Data/DeJager/FASTQs_Download"
-                "/FASTQ_Download_CSVs/Synapse_FASTQ_IDs.csv",
+                str(dejager_root / "FASTQs" / "FASTQ_Download_CSVs" / "Synapse_FASTQ_IDs.csv"),
             )
         ),
     }

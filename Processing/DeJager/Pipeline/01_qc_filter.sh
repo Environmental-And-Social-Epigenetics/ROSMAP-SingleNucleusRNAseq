@@ -24,6 +24,7 @@ source "${REPO_ROOT}/config/paths.sh"
 mkdir -p "${DEJAGER_PROCESSING_LOGS}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
+export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
 # Temporarily relax nounset for conda activation (some activate.d scripts
 # reference unset variables like ADDR2LINE).
@@ -40,8 +41,9 @@ INPUT_DIR="${DEJAGER_PREPROCESSED}"
 OUTPUT_DIR="${DEJAGER_QC_FILTERED}"
 
 mapfile -t SAMPLE_IDS < <(
-    python "${SCRIPT_DIR}/01_qc_filter.py" \
-        --input-dir "${INPUT_DIR}" \
+    python -m rosmap_tx.processing \
+        --dataset dejager \
+        --stage 1 \
         --list-samples
 )
 
@@ -59,9 +61,7 @@ fi
 SAMPLE_ID="${SAMPLE_IDS[${INDEX}]}"
 echo "Running Stage 1 QC for library ${SAMPLE_ID}"
 
-python "${SCRIPT_DIR}/01_qc_filter.py" \
-    --input-dir "${INPUT_DIR}" \
-    --output-dir "${OUTPUT_DIR}" \
-    --patient-map-csv "${DEJAGER_PATIENT_MAP}" \
-    --patient-id-overrides-json "${DEJAGER_PATIENT_ID_OVERRIDES}" \
+python -m rosmap_tx.processing \
+    --dataset dejager \
+    --stage 1 \
     --sample-ids "${SAMPLE_ID}"

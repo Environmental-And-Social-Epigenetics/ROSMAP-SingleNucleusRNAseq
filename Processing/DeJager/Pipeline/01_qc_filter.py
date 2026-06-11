@@ -21,18 +21,20 @@ sc.settings.verbosity = 0
 def default_paths() -> dict[str, Path]:
     script_path = Path(__file__).resolve()
     repo_root = script_path.parents[3]
-    workspace_root = repo_root.parent
+    dejager_root = repo_root / "Data" / "Transcriptomics" / "DeJager"
     return {
         "repo_root": repo_root,
-        "workspace_root": workspace_root,
         "input_dir": Path(os.environ.get(
             "DEJAGER_PREPROCESSED",
-            str(workspace_root / "DeJager_Data" / "Preprocessed_Counts"),
+            os.environ.get("DEJAGER_CELLBENDER", str(dejager_root / "Cellbender_Output")),
         )),
-        "output_dir": workspace_root / "DeJager_Data" / "Processing_Outputs" / "01_QC_Filtered",
+        "output_dir": Path(os.environ.get(
+            "DEJAGER_QC_FILTERED",
+            str(dejager_root / "Processing_Outputs" / "01_QC_Filtered"),
+        )),
         "patient_map_csv": Path(os.environ.get(
             "DEJAGER_PATIENT_MAP",
-            str(workspace_root / "DeJager_Data" / "cell_to_patient_assignmentsFinal0.csv"),
+            str(dejager_root / "Demuxlet" / "cell_to_patient_assignmentsFinal0.csv"),
         )),
         "patient_id_overrides_json": script_path.parent / "Resources" / "patient_id_overrides.json",
     }

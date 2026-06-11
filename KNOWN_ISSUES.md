@@ -79,7 +79,7 @@ Scripts are named "TsaiPipeline" (e.g., `firstStageTsaiPipeline.py`) even though
 
 All conda environment paths are now centralized in `config/paths.sh`.
 Processing pipeline shell wrappers source this config.  Environment specs for
-recreating envs from scratch are in `Processing/Tsai/Pipeline/envs/`.
+recreating envs from scratch are in `envs/processing/`.
 
 ---
 
@@ -276,8 +276,8 @@ The preprocessing steps (CellBender, Synapse download, bcftools, Globus) had no
 conda YAML specifications in the repo, making it impossible to recreate the
 environments from scratch.
 
-**Fix**: Created `Preprocessing/envs/` with YAML specs for all four preprocessing
-environments (cellbender.yml, synapse.yml, bcftools.yml, globus.yml).
+**Fix**: Created canonical env specs (now consolidated under `envs/preprocessing/`)
+for all four preprocessing environments (cellbender, synapse, bcftools, globus).
 
 ---
 
@@ -289,7 +289,8 @@ environments (cellbender.yml, synapse.yml, bcftools.yml, globus.yml).
 The Analysis directory had no conda YAML specifications for downstream analysis
 (DEG, SCENIC, COMPASS, GSEA).
 
-**Fix**: Created `Analysis/envs/` with YAML specs for all four analysis environments.
+**Fix**: Created canonical env specs (now consolidated under `envs/analysis/`)
+with YAML specs for all analysis environments.
 
 ---
 
@@ -388,9 +389,8 @@ Preflight checks revealed missing packages in existing legacy conda environments
 Openmind era that do not match the current pipeline specs.
 
 **Resolution**: The canonical environment specifications in
-`Processing/Tsai/Pipeline/envs/` (and the identical DeJager copies) already
-contain all required packages. The fix is to rebuild environments from the
-official specs rather than patching the legacy envs:
+`envs/processing/` already contain all required packages. The fix is to rebuild
+environments from the canonical specs rather than patching the legacy envs:
 
 ```bash
 source config/paths.sh
@@ -401,6 +401,33 @@ This creates fresh environments at `${CONDA_ENV_BASE}/` with the correct names
 and all required packages. After rebuilding, update `config/paths.local.sh` to
 point `SINGLECELL_ENV` and `BATCHCORR_ENV` at the new environments, then
 validate with `bash config/preflight.sh tsai-stage2 && bash config/preflight.sh tsai-stage3`.
+
+---
+
+### 28. Demuxlet Template Used Deprecated `singularity` and Non-Existent `popscle_pileup.py` — RESOLVED
+
+**Severity**: High
+**Status**: Resolved (2026-04-17)
+
+**Affected Files**:
+- `Preprocessing/DeJager/04_Demuxlet_Freemuxlet/Demuxlet_DeJager.py` (DEMUX_TEMPLATE, default `SINGULARITY_MODULE`)
+- `Preprocessing/DeJager/04_Demuxlet_Freemuxlet/example_demuxlet.sh`
+- `Preprocessing/DeJager/04_Demuxlet_Freemuxlet/README.md`
+
+**Symptom**: Surfaced while running demuxlet for the 3 CellBender-recovered libraries (200715-B35-A, 201002-B56-B, 201014-B59-A). All 3 demux jobs (12111537–12111539) failed within 3 seconds with:
+```
+FATAL: "popscle_pileup.py": executable file not found in $PATH
+```
+
+**Root Causes**:
+1. DEMUX_TEMPLATE invoked `singularity exec`, but singularity has been decommissioned on Engaging — only `apptainer/1.4.2` is available.
+2. The template called `popscle_pileup.py`, which does not exist in the `Demuxafy.sif` container. The container only ships the native `popscle` binary at `/opt/popscle/bin/popscle` with subcommands `dsc-pileup` and `demuxlet`.
+3. The second stage used `popscle demuxlet` without a full path; `popscle` is also not on the container's PATH.
+4. The Python default for `SINGULARITY_MODULE` was the decommissioned `openmind/singularity/3.10.4`. The local override in `config/paths.local.sh` was correct, but any caller not sourcing it got the broken default.
+
+**Fix**: Patched DEMUX_TEMPLATE and the example script to use `apptainer exec` and full binary paths (`/opt/popscle/bin/popscle dsc-pileup`, `/opt/popscle/bin/popscle demuxlet`). Updated the Python default for `SINGULARITY_MODULE` to `apptainer/1.4.2`. Updated README wording from Singularity-specific to apptainer-aware.
+
+**Verification**: Regenerating a demux script via `python Demuxlet_DeJager.py --demux-only --force` now produces commands equivalent to the hand-patched scripts used for the in-flight B35-A/B56-B/B59-A runs.
 
 ---
 
@@ -433,6 +460,7 @@ validate with `bash config/preflight.sh tsai-stage2 && bash config/preflight.sh 
 | 25. Conda env name mismatches | Resolved | 2026-03-18 |
 | 26. Analysis/SocIsl hardcoded paths | Resolved | 2026-04-08 |
 | 27. Conda envs missing packages | Resolved | 2026-04-08 |
+| 28. Demuxlet template used deprecated singularity/popscle_pileup.py | Resolved | 2026-04-17 |
 
 ---
 

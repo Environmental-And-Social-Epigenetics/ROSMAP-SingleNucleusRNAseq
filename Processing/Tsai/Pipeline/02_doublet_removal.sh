@@ -23,6 +23,7 @@ source "${REPO_ROOT}/config/paths.sh"
 mkdir -p "${TSAI_PROCESSING_LOGS}"
 
 export HDF5_USE_FILE_LOCKING=FALSE
+export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
 # Temporarily relax nounset for conda activation (some activate.d scripts
 # reference unset variables like ADDR2LINE).
@@ -40,9 +41,9 @@ OUTPUT_DIR="${TSAI_DOUBLET_REMOVED}"
 METADATA_CSV="${TSAI_METADATA_CSV}"
 
 mapfile -t SAMPLE_IDS < <(
-    Rscript "${SCRIPT_DIR}/02_doublet_removal.Rscript" \
-        --input-dir "${INPUT_DIR}" \
-        --metadata-csv "${METADATA_CSV}" \
+    python -m rosmap_tx.processing \
+        --dataset tsai \
+        --stage 2 \
         --list-samples
 )
 
@@ -60,9 +61,8 @@ fi
 SAMPLE_ID="${SAMPLE_IDS[${INDEX}]}"
 echo "Running Stage 2 doublet removal for sample ${SAMPLE_ID}"
 
-Rscript "${SCRIPT_DIR}/02_doublet_removal.Rscript" \
-    --input-dir "${INPUT_DIR}" \
-    --output-dir "${OUTPUT_DIR}" \
-    --metadata-csv "${METADATA_CSV}" \
+python -m rosmap_tx.processing \
+    --dataset tsai \
+    --stage 2 \
     --sample-ids "${SAMPLE_ID}" \
     --threads 4

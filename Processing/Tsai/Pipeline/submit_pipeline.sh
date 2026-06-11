@@ -98,7 +98,7 @@ submit_stage() {
                 --output="${LOG_DIR}/tsai_qc_aggregate_%j.out" \
                 --error="${LOG_DIR}/tsai_qc_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python ${SCRIPT_DIR}/01_qc_filter.py --output-dir ${TSAI_QC_FILTERED} --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python -m rosmap_tx.processing --dataset tsai --stage 1 --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
@@ -123,7 +123,7 @@ submit_stage() {
                 --output="${LOG_DIR}/tsai_doublets_aggregate_%j.out" \
                 --error="${LOG_DIR}/tsai_doublets_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && Rscript ${SCRIPT_DIR}/02_doublet_removal.Rscript --output-dir ${TSAI_DOUBLET_REMOVED} --input-dir ${TSAI_QC_FILTERED} --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && python -m rosmap_tx.processing --dataset tsai --stage 2 --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;

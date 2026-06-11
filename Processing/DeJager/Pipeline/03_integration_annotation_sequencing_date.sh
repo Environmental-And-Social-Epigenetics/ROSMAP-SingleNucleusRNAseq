@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J dej_integrate_derived
+#SBATCH -J dej_integrate_seqdate
 #SBATCH -t 48:00:00
 #SBATCH -n 32
 #SBATCH --mem=350G
@@ -34,4 +34,4 @@ export PATH="${CONDA_PREFIX}/bin:${PATH}"
 python -m rosmap_tx.processing \
     --dataset dejager \
     --stage 3 \
-    --variant derived_batch
+    --variant sequencing_date
