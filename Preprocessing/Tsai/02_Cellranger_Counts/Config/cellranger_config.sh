@@ -40,11 +40,13 @@ export TRACKING_DIR="${PIPELINE_DIR}/Tracking"
 # BATCH CONFIGURATION
 # =============================================================================
 
-# Number of patients per batch (conservative: 80 x 10GB = 800GB < 1TB)
-export BATCH_SIZE=80
+# Number of patients per batch. Must match the generate_batch_scripts.py
+# default (30); the 480 Tsai patients are split into 16 batches of 30, which
+# is the layout reflected by Batch_Scripts/batch_1..batch_16 and the READMEs.
+export BATCH_SIZE=30
 
-# Total number of batches (480 patients / 80 = 6 batches)
-export NUM_BATCHES=6
+# Total number of batches (480 patients / 30 = 16 batches)
+export NUM_BATCHES=16
 
 # =============================================================================
 # CELL RANGER PARAMETERS

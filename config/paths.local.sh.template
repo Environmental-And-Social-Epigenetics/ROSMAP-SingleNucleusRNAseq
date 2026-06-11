@@ -34,16 +34,19 @@ export CONDA_ENV_BASE="${HOME}/conda_envs"
 # Defaults to Data/.scratch if unset.
 # export SCRATCH_ROOT="/path/to/scratch/storage"
 
-# Analysis outputs — recommended to live outside the repo tree
-export ANALYSIS_OUTPUT_ROOT="/path/to/analysis/outputs"
+# Analysis outputs — recommended to live outside the repo tree.
+# Defaults to ${WORKSPACE_ROOT}/Analysis_Outputs (see config/paths.sh); uncomment
+# and edit only if you want a different location.
+# export ANALYSIS_OUTPUT_ROOT="/path/to/analysis/outputs"
 
 # Cell Ranger 8.0.0 installation directory
 # Download from: https://www.10xgenomics.com/support/software/cell-ranger
-export CELLRANGER_PATH="/path/to/cellranger-8.0.0"
+# The sentinel below is detected by `check_paths` so an unconfigured clone fails loudly.
+export CELLRANGER_PATH="__UNCONFIGURED__set_CELLRANGER_PATH_in_paths_local_sh"
 
 # Cell Ranger reference transcriptome (GRCh38-2020-A)
 # Download from: https://cf.10xgenomics.com/supp/cell-exp/refdata-gex-GRCh38-2020-A.tar.gz
-export CELLRANGER_REF="/path/to/refdata-gex-GRCh38-2020-A"
+export CELLRANGER_REF="__UNCONFIGURED__set_CELLRANGER_REF_in_paths_local_sh"
 
 # Email for SLURM job notifications (leave empty to disable)
 export SLURM_MAIL_USER="you@university.edu"

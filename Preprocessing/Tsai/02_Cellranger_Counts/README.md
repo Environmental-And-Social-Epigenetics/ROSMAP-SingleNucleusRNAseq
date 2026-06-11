@@ -50,8 +50,12 @@ Due to the 1TB scratch space limit, patients are processed in **16 batches of 30
 ```bash
 cd ${REPO_ROOT}/Preprocessing/Tsai/02_Cellranger_Counts
 
-# Activate Python environment
-source config/paths.sh
+# Source the Cell Ranger batch config (this also sources config/paths.sh and
+# sets BATCH_SIZE / NUM_BATCHES). The generator reads these from the environment.
+source Config/cellranger_config.sh
+
+# Activate a Python env that provides pandas. PYTHON_ENV defaults to the
+# synapse env (built by setup/install_envs.sh) unless overridden.
 init_conda
 conda activate "${PYTHON_ENV}"
 

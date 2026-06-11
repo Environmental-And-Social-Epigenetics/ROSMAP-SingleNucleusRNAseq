@@ -57,7 +57,11 @@ export CONDA_ENV_BASE="${CONDA_ENV_BASE:-${HOME}/conda_envs}"
 # Specific environments (all derive from CONDA_ENV_BASE by default)
 export CELLBENDER_ENV="${CELLBENDER_ENV:-${CONDA_ENV_BASE}/Cellbender_env}"
 export SYNAPSE_ENV="${SYNAPSE_ENV:-${CONDA_ENV_BASE}/synapse_env}"
-export PYTHON_ENV="${PYTHON_ENV:-${CONDA_ENV_BASE}/python_env}"
+# General-purpose Python (pandas + stdlib) for preprocessing helper scripts.
+# setup/install_envs.sh does not build a dedicated python_env, so this defaults
+# to the synapse env (which provides pandas). Override in paths.local.sh if you
+# maintain a separate general Python environment.
+export PYTHON_ENV="${PYTHON_ENV:-${SYNAPSE_ENV}}"
 export SINGLECELL_ENV="${SINGLECELL_ENV:-${CONDA_ENV_BASE}/single_cell_BP}"
 export BATCHCORR_ENV="${BATCHCORR_ENV:-${CONDA_ENV_BASE}/BatchCorrection_SingleCell}"
 export QC_ENV="${QC_ENV:-${CONDA_ENV_BASE}/qcEnv}"
@@ -335,8 +339,16 @@ init_conda() {
 # Activate a conda environment by full path
 activate_env() {
     local env_path="$1"
+    # Conda's activation scripts reference unbound variables, which crash under
+    # `set -u` (common in pipeline scripts). Temporarily disable nounset around
+    # activation, then restore the caller's setting. This protects every caller
+    # at once, so individual scripts no longer need their own set +u/set -u wrap.
+    local _had_u=0
+    case "$-" in *u*) _had_u=1 ;; esac
+    set +u
     init_conda
     conda activate "${env_path}"
+    if [[ "${_had_u}" -eq 1 ]]; then set -u; fi
 }
 
 # Verify paths exist and detect unconfigured sentinels
