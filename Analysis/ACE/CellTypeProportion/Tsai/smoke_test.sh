@@ -28,6 +28,7 @@ python "${SCRIPT_DIR}/prep_counts.py" \
 activate_env "${SCCOMP_ENV}"
 
 Rscript "${SCRIPT_DIR}/sccomp_analysis.R" \
+  --cohort tsai \
   --integration derived_batch \
   --sex all \
   --resolution fine \

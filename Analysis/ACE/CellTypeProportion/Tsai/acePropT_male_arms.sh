@@ -20,7 +20,7 @@ source "${REPO_ROOT}/Analysis/ACE/_shared/arm_covariates.sh"
 
 INTEGRATION="derived_batch"
 RESOLUTION="fine"
-OUTPUT_ROOT="${ACE_PROP_OUTPUT_ROOT:-${ANALYSIS_OUTPUT_ROOT}/ACE/CellTypeProportion/Tsai}"
+OUTPUT_ROOT="${ACE_PROP_OUTPUT_ROOT:-${ACE_OUTPUT_ROOT}/CellTypeProportion/Tsai}"
 LOG_DIR="${OUTPUT_ROOT}/logs"
 mkdir -p "${LOG_DIR}"
 

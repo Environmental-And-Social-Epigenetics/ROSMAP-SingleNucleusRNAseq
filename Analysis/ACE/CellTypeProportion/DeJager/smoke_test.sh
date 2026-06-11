@@ -28,6 +28,7 @@ python "${SCRIPT_DIR}/prep_counts.py" \
 activate_env "${SCCOMP_ENV}"
 
 Rscript "${SCRIPT_DIR}/sccomp_analysis.R" \
+  --cohort dejager \
   --integration library_id \
   --sex all \
   --resolution fine \

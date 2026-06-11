@@ -23,14 +23,17 @@ SEX="${2:?ERROR: sex argument required (all, male, or female)}"
 RESOLUTION="${3:?ERROR: resolution argument required (fine or broad)}"
 shift 3 || true
 
-OUTPUT_ROOT="${ACE_PROP_OUTPUT_ROOT:-${ANALYSIS_OUTPUT_ROOT}/ACE/CellTypeProportion/Tsai}"
+OUTPUT_ROOT="${ACE_PROP_OUTPUT_ROOT:-${ACE_OUTPUT_ROOT}/CellTypeProportion/Tsai}"
 
 set +u
 activate_env "${SCCOMP_ENV}"
 set -u
 export HDF5_USE_FILE_LOCKING=FALSE
 
+# Shared, cohort-aware sccomp script lives in this (Tsai) directory and is the
+# single source of truth; --cohort tsai selects the Tsai default integration.
 "${SCCOMP_ENV}/bin/Rscript" "${SCRIPT_DIR}/sccomp_analysis.R" \
+    --cohort tsai \
     --integration "${INTEGRATION}" \
     --sex "${SEX}" \
     --resolution "${RESOLUTION}" \

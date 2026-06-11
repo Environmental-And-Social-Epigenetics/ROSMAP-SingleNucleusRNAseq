@@ -17,12 +17,15 @@ SEX="${2:?ERROR: sex argument required (all, male, or female)}"
 RESOLUTION="${3:?ERROR: resolution argument required (fine or broad)}"
 shift 3 || true
 
-OUTPUT_ROOT="${ACE_PROP_OUTPUT_ROOT:-${ANALYSIS_OUTPUT_ROOT}/ACE/CellTypeProportion/DeJager}"
+OUTPUT_ROOT="${ACE_PROP_OUTPUT_ROOT:-${ACE_OUTPUT_ROOT}/CellTypeProportion/DeJager}"
 
 activate_env "${SCCOMP_ENV}"
 export HDF5_USE_FILE_LOCKING=FALSE
 
+# sccomp_analysis.R here is a thin wrapper that source()s the canonical Tsai
+# single source of truth; --cohort dejager selects the DeJager default integration.
 Rscript "${SCRIPT_DIR}/sccomp_analysis.R" \
+    --cohort dejager \
     --integration "${INTEGRATION}" \
     --sex "${SEX}" \
     --resolution "${RESOLUTION}" \

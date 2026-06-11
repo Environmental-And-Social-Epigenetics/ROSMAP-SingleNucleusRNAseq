@@ -1,3 +1,23 @@
+# Canonical, cohort-aware ACE cell-type proportion (sccomp) analysis.
+#
+# Single source of truth for BOTH cohorts. The DeJager sccomp_analysis.R is a
+# thin wrapper that source()s this file (mirroring the DEG parity pattern where
+# aceDegDJ.Rscript source()s aceDegT.Rscript). Cohort-specific bits stay
+# parameterized:
+#   * --cohort {tsai,dejager} (or ACE_PROP_COHORT) selects the default
+#     integration label (tsai -> derived_batch, dejager -> library_id);
+#   * --output-root (or ACE_PROP_OUTPUT_ROOT) selects the cohort output tree.
+# The cell-grouping id column is already normalized to `sample`/`projid` by each
+# cohort's prep_counts.py (Tsai keys on projid/sample_id, DeJager on patient_id,
+# both written out as the metadata `projid` column and the counts `sample`
+# column), so the statistical core below reads identical columns for both.
+#
+# Statistical core (identical across cohorts): the modern, maintained sccomp
+# pipeline
+#   sccomp_estimate() |> sccomp_remove_outliers() |> sccomp_test()
+# plus sccomp_proportional_fold_change(). The deprecated monolithic sccomp_glm()
+# is NOT used.
+
 library(sccomp)
 library(dplyr)
 library(readr)
@@ -12,7 +32,8 @@ ace_components <- c(
 )
 
 args <- commandArgs(trailingOnly = TRUE)
-integration <- "derived_batch"
+cohort <- tolower(Sys.getenv("ACE_PROP_COHORT", unset = "tsai"))
+integration <- NULL
 sex_stratum <- "all"
 resolution <- "fine"
 output_root <- Sys.getenv("ACE_PROP_OUTPUT_ROOT", unset = "")
@@ -22,7 +43,10 @@ arm <- NULL   # male AD-model arm (e.g. MaleContAD): males-only, single primary
 
 i <- 1
 while (i <= length(args)) {
-  if (args[i] == "--integration" && i < length(args)) {
+  if (args[i] == "--cohort" && i < length(args)) {
+    cohort <- tolower(args[i + 1])
+    i <- i + 2
+  } else if (args[i] == "--integration" && i < length(args)) {
     integration <- args[i + 1]
     i <- i + 2
   } else if (args[i] == "--sex" && i < length(args)) {
@@ -45,6 +69,16 @@ while (i <= length(args)) {
   }
 }
 
+# Cohort-specific default integration label (overridable via --integration).
+if (is.null(integration)) {
+  integration <- switch(
+    cohort,
+    tsai = "derived_batch",
+    dejager = "library_id",
+    stop("Unknown --cohort '", cohort, "'. Known: tsai, dejager.")
+  )
+}
+
 # A male AD-model arm implies males-only and pulls its covariate set from the
 # shared single-source-of-truth spec.
 arm_spec_obj <- NULL
@@ -65,6 +99,7 @@ if (output_root == "") {
 }
 
 cat("=== sccomp Cell Type Proportion Analysis ===\n")
+cat("Cohort:     ", cohort, "\n")
 cat("Integration:", integration, "\n")
 cat("Sex stratum:", sex_stratum, "\n")
 cat("Resolution: ", resolution, "\n")
@@ -130,6 +165,7 @@ if (smoke_mode) {
   smoke_dir <- file.path(results_base, "smoke")
   dir.create(smoke_dir, recursive = TRUE, showWarnings = FALSE)
   smoke_summary <- tibble(
+    cohort = cohort,
     integration = integration,
     sex = sex_stratum,
     resolution = resolution,
@@ -257,18 +293,22 @@ run_sccomp_model <- function(dat, phenotype, covars, diff_var, out_dir, label) {
 
   result <- tryCatch({
     fit <- dat_sub |>
-      sccomp_glm(
+      sccomp_estimate(
         formula_composition = formula_comp,
         formula_variability = formula_var,
         .sample = sample,
         .cell_group = cell_group,
         .count = count,
         bimodal_mean_variability_association = TRUE,
-        check_outliers = TRUE,
         cores = parallel::detectCores(),
         mcmc_seed = 42,
         verbose = FALSE
-      )
+      ) |>
+      sccomp_remove_outliers(
+        cores = parallel::detectCores(),
+        verbose = FALSE
+      ) |>
+      sccomp_test()
 
     cat("  Model fitted successfully\n")
     fit
@@ -296,6 +336,22 @@ run_sccomp_model <- function(dat, phenotype, covars, diff_var, out_dir, label) {
   if (!is.null(res_tbl) && nrow(res_tbl) > 0) {
     write_csv(res_tbl, file.path(out_dir, paste0(file_prefix, "_results.csv")))
     cat("  Results saved:", nrow(res_tbl), "cell types\n")
+  }
+
+  fc_tbl <- tryCatch({
+    result |>
+      sccomp_proportional_fold_change(
+        formula_composition = formula_comp,
+        from = -1,
+        to = 1
+      )
+  }, error = function(e) {
+    cat("  Warning: could not compute fold change:", conditionMessage(e), "\n")
+    NULL
+  })
+
+  if (!is.null(fc_tbl)) {
+    write_csv(fc_tbl, file.path(out_dir, paste0(file_prefix, "_fc.csv")))
   }
 
   outliers <- tryCatch({

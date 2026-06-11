@@ -12,8 +12,16 @@ the covariate set of a specified male AD-model arm:
 
 Males-only (the cached AUCell already comes from a Male_<CT> SCENIC run).
 
+Cohort-agnostic: the cached AUCell matrix is indexed by "<projid>_pool<N>" for
+BOTH the Tsai and DeJager cohorts (scenic_analysis.py micropools by `patient_id`
+which equals the ROSMAP projid in both cohorts), so the phenotype merge on
+`projid` is identical regardless of cohort. A ``--cohort {tsai,dejager}`` flag
+is accepted for symmetry with scenic_analysis.py and for log provenance; it does
+not change the association method.
+
 Usage:
     python scenic_associate.py \
+        --cohort tsai \
         --auc-matrix .../Male_Mic/auc_matrix.csv \
         --pheno-csv  $ACE_SCORES_CSV \
         --arm MaleContAD --phenotype tot_adverse_exp \
@@ -43,6 +51,10 @@ MIN_OBS = 5
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Per-arm SCENIC regulon association over cached AUCell.")
+    p.add_argument("--cohort", default="tsai", choices=["tsai", "dejager"],
+                   help="Cohort label for provenance/logging (default: tsai). The "
+                        "cached AUCell is projid-keyed for both cohorts, so this does "
+                        "not change the association method.")
     p.add_argument("--auc-matrix", required=True, type=Path,
                    help="Cached AUCell matrix CSV (micropool x regulon, index <projid>_pool<N>).")
     p.add_argument("--pheno-csv", required=True, type=Path)
@@ -96,7 +108,7 @@ def main() -> None:
         meta[col] = (v - v.mean()) / sd if sd and sd > 0 else 0.0
 
     formula = armcov.ols_formula(args.arm, phenotype, response="AUCell")
-    print(f"=== SCENIC associate: {args.cell_type} / arm={args.arm} ===")
+    print(f"=== SCENIC associate: {args.cell_type} / arm={args.arm} / cohort={args.cohort} ===")
     print(f"  AUCell: {auc.shape[0]} micropools x {auc.shape[1]} regulons")
     print(f"  Formula: {formula}")
 

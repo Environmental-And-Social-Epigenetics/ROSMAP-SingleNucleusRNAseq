@@ -9,9 +9,20 @@ association with ACE phenotypes via OLS regression.
 This script processes ONE cell type x ONE sex combination per invocation
 to enable SLURM parallelization across cell types.
 
+It is COHORT-AWARE: the same code runs for both the Tsai and DeJager cohorts.
+The only cohort difference is the cell -> patient key in the input h5ad obs.
+Tsai h5ads carry ``projid`` (the ROSMAP donor id); DeJager celltype-split
+h5ads carry both ``patient_id`` and ``projid`` (the DEG prep step sets
+``obs['projid'] = patient_id``, already a ROSMAP projid). Either way the
+phenotype merge happens on ``projid`` against the pooled
+TSAI_DEJAGER_all_patients_wACEscores.csv, so the METHOD (micropool pool_size,
+CPM, GRNBoost2, cisTarget, AUCell, OLS) is IDENTICAL across cohorts. Pass
+``--cohort {tsai,dejager}`` to make the intended key explicit; ``--pool-size``
+is a single arg (default 50) shared by BOTH cohorts.
+
 Usage:
     python scenic_analysis.py \
-        --cell-type Mic --sex Male \
+        --cohort tsai --cell-type Mic --sex Male \
         --input-h5ad /path/to/Mic.h5ad \
         --pheno-csv /path/to/ace_scores.csv \
         --output-dir /path/to/output/Male_Mic \
@@ -65,6 +76,21 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 SEX_MAP = {"Male": 1, "Female": 0}
+
+# Cohort -> ordered list of obs columns to try as the cell->patient key.
+# Both cohorts ultimately key cells by `projid` for the phenotype merge:
+#   - Tsai  h5ads carry `projid` (and sometimes `sample_id`).
+#   - DeJager celltype-split h5ads carry `patient_id` AND `projid`, where the
+#     DEG prep step set obs['projid'] = patient_id (already a ROSMAP projid).
+# The candidates differ only in which native column is guaranteed present; the
+# resolved value is normalized to obs['patient_id'] and merged on `projid`, so
+# the downstream method is identical. An unknown cohort falls back to trying
+# all candidates (preserves the original robust behaviour).
+COHORT_PATIENT_COL_CANDIDATES = {
+    "tsai": ("projid", "patient_id", "sample_id"),
+    "dejager": ("patient_id", "projid", "sample_id"),
+}
+DEFAULT_PATIENT_COL_CANDIDATES = ("patient_id", "projid", "sample_id")
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +268,10 @@ def parse_args():
     p = argparse.ArgumentParser(
         description="ACE SCENIC analysis for one cell-type x sex combination"
     )
+    p.add_argument("--cohort", default="tsai", choices=["tsai", "dejager"],
+                   help="Cohort whose h5ad obs key convention to expect "
+                        "(default: tsai). Only affects which obs column is used "
+                        "as the cell->patient key; the analysis method is identical.")
     p.add_argument("--cell-type", required=True, help="Cell type label (e.g. Mic)")
     p.add_argument("--sex", required=True, choices=["Male", "Female"],
                    help="Sex to analyse")
@@ -274,11 +304,12 @@ def main():
     cell_type = args.cell_type
     sex = args.sex
     phenotype = args.phenotype
+    cohort = args.cohort
     msex_val = SEX_MAP[sex]
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    log.info("=== ACE SCENIC: %s / %s ===", cell_type, sex)
+    log.info("=== ACE SCENIC: %s / %s (cohort=%s) ===", cell_type, sex, cohort)
     log.info("Phenotype: %s", phenotype)
     log.info("Input h5ad: %s", args.input_h5ad)
     log.info("Output dir: %s", args.output_dir)
@@ -290,19 +321,29 @@ def main():
     log.info("Loading h5ad: %s", args.input_h5ad)
     adata = ad.read_h5ad(args.input_h5ad)
 
-    # Tsai h5ads carry `projid` (and `sample_id`); DeJager carries `patient_id`.
-    # Normalize to `patient_id` so the rest of this script stays cohort-agnostic.
-    if "patient_id" not in adata.obs.columns:
-        for candidate in ("projid", "sample_id"):
-            if candidate in adata.obs.columns:
-                adata.obs["patient_id"] = adata.obs[candidate].astype(str)
-                log.info("Mapped obs['%s'] -> obs['patient_id']", candidate)
-                break
-        else:
-            raise KeyError(
-                "h5ad obs has none of patient_id/projid/sample_id; "
-                f"found columns: {list(adata.obs.columns)}"
-            )
+    # Resolve the cell->patient key in a cohort-aware way, then normalize to
+    # `patient_id` so the rest of this script stays cohort-agnostic. Both
+    # cohorts end up keyed by a ROSMAP projid:
+    #   - Tsai  h5ads carry `projid` (and sometimes `sample_id`).
+    #   - DeJager celltype-split h5ads carry `patient_id` AND `projid`, both
+    #     equal to the ROSMAP projid (set by the DEG prep step).
+    # The per-cohort candidate ordering only changes which column is *preferred*
+    # when several are present; the resolved values (and thus the method) are
+    # identical because the columns agree for DeJager.
+    candidates = COHORT_PATIENT_COL_CANDIDATES.get(
+        cohort, DEFAULT_PATIENT_COL_CANDIDATES
+    )
+    for candidate in candidates:
+        if candidate in adata.obs.columns:
+            adata.obs["patient_id"] = adata.obs[candidate].astype(str)
+            log.info("Cohort %s: using obs['%s'] -> obs['patient_id']",
+                     cohort, candidate)
+            break
+    else:
+        raise KeyError(
+            f"h5ad obs has none of {candidates} for cohort '{cohort}'; "
+            f"found columns: {list(adata.obs.columns)}"
+        )
     adata.obs["patient_id"] = adata.obs["patient_id"].astype(str)
 
     log.info("Loading phenotype CSV: %s", args.pheno_csv)
@@ -521,7 +562,7 @@ def main():
     # ------------------------------------------------------------------
     n_sig = (results_df["padj"] < 0.05).sum() if "padj" in results_df.columns else 0
     log.info("Significant regulons (padj < 0.05): %d / %d", n_sig, len(results_df))
-    log.info("=== Done: %s / %s ===", cell_type, sex)
+    log.info("=== Done: %s / %s (cohort=%s) ===", cell_type, sex, cohort)
 
 
 if __name__ == "__main__":
