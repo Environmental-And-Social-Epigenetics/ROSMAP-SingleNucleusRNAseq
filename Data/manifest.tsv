@@ -1,0 +1,14 @@
+dataset	root	pattern	approx_count	required	provenance	notes
+Tsai	Data/Transcriptomics/Tsai/FASTQs	*.fastq.gz	480	optional	Tsai lab / Globus	Raw FASTQs; too large for git.
+Tsai	Data/Transcriptomics/Tsai/Cellranger_Output	outs/filtered_feature_bc_matrix.h5	480	optional	Cell Ranger 8.0.0	Per-projid Cell Ranger outputs.
+Tsai	Data/Transcriptomics/Tsai/Cellbender_Output	processed_feature_bc_matrix_filtered.h5	478	required_for_processing	Tsai preprocessing	Stage 1 input.
+Tsai	Data/Transcriptomics/Tsai/Processing_Outputs/01_QC_Filtered	*_qc.h5ad	478	generated	Processing Stage 1	Not tracked.
+Tsai	Data/Transcriptomics/Tsai/Processing_Outputs/02_Doublet_Removed	*_singlets.h5ad	478	generated	Processing Stage 2	Not tracked.
+Tsai	Data/Transcriptomics/Tsai/Processing_Outputs/03_Integrated/{variant_id}	tsai_annotated.h5ad	1	generated	Processing Stage 3	Variant IDs are defined in config/variants.yaml.
+DeJager	Data/Transcriptomics/DeJager/FASTQs	*.fastq.gz	127	optional	Synapse syn21438684	Raw FASTQs; too large for git.
+DeJager	Data/Transcriptomics/DeJager/Cellranger_Output	outs/filtered_feature_bc_matrix.h5	47	optional	Cell Ranger	Per-library outputs currently observed from available runs.
+DeJager	Data/Transcriptomics/DeJager/Cellbender_Output	processed_feature_bc_matrix_filtered.h5	131	required_for_processing	DeJager preprocessing	Stage 1 input.
+DeJager	Data/Transcriptomics/DeJager/Processing_Outputs/01_QC_Filtered	*_qc.h5ad	131	generated	Processing Stage 1	Not tracked.
+DeJager	Data/Transcriptomics/DeJager/Processing_Outputs/02_Doublet_Removed	*_singlets.h5ad	131	generated	Processing Stage 2	Not tracked.
+DeJager	Data/Transcriptomics/DeJager/Processing_Outputs/03_Integrated/{variant_id}	dejager_annotated.h5ad	1	generated	Processing Stage 3	Variant IDs are defined in config/variants.yaml.
+
