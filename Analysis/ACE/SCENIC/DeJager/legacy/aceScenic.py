@@ -1,3 +1,12 @@
+# DEPRECATED: superseded by the modular scenic_analysis.py pipeline; retained
+# for reference only.
+#
+# This monolithic script had an INTERNALLY INCONSISTENT micropool pool_size
+# (30 for males at line ~117, 39 for females at line ~240). The supported entry
+# point is Analysis/ACE/SCENIC/DeJager/aceScenicDJ.sh -> run_scenic.sh, which
+# delegates to the shared Analysis/ACE/SCENIC/Tsai/scenic_analysis.py with
+# --cohort dejager and a SINGLE pool_size (default 50, identical to Tsai).
+# Do not run this monolithic script.
 import anndata as ad
 import pandas as pd
 file_path_target = 'totalAdataAnno3D.h5ad'

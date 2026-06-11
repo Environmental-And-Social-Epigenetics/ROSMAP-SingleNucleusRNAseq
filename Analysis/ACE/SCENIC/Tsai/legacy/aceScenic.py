@@ -1,3 +1,9 @@
+# DEPRECATED: superseded by the modular scenic_analysis.py pipeline; retained
+# for reference only.
+#
+# The supported entry point is Analysis/ACE/SCENIC/Tsai/aceScenicT.sh ->
+# run_scenic.sh -> scenic_analysis.py (cohort-aware, single pool_size=50).
+# Do not run this monolithic script.
 import anndata as ad
 import pandas as pd
 # variables = ['In_PV (Basket)', 'In_PV (Chandelier)']

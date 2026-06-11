@@ -51,12 +51,21 @@ This submits one SLURM job per cell-type x sex combination via `run_scenic.sh`.
 | File | Description |
 |---|---|
 | `aceScenicT.sh` | Main launcher -- submits SLURM jobs |
-| `run_scenic.sh` | SLURM batch script for one cell-type x sex |
-| `scenic_analysis.py` | Core pySCENIC pipeline (GRNBoost2 + cisTarget + AUCell + OLS) |
-| `scenic_visualize.py` | Post-hoc visualization (volcano, heatmap, bar plots) |
+| `run_scenic.sh` | SLURM batch script for one cell-type x sex. **Shared by both cohorts**: takes an optional 5th `COHORT` arg (`tsai`\|`dejager`, default `tsai`) that selects the cohort-specific DEG input dir and SCENIC output dir. |
+| `scenic_analysis.py` | Core pySCENIC pipeline (GRNBoost2 + cisTarget + AUCell + OLS). Cohort-aware via `--cohort {tsai,dejager}`; `--pool-size` (default 50) is a single arg shared by both cohorts. |
+| `scenic_associate.py` | Per-arm OLS over cached AUCell (cohort-agnostic; `--cohort` for provenance). |
+| `scenic_visualize.py` | Post-hoc visualization (volcano, heatmap, bar plots); cohort-agnostic, runs on either cohort's results dir. |
 | `smoke_test.sh` | Quick validation with synthetic data |
-| `aceScenic.py` | Legacy script (buggy, kept for reference) |
-| `aceScenic.sh` | Legacy SLURM wrapper (kept for reference) |
+| `legacy/aceScenic.py` | Archived monolithic script (DEPRECATED; kept for reference) |
+| `legacy/aceScenic.sh` | Archived SLURM wrapper (DEPRECATED; kept for reference) |
+
+### Cohort parity
+
+The DeJager cohort runs **this same pipeline**. `Analysis/ACE/SCENIC/DeJager/`
+contains only thin launchers (`aceScenicDJ.sh`, `run_scenic.sh`) that delegate
+to the files here with `--cohort dejager`. There is no separate DeJager analysis
+code, and the micropool `pool_size` (default 50) is **identical** for both
+cohorts and both sexes — see `../README.md` "Unified pipeline".
 
 ## Output Structure
 
