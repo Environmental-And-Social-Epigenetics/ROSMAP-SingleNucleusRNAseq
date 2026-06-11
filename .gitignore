@@ -101,6 +101,8 @@ Analysis/ACE/**/reports/
 Analysis/ACE/**/report/
 Analysis/ACE/**/Report/
 Analysis/ACE/**/*_report.md
+# Per-run metadata written next to generated outputs (not source)
+**/run_metadata.json
 
 # Generated preprocessing logs / batch outputs
 Preprocessing/Tsai/01_FASTQ_Location/03_Globus_Transfer/Logs/**

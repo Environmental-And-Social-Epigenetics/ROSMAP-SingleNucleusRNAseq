@@ -87,7 +87,11 @@ if (!is.null(arm)) {
     grep("^--file=", commandArgs(FALSE), value = TRUE)[1])), error = function(e) ".")
   shared_R <- file.path(this_dir, "..", "..", "_shared", "arm_covariates.R")
   if (!file.exists(shared_R)) {
-    shared_R <- "/orcd/data/lhtsai/001/mabdel03/ROSMAP_Code/Transcriptomics/Analysis/ACE/_shared/arm_covariates.R"
+    # Portable fallback: resolve from REPO_ROOT (exported by config/paths.sh).
+    repo_root <- Sys.getenv("REPO_ROOT", "")
+    if (nzchar(repo_root)) {
+      shared_R <- file.path(repo_root, "Analysis", "ACE", "_shared", "arm_covariates.R")
+    }
   }
   source(shared_R)
   arm_spec_obj <- arm_spec(arm)

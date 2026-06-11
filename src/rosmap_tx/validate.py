@@ -43,6 +43,7 @@ FORBIDDEN_TRACKED_PATTERNS = [
     "Analysis/ACE/**/tables/*",
     "Analysis/ACE/**/reports/*",
     "Analysis/ACE/**/*_report.md",
+    "*/run_metadata.json",
 ]
 
 TRACKED_ALLOWLIST = {

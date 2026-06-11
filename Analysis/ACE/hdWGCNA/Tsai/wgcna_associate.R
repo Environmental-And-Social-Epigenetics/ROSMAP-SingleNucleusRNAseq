@@ -50,8 +50,11 @@ this_dir <- dirname(sub("--file=", "", grep("--file=", commandArgs(FALSE), value
 if (is.na(this_dir) || !nzchar(this_dir)) this_dir <- "."
 shared_R <- file.path(this_dir, "..", "..", "_shared", "arm_covariates.R")
 if (!file.exists(shared_R)) {
-  # fall back to repo-relative path
-  shared_R <- "/orcd/data/lhtsai/001/mabdel03/ROSMAP_Code/Transcriptomics/Analysis/ACE/_shared/arm_covariates.R"
+  # Portable fallback: resolve from REPO_ROOT (exported by config/paths.sh).
+  repo_root <- Sys.getenv("REPO_ROOT", "")
+  if (nzchar(repo_root)) {
+    shared_R <- file.path(repo_root, "Analysis", "ACE", "_shared", "arm_covariates.R")
+  }
 }
 source(shared_R)
 spec <- arm_spec(arm)
