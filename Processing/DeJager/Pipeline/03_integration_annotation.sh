@@ -46,4 +46,4 @@ export PATH="${CONDA_PREFIX}/bin:${PATH}"
 python -m rosmap_tx.processing \
     --dataset dejager \
     --stage 3 \
-    --variant library_id
+    --variant "${PIPELINE_VARIANT:-primary}"

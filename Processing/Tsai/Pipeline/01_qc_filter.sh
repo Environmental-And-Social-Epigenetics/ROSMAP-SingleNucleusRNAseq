@@ -65,4 +65,5 @@ echo "Running Stage 1 QC for sample ${SAMPLE_ID}"
 python -m rosmap_tx.processing \
     --dataset tsai \
     --stage 1 \
+    --variant "${PIPELINE_VARIANT:-primary}" \
     --sample-ids "${SAMPLE_ID}"

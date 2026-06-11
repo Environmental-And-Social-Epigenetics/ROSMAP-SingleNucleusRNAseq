@@ -40,4 +40,4 @@ fi
 python -m rosmap_tx.processing \
     --dataset tsai \
     --stage 3 \
-    --variant derived_batch
+    --variant "${PIPELINE_VARIANT:-primary}"

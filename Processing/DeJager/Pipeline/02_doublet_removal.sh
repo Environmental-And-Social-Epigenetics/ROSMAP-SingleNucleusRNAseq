@@ -68,5 +68,6 @@ echo "Running Stage 2 doublet removal for library ${SAMPLE_ID}"
 python -m rosmap_tx.processing \
     --dataset dejager \
     --stage 2 \
+    --variant "${PIPELINE_VARIANT:-primary}" \
     --sample-ids "${SAMPLE_ID}" \
     --threads 4

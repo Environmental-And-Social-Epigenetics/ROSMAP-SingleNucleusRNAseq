@@ -39,17 +39,26 @@ if [[ -n "${SLURM_MAIL_USER:-}" ]]; then
     EXTRA_SBATCH_FLAGS+=(--mail-user="${SLURM_MAIL_USER}")
 fi
 
-# Parse --no-preflight flag
+# Parse --no-preflight and --variant flags
 NO_PREFLIGHT=false
+VARIANT="primary"
 ARGS=()
+_want_variant=false
 for arg in "$@"; do
-    if [[ "${arg}" == "--no-preflight" ]]; then
-        NO_PREFLIGHT=true
-    else
-        ARGS+=("${arg}")
+    if [[ "${_want_variant}" == true ]]; then
+        VARIANT="${arg}"; _want_variant=false; continue
     fi
+    case "${arg}" in
+        --no-preflight) NO_PREFLIGHT=true ;;
+        --variant) _want_variant=true ;;
+        --variant=*) VARIANT="${arg#*=}" ;;
+        *) ARGS+=("${arg}") ;;
+    esac
 done
 set -- "${ARGS[@]}"
+
+# Propagate the chosen variant to the per-stage scripts and aggregate wraps.
+export PIPELINE_VARIANT="${VARIANT}"
 
 # Track the last submitted job ID for dependency chaining
 LAST_JOB_ID=""
@@ -98,7 +107,7 @@ submit_stage() {
                 --output="${LOG_DIR}/tsai_qc_aggregate_%j.out" \
                 --error="${LOG_DIR}/tsai_qc_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python -m rosmap_tx.processing --dataset tsai --stage 1 --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python -m rosmap_tx.processing --dataset tsai --stage 1 --variant ${VARIANT} --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
@@ -123,7 +132,7 @@ submit_stage() {
                 --output="${LOG_DIR}/tsai_doublets_aggregate_%j.out" \
                 --error="${LOG_DIR}/tsai_doublets_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && python -m rosmap_tx.processing --dataset tsai --stage 2 --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && python -m rosmap_tx.processing --dataset tsai --stage 2 --variant ${VARIANT} --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
@@ -149,6 +158,7 @@ if [[ $# -eq 0 ]]; then
     echo "Usage: $0 [--no-preflight] <stage> [stage ...]"
     echo "  Stages: 1 (QC), 2 (doublets), 3 (integration), all"
     echo "  --no-preflight   Skip preflight checks before submission"
+    echo "  --variant <id>   Pipeline variant to run (default: primary; see config/variants.yaml)"
     exit 1
 fi
 

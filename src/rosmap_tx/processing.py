@@ -11,7 +11,10 @@ from .config import (
     load_yaml,
     paths_env,
     repo_root,
+    resolve_pipeline_variant,
     resolve_variant,
+    stage_leaf,
+    stage_output_dir,
     variant_output_dir,
 )
 from .manifest import command_string, write_run_manifest
@@ -34,13 +37,18 @@ def _script(dataset: str, name: str) -> Path:
 def build_command(args: argparse.Namespace, passthrough: list[str], env: dict[str, str]) -> tuple[list[str], dict[str, Any], dict[str, str], dict[str, str], Path, str]:
     dataset = args.dataset.lower()
     stage = str(args.stage)
-    variant_id = "canonical"
     parameters: dict[str, Any] = {}
 
+    # Resolve the variant once for every stage so the run manifest records the
+    # real variant and stages 1/2 can namespace their outputs correctly.
+    variant_id, record = resolve_variant(dataset, args.variant)
+
     if stage == "1":
-        qc = _stage_params("1").get("qc_filter", {})
+        _, _, stage_params = resolve_pipeline_variant(dataset, args.variant, "1")
+        qc = stage_params.get("qc_filter", {})
         input_dir = Path(env["TSAI_PREPROCESSED" if dataset == "tsai" else "DEJAGER_PREPROCESSED"])
-        output_dir = Path(env["TSAI_QC_FILTERED" if dataset == "tsai" else "DEJAGER_QC_FILTERED"])
+        out_leaf = stage_leaf(record, "1", variant_id)
+        output_dir = stage_output_dir(dataset, "1", out_leaf, env)
         command = [sys.executable, str(_script(dataset, "01_qc_filter.py")), "--input-dir", str(input_dir)]
         if args.list_samples:
             command.append("--list-samples")
@@ -62,9 +70,13 @@ def build_command(args: argparse.Namespace, passthrough: list[str], env: dict[st
             _add_if_present(command, flag, qc.get(key))
         parameters = qc.copy()
     elif stage == "2":
-        dbl = _stage_params("2").get("doublet_removal", {})
-        input_dir = Path(env["TSAI_QC_FILTERED" if dataset == "tsai" else "DEJAGER_QC_FILTERED"])
-        output_dir = Path(env["TSAI_DOUBLET_REMOVED" if dataset == "tsai" else "DEJAGER_DOUBLET_REMOVED"])
+        _, _, stage_params = resolve_pipeline_variant(dataset, args.variant, "2")
+        dbl = stage_params.get("doublet_removal", {})
+        # Read whatever Stage 1 wrote for this variant (its own leaf or shared).
+        in_leaf = stage_leaf(record, "1", variant_id)
+        out_leaf = stage_leaf(record, "2", variant_id)
+        input_dir = stage_output_dir(dataset, "1", in_leaf, env)
+        output_dir = stage_output_dir(dataset, "2", out_leaf, env)
         command = ["Rscript", str(_script(dataset, "02_doublet_removal.Rscript")), "--input-dir", str(input_dir)]
         if args.list_samples:
             command.append("--list-samples")
@@ -72,12 +84,15 @@ def build_command(args: argparse.Namespace, passthrough: list[str], env: dict[st
             command.extend(["--output-dir", str(output_dir)])
         if dataset == "tsai":
             command.extend(["--metadata-csv", env["TSAI_METADATA_CSV"]])
+        _add_if_present(command, "--method", dbl.get("method"))
         _add_if_present(command, "--threads", args.threads or dbl.get("threads"))
         parameters = dbl.copy()
     elif stage == "3":
-        integration = _stage_params("3").get("integration", {})
-        variant_id, record = resolve_variant(dataset, args.variant)
-        input_dir = Path(env["TSAI_DOUBLET_REMOVED" if dataset == "tsai" else "DEJAGER_DOUBLET_REMOVED"])
+        _, _, stage_params = resolve_pipeline_variant(dataset, args.variant, "3")
+        integration = stage_params.get("integration", {})
+        # Read whatever Stage 2 wrote for this variant (its own leaf or shared).
+        in_leaf = stage_leaf(record, "2", variant_id)
+        input_dir = stage_output_dir(dataset, "2", in_leaf, env)
         output_dir = variant_output_dir(dataset, variant_id, record, env)
         command = [
             sys.executable,
@@ -100,11 +115,14 @@ def build_command(args: argparse.Namespace, passthrough: list[str], env: dict[st
             ])
         else:
             command.extend(["--derived-batches-csv", env["DEJAGER_DERIVED_BATCHES_CSV"]])
+        # Harmony key: an overrides.stage3.integration.harmony_batch_key wins,
+        # else the variant record's harmony_batch_key.
+        harmony_key = integration.get("harmony_batch_key", record.get("harmony_batch_key"))
         if record.get("skip_harmony") or args.skip_harmony:
             command.append("--skip-harmony")
         else:
-            command.extend(["--harmony-batch-key", str(record["harmony_batch_key"])])
-        parameters = {**integration, **record}
+            command.extend(["--harmony-batch-key", str(harmony_key)])
+        parameters = {**integration, **{k: v for k, v in record.items() if k != "overrides"}}
     else:
         raise ValueError(f"Unsupported stage: {stage}")
 
@@ -125,7 +143,8 @@ def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, list[
     parser = argparse.ArgumentParser(description="ROSMAP transcriptomics processing launcher.")
     parser.add_argument("--dataset", required=True, choices=["tsai", "dejager"])
     parser.add_argument("--stage", required=True, choices=["1", "2", "3"])
-    parser.add_argument("--variant", default="canonical")
+    parser.add_argument("--variant", default="primary",
+                        help="Variant id, or 'primary' (default) to use the declared primary.")
     parser.add_argument("--sample-ids", default="")
     parser.add_argument("--threads", type=int)
     parser.add_argument("--list-samples", action="store_true")
@@ -133,6 +152,10 @@ def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, list[
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--skip-harmony", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--print-input-dir", action="store_true",
+                        help="Print the resolved input dir for this stage/variant and exit.")
+    parser.add_argument("--print-output-dir", action="store_true",
+                        help="Print the resolved output dir for this stage/variant and exit.")
     return parser.parse_known_args(argv)
 
 
@@ -140,6 +163,13 @@ def main(argv: list[str] | None = None) -> int:
     args, passthrough = parse_args(argv)
     env = paths_env()
     command, parameters, inputs, outputs, output_dir, variant_id = build_command(args, passthrough, env)
+
+    if args.print_input_dir:
+        print(inputs["input_dir"])
+        return 0
+    if args.print_output_dir:
+        print(str(output_dir))
+        return 0
 
     if args.dry_run:
         print(command_string(command))

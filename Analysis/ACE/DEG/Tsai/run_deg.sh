@@ -19,12 +19,17 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 source "${REPO_ROOT}/config/paths.sh"
 
 normalize_integration() {
+  # 'primary'/'canonical' resolve to the dataset's declared primary variant
+  # (config/variants.yaml). 'batch' is a legacy alias for derived_batch. Any
+  # other value is passed through and validated by rosmap_tx.config --resolve,
+  # so adding a variant to variants.yaml makes it usable here automatically.
   case "$1" in
-    batch|derived_batch) echo "derived_batch" ;;
-    projid) echo "projid" ;;
+    batch) echo "derived_batch" ;;
+    primary|canonical|main)
+      PYTHONPATH="${REPO_ROOT}/src" python -m rosmap_tx.config --primary tsai ;;
     *)
-      echo "ERROR: integration argument must be one of: derived_batch, projid" >&2
-      exit 1
+      PYTHONPATH="${REPO_ROOT}/src" python -m rosmap_tx.config --resolve tsai "$1" 2>/dev/null \
+        || { echo "ERROR: unknown integration/variant '$1' (see config/variants.yaml)" >&2; exit 1; }
       ;;
   esac
 }
@@ -35,7 +40,7 @@ set -u
 
 export HDF5_USE_FILE_LOCKING=FALSE
 
-INTEGRATION_RAW="${1:?ERROR: integration argument required (derived_batch or projid)}"
+INTEGRATION_RAW="${1:?ERROR: integration argument required (e.g. primary, derived_batch, projid)}"
 PHENOTYPE="${2:?ERROR: phenotype argument required (tot_adverse_exp, early_hh_ses, or ace_aggregate)}"
 CELLTYPE="${3:-}"
 INTEGRATION="$(normalize_integration "${INTEGRATION_RAW}")"

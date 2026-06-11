@@ -44,17 +44,28 @@ if [[ -n "${SLURM_MAIL_USER:-}" ]]; then
     EXTRA_SBATCH_FLAGS+=(--mail-user="${SLURM_MAIL_USER}")
 fi
 
-# Parse --no-preflight flag
+# Parse --no-preflight and --variant flags
 NO_PREFLIGHT=false
+VARIANT="primary"
 ARGS=()
+_want_variant=false
 for arg in "$@"; do
-    if [[ "${arg}" == "--no-preflight" ]]; then
-        NO_PREFLIGHT=true
-    else
-        ARGS+=("${arg}")
+    if [[ "${_want_variant}" == true ]]; then
+        VARIANT="${arg}"; _want_variant=false; continue
     fi
+    case "${arg}" in
+        --no-preflight) NO_PREFLIGHT=true ;;
+        --variant) _want_variant=true ;;
+        --variant=*) VARIANT="${arg#*=}" ;;
+        *) ARGS+=("${arg}") ;;
+    esac
 done
 set -- "${ARGS[@]}"
+
+# Propagate the chosen variant to the per-stage scripts and aggregate wraps.
+# Note: the canonical Stage 3 (03_integration_annotation.sh) honors this; the
+# 3b/3c/3d/3f scripts remain fixed Harmony-batch-key diagnostics.
+export PIPELINE_VARIANT="${VARIANT}"
 
 # Track the last submitted job ID for dependency chaining
 LAST_JOB_ID=""
@@ -109,7 +120,7 @@ submit_stage() {
                 --output="${LOG_DIR}/dej_qc_aggregate_%j.out" \
                 --error="${LOG_DIR}/dej_qc_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python -m rosmap_tx.processing --dataset dejager --stage 1 --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${QC_ENV} && set -u && python -m rosmap_tx.processing --dataset dejager --stage 1 --variant ${VARIANT} --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
@@ -134,7 +145,7 @@ submit_stage() {
                 --output="${LOG_DIR}/dej_doublets_aggregate_%j.out" \
                 --error="${LOG_DIR}/dej_doublets_aggregate_%j.err" \
                 "${EXTRA_SBATCH_FLAGS[@]+"${EXTRA_SBATCH_FLAGS[@]}"}" \
-                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && python -m rosmap_tx.processing --dataset dejager --stage 2 --aggregate-only")
+                --wrap="source ${REPO_ROOT}/config/paths.sh && export PYTHONPATH=${REPO_ROOT}/src:\${PYTHONPATH:-} && set +u && source ${CONDA_INIT_SCRIPT} && conda activate ${SINGLECELL_ENV} && set -u && python -m rosmap_tx.processing --dataset dejager --stage 2 --variant ${VARIANT} --aggregate-only")
             echo "  ${sbatch_output}"
             LAST_JOB_ID=$(parse_job_id "${sbatch_output}")
             ;;
@@ -243,6 +254,7 @@ if [[ $# -eq 0 ]]; then
     echo "          3d (integration, derived_batch), 3f (integration, sequencing_date),"
     echo "          3e (comparison + report), all"
     echo "  --no-preflight   Skip preflight checks before submission"
+    echo "  --variant <id>   Pipeline variant for the canonical run (default: primary; see config/variants.yaml)"
     exit 1
 fi
 

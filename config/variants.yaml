@@ -1,9 +1,52 @@
+# =============================================================================
+# Pipeline variants
+# =============================================================================
+#
+# A "variant" is a named version of the processing pipeline. Variants let you
+# experiment (different QC thresholds, doublet method, integration params,
+# Harmony key, ...) while keeping ONE declared "primary" pipeline that all
+# default runs and downstream analysis resolve to.
+#
+# HOW TO SWITCH THE PRIMARY PIPELINE: edit the single `primary:` line below.
+# Everything else (submit_pipeline.sh, the launcher's --variant primary, and the
+# analysis launchers) resolves to whatever you name here.
+#
+# Each variant may declare:
+#   role:               primary | sensitivity | experiment   (label only)
+#   harmony_batch_key:  obs column used for Harmony (Stage 3)
+#   skip_harmony:       true to use the PCA embedding directly (no correction)
+#   output_env:         env var (from config/paths.sh) holding the Stage 3 dir
+#   overrides:          optional subtree mirroring config/pipeline.yaml; deep-
+#                       merged over the defaults so a variant can change ANY
+#                       stage parameter, not just the Harmony key.
+#   touches:            list of stages this variant changes vs the primary
+#                       (e.g. [stage1, stage3]). Stages NOT listed share the
+#                       primary's outputs (written under a `shared` leaf), so
+#                       variants that only differ at Stage 3 do not recompute
+#                       Stages 1/2. Defaults to [stage3] when omitted.
+#   analysis:           optional per-workflow model gating, e.g.
+#                         analysis: { ace: { models: [sex_stratified_ace] } }
+#
+# The keyword `primary` (and its aliases canonical / main / official) resolves
+# to the dataset's declared primary variant when passed as --variant.
+# =============================================================================
+
+# The single source of truth for which pipeline is primary, per dataset.
+# Change a value here to switch the whole primary pipeline in one line.
+primary:
+  tsai: "derived_batch"
+  dejager: "library_id"
+
 datasets:
   tsai:
-    canonical: "derived_batch"
+    # No per-dataset `canonical:` key — the top-level primary: block above is the
+    # single source of truth (switch the primary in ONE line). `canonical` still
+    # works as an input alias for --variant and resolves to the primary.
     variants:
+
+      # ---- primary + Harmony-key sensitivity variants (Stage 3 only) --------
       derived_batch:
-        role: "canonical"
+        role: "primary"
         harmony_batch_key: "derived_batch"
         output_env: "TSAI_INTEGRATED"
         description: "Flowcell-derived batch correction; current preferred Tsai integration."
@@ -17,11 +60,38 @@ datasets:
         skip_harmony: true
         output_env: "TSAI_INTEGRATED_NO_HARMONY"
         description: "No batch correction baseline; PCA embedding is used directly."
+
+      # ---- example whole-pipeline variants (override arbitrary stage params) -
+      strict_qc:
+        role: "experiment"
+        harmony_batch_key: "derived_batch"
+        touches: ["stage1", "stage3"]
+        overrides:
+          stage1:
+            qc_filter:
+              counts_low_pct: 6.0
+              counts_high_pct: 94.0
+              mt_pct_threshold: 5.0
+          stage3:
+            integration:
+              n_hvgs: 2000
+        description: "Stricter QC percentiles and 5% MT cap; 2000 HVGs."
+
+      hvg5000:
+        role: "experiment"
+        harmony_batch_key: "derived_batch"
+        touches: ["stage3"]
+        overrides:
+          stage3:
+            integration:
+              n_hvgs: 5000
+              n_pcs: 50
+        description: "Higher HVG/PC budget (5000 HVGs, 50 PCs) for a richer embedding."
+
   dejager:
-    canonical: "library_id"
     variants:
       library_id:
-        role: "canonical"
+        role: "primary"
         harmony_batch_key: "library_id"
         output_env: "DEJAGER_INTEGRATED"
         description: "Per-library correction; captures library preparation and sequencing effects."
@@ -50,4 +120,3 @@ datasets:
         skip_harmony: true
         output_env: "DEJAGER_INTEGRATED_NO_HARMONY"
         description: "No batch correction baseline; PCA embedding is used directly."
-

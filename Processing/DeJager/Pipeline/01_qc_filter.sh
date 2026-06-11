@@ -64,4 +64,5 @@ echo "Running Stage 1 QC for library ${SAMPLE_ID}"
 python -m rosmap_tx.processing \
     --dataset dejager \
     --stage 1 \
+    --variant "${PIPELINE_VARIANT:-primary}" \
     --sample-ids "${SAMPLE_ID}"

@@ -134,16 +134,41 @@ def check_tracked_files() -> int:
     return _print_result(not offenders, "tracked generated-data boundary", detail)
 
 
+KNOWN_STAGES = {"stage1", "stage2", "stage3"}
+
+
 def check_variants() -> int:
     env = paths_env()
     variants = load_yaml("variants.yaml")
+    pipeline = load_yaml("pipeline.yaml")
     errors: list[str] = []
+
+    primary_block = variants.get("primary", {})
     for dataset, block in variants.get("datasets", {}).items():
+        records = block.get("variants", {})
+
+        # The primary must exist and name a real variant. The top-level
+        # primary: block is the single source of truth; the per-dataset
+        # canonical: key is an optional back-compat alias. If both are present
+        # they must agree (otherwise the one-line switch would be ambiguous).
+        if dataset in primary_block:
+            primary_id = primary_block[dataset]
+            if primary_id not in records:
+                errors.append(f"{dataset} primary '{primary_id}' is not a defined variant")
+            if block.get("canonical") and block["canonical"] != primary_id:
+                errors.append(
+                    f"{dataset} canonical '{block.get('canonical')}' != primary '{primary_id}'. "
+                    f"Either remove the canonical: key (it defaults to primary) or keep it in sync."
+                )
+        elif block.get("canonical") not in records:
+            errors.append(f"{dataset} has no primary: entry and canonical: is missing/invalid")
+
         try:
-            resolve_variant(dataset, "canonical")
+            resolve_variant(dataset, "primary")
         except Exception as exc:  # noqa: BLE001
             errors.append(str(exc))
-        for variant_id, record in block.get("variants", {}).items():
+
+        for variant_id, record in records.items():
             try:
                 out = variant_output_dir(dataset, variant_id, record, env)
                 if unconfigured(out):
@@ -152,6 +177,32 @@ def check_variants() -> int:
                     errors.append(f"{dataset}/{variant_id} sets both skip_harmony and harmony_batch_key")
                 if not record.get("skip_harmony") and not record.get("harmony_batch_key"):
                     errors.append(f"{dataset}/{variant_id} must define harmony_batch_key or skip_harmony")
+
+                touches = record.get("touches", ["stage3"])
+                bad_touches = [t for t in touches if t not in KNOWN_STAGES]
+                if bad_touches:
+                    errors.append(f"{dataset}/{variant_id} touches unknown stage(s): {bad_touches}")
+
+                overrides = record.get("overrides") or {}
+                for stage_key, stage_override in overrides.items():
+                    if stage_key not in KNOWN_STAGES:
+                        errors.append(f"{dataset}/{variant_id} overrides unknown stage '{stage_key}'")
+                        continue
+                    # An override that does not bump the leaf would silently
+                    # collide with the primary's shared output — hard fail.
+                    if stage_key != "stage3" and stage_key not in touches:
+                        errors.append(
+                            f"{dataset}/{variant_id} overrides {stage_key} but does not list it in touches "
+                            f"(its output would collide with the primary's 'shared' output)"
+                        )
+                    # Override keys should exist in pipeline.yaml's stage shape.
+                    base_stage = pipeline.get(stage_key, {})
+                    for sub_key, sub_val in (stage_override or {}).items():
+                        if sub_key not in base_stage:
+                            errors.append(
+                                f"{dataset}/{variant_id} overrides {stage_key}.{sub_key} "
+                                f"which is not a known key in pipeline.yaml"
+                            )
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"{dataset}/{variant_id}: {exc}")
     return _print_result(not errors, "variants resolve", "\n".join(errors))
