@@ -1,2 +1,0 @@
-# No pip packages are required for this environment.
-# Install the Bioconductor stack with the conda bootstrap command in README.md.
