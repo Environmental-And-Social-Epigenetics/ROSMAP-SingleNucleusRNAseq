@@ -1,7 +1,7 @@
-# ACE TF/COMPASS — Metabolic Flux Analysis
+# ACE COMPASS — Metabolic Flux Analysis
 
 COMPASS metabolic flux analysis for the ACE phenotype, adapted from the SocIsl
-implementation in `Analysis/SocIsl/TF/`.
+implementation in `Analysis/SocIsl/COMPASS/`.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ python compass_analysis.py
 
 ## Outputs
 
-Under `${ACE_OUTPUT_ROOT}/TF/Tsai/`:
+Under `${ACE_OUTPUT_ROOT}/COMPASS/Tsai/`:
 - `{celltype}Compass/` — raw COMPASS outputs per cell type
 - Reaction activity matrices, meta-reaction assignments
 - Statistical results with p-values, effect sizes, adjusted p-values

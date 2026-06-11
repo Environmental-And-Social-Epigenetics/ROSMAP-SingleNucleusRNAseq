@@ -35,12 +35,14 @@ Analysis/<NewPhenotype>/
 ├── SCENIC/                    Regulatory network inference (pySCENIC)
 │   ├── Tsai/
 │   └── DeJager/
-└── TF/                        Transcription factor / activity analysis
+└── COMPASS/                   Metabolic flux analysis (CPLEX-based)
     ├── Tsai/
     └── DeJager/
 ```
 
-`<AnalysisType>` is one of `DEG`, `SCENIC`, `TF`, ... (add more as needed).
+`<AnalysisType>` is one of `DEG`, `SCENIC`, `COMPASS`, `TFActivity`, `GSEA`, ...
+(add more as needed). Match the names used in `Analysis/ACE/` so the layout is
+consistent across phenotypes.
 `<Cohort>` is `Tsai` or `DeJager`. Keep launchers and analysis scripts inside the
 leaf cohort directory (e.g. `Analysis/<NewPhenotype>/DEG/Tsai/`).
 

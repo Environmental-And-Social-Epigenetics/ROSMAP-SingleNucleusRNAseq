@@ -37,9 +37,9 @@ SocIsl/
 ├── SCENIC/                 Regulatory network inference (pySCENIC)
 │   ├── DeJager/            SCENIC scripts for DeJager
 │   └── Tsai/               SCENIC scripts + regulon/AUCell result CSVs
-├── TF/                     Transcription factor / COMPASS metabolic analysis
+├── COMPASS/                COMPASS metabolic flux analysis (CPLEX-based)
 │   ├── DeJager/            COMPASS run scripts (per cell type) + cell ranger scripts
-│   └── Tsai/               COMPASS run scripts (per cell type x sex) + TF activity CSVs
+│   └── Tsai/               COMPASS run scripts (per cell type x sex) + result CSVs
 ├── GSEA/                   Gene set enrichment / pathway analysis (WebGestaltR)
 │   ├── DeJager/            GSEA scripts + pathway result CSVs
 │   └── Tsai/               Tsai-specific GSEA scripts
@@ -114,10 +114,10 @@ conda activate "${CONDA_ENV_BASE}/scenic_analysis"
 cd Analysis/SocIsl/SCENIC/Tsai
 sbatch tsaiAdataScenic.sh
 
-# --- COMPASS / TF (requires CPLEX license) ---
+# --- COMPASS (metabolic flux; requires CPLEX license) ---
 conda activate "${CONDA_ENV_BASE}/compass_analysis"
 # Install CPLEX: https://www.ibm.com/academic/ (free academic license)
-cd Analysis/SocIsl/TF/Tsai
+cd Analysis/SocIsl/COMPASS/Tsai
 sbatch compassRunAstTsai.sh   # one cell type at a time
 ```
 
