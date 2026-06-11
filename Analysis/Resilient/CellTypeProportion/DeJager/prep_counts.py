@@ -58,27 +58,41 @@ def default_h5ad_paths() -> dict[str, Path]:
     dejager_processing = repo / "Data" / "Transcriptomics" / "DeJager" / "Processing_Outputs"
     return {
         "library_id": Path(
-            os.environ.get("DEJAGER_INTEGRATED", str(dejager_processing / "03_Integrated"))
+            os.environ.get("DEJAGER_INTEGRATED", str(dejager_processing / "03_Integrated" / "library_id"))
         )
         / "dejager_annotated.h5ad",
         "derived_batch": Path(
             os.environ.get(
                 "DEJAGER_INTEGRATED_DERIVED_BATCH",
-                str(dejager_processing / "03_Integrated_derived_batch"),
+                str(dejager_processing / "03_Integrated" / "derived_batch"),
             )
         )
         / "dejager_annotated.h5ad",
         "patient_id": Path(
             os.environ.get(
                 "DEJAGER_INTEGRATED_PATIENT_ID",
-                str(dejager_processing / "03_Integrated_patient_id"),
+                str(dejager_processing / "03_Integrated" / "patient_id"),
             )
         )
         / "dejager_annotated.h5ad",
         "pool_batch": Path(
             os.environ.get(
                 "DEJAGER_INTEGRATED_POOL_BATCH",
-                str(dejager_processing / "03_Integrated_pool_batch"),
+                str(dejager_processing / "03_Integrated" / "pool_batch"),
+            )
+        )
+        / "dejager_annotated.h5ad",
+        "sequencing_date": Path(
+            os.environ.get(
+                "DEJAGER_INTEGRATED_SEQUENCING_DATE",
+                str(dejager_processing / "03_Integrated" / "sequencing_date"),
+            )
+        )
+        / "dejager_annotated.h5ad",
+        "no_harmony": Path(
+            os.environ.get(
+                "DEJAGER_INTEGRATED_NO_HARMONY",
+                str(dejager_processing / "03_Integrated" / "no_harmony"),
             )
         )
         / "dejager_annotated.h5ad",
@@ -102,6 +116,8 @@ def normalize_integration(name: str) -> str:
         "patient_id": "patient_id",
         "pool_batch": "pool_batch",
         "derived_batch": "derived_batch",
+        "sequencing_date": "sequencing_date",
+        "no_harmony": "no_harmony",
     }
     if name not in aliases:
         choices = ", ".join(sorted(aliases))
@@ -191,7 +207,7 @@ def main() -> None:
     parser.add_argument(
         "--integration",
         default="library_id",
-        choices=["batch", "projid", "library_id", "patient_id", "pool_batch", "derived_batch"],
+        choices=["batch", "projid", "library_id", "patient_id", "pool_batch", "derived_batch", "sequencing_date", "no_harmony"],
         help="Integrated annotated object to summarize.",
     )
     parser.add_argument(

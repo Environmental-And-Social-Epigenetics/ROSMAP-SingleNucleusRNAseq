@@ -17,6 +17,8 @@ sex_stratum <- "all"
 resolution <- "fine"
 output_root <- Sys.getenv("ACE_PROP_OUTPUT_ROOT", unset = "")
 smoke_mode <- FALSE
+arm <- NULL   # male AD-model arm (e.g. MaleContAD): males-only, single primary
+              # tot_adverse_exp composition model with that arm's AD covariates.
 
 i <- 1
 while (i <= length(args)) {
@@ -32,12 +34,30 @@ while (i <= length(args)) {
   } else if (args[i] == "--output-root" && i < length(args)) {
     output_root <- args[i + 1]
     i <- i + 2
+  } else if (args[i] == "--arm" && i < length(args)) {
+    arm <- args[i + 1]
+    i <- i + 2
   } else if (args[i] == "--smoke") {
     smoke_mode <- TRUE
     i <- i + 1
   } else {
     i <- i + 1
   }
+}
+
+# A male AD-model arm implies males-only and pulls its covariate set from the
+# shared single-source-of-truth spec.
+arm_spec_obj <- NULL
+if (!is.null(arm)) {
+  this_dir <- tryCatch(dirname(sub("^--file=", "",
+    grep("^--file=", commandArgs(FALSE), value = TRUE)[1])), error = function(e) ".")
+  shared_R <- file.path(this_dir, "..", "..", "_shared", "arm_covariates.R")
+  if (!file.exists(shared_R)) {
+    shared_R <- "/orcd/data/lhtsai/001/mabdel03/ROSMAP_Code/Transcriptomics/Analysis/ACE/_shared/arm_covariates.R"
+  }
+  source(shared_R)
+  arm_spec_obj <- arm_spec(arm)
+  sex_stratum <- "male"   # male AD-model arms are males-only
 }
 
 if (output_root == "") {
@@ -51,7 +71,12 @@ cat("Resolution: ", resolution, "\n")
 cat("Output root:", output_root, "\n\n")
 
 data_dir <- file.path(output_root, "data")
-results_base <- file.path(output_root, paste0("results_", integration))
+# Arm runs go to a dedicated results dir so they don't collide with the baseline.
+results_base <- if (!is.null(arm)) {
+  file.path(output_root, paste0("results_", integration, "_", arm))
+} else {
+  file.path(output_root, paste0("results_", integration))
+}
 dir.create(results_base, recursive = TRUE, showWarnings = FALSE)
 
 counts_file <- file.path(data_dir, paste0("cell_counts_", resolution, "_", integration, ".csv"))
@@ -134,26 +159,67 @@ dat_ace <- dat_ace |>
   scale_col("age_death") |>
   scale_col("pmi")
 
-covars <- if (sex_stratum == "all") {
-  "age_death + msex + pmi + niareagansc"
-} else {
-  "age_death + pmi + niareagansc"
-}
+if (!is.null(arm)) {
+  # Per-arm AD-confounding mode: males-only, single primary tot_adverse_exp
+  # composition model whose covariates match the DEG arm. AD_binary derived from
+  # niareagansc when the arm needs it; interaction term added for MaleAceByAD.
+  if (arm_spec_obj$needs_ad_binary) {
+    dat_ace$AD_binary <- as.integer(dat_ace$niareagansc %in% c(1, 2))
+  }
+  missing_ad <- setdiff(arm_spec_obj$ad_covars, c(names(dat_ace), "AD_binary"))
+  if (length(missing_ad) > 0) {
+    stop("Metadata missing AD covariate(s) for arm ", arm, ": ",
+         paste(missing_ad, collapse = ", "))
+  }
+  # scale continuous AD covariates (amylsqrt/tangsqrt) like age_death/pmi
+  for (cv in arm_spec_obj$ad_covars) {
+    if (cv != "AD_binary" && cv %in% names(dat_ace)) dat_ace <- scale_col(dat_ace, cv)
+  }
+  ad_terms <- arm_spec_obj$ad_covars
+  covars <- paste(c("age_death", "pmi", ad_terms), collapse = " + ")
+  # MaleAceByAD: add the AD_binary x phenotype interaction in the composition formula.
+  arm_interaction <- isTRUE(arm_spec_obj$interaction)
 
-models <- list(
-  list(name = "primary", phenotype = "tot_adverse_exp", subdir = "primary", diff_var = FALSE),
-  list(name = "ses", phenotype = "early_hh_ses", subdir = "ses", diff_var = FALSE),
-  list(name = "aggregate", phenotype = "ace_aggregate", subdir = "aggregate", diff_var = FALSE),
-  list(name = "variability", phenotype = "tot_adverse_exp", subdir = "variability", diff_var = TRUE)
-)
+  # sccomp needs complete covariates: drop samples missing any AD covariate
+  # (e.g. ~2 males lack amylsqrt). Drop whole samples (all their cell_group rows).
+  ad_cols_present <- intersect(c(ad_terms, "niareagansc"), names(dat_ace))
+  if (length(ad_cols_present) > 0) {
+    bad_samples <- dat_ace |>
+      filter(if_any(all_of(ad_cols_present), is.na)) |>
+      pull(sample) |>
+      unique()
+    if (length(bad_samples) > 0) {
+      dat_ace <- dat_ace |> filter(!sample %in% bad_samples)
+      cat("Dropped", length(bad_samples), "samples missing AD covariate(s) for arm", arm, "\n")
+    }
+  }
 
-for (component in ace_components) {
-  models[[length(models) + 1]] <- list(
-    name = component,
-    phenotype = component,
-    subdir = "components",
-    diff_var = FALSE
+  models <- list(
+    list(name = "primary", phenotype = "tot_adverse_exp", subdir = "primary", diff_var = FALSE)
   )
+} else {
+  covars <- if (sex_stratum == "all") {
+    "age_death + msex + pmi + niareagansc"
+  } else {
+    "age_death + pmi + niareagansc"
+  }
+  arm_interaction <- FALSE
+
+  models <- list(
+    list(name = "primary", phenotype = "tot_adverse_exp", subdir = "primary", diff_var = FALSE),
+    list(name = "ses", phenotype = "early_hh_ses", subdir = "ses", diff_var = FALSE),
+    list(name = "aggregate", phenotype = "ace_aggregate", subdir = "aggregate", diff_var = FALSE),
+    list(name = "variability", phenotype = "tot_adverse_exp", subdir = "variability", diff_var = TRUE)
+  )
+
+  for (component in ace_components) {
+    models[[length(models) + 1]] <- list(
+      name = component,
+      phenotype = component,
+      subdir = "components",
+      diff_var = FALSE
+    )
+  }
 }
 
 run_sccomp_model <- function(dat, phenotype, covars, diff_var, out_dir, label) {
@@ -169,13 +235,18 @@ run_sccomp_model <- function(dat, phenotype, covars, diff_var, out_dir, label) {
 
   dat_sub <- dat_sub |> scale_col(phenotype)
 
-  for (column in c("age_death", "pmi", "niareagansc", "msex", phenotype)) {
+  for (column in c("age_death", "pmi", "niareagansc", "msex", phenotype,
+                   "amylsqrt", "tangsqrt", "AD_binary")) {
     if (column %in% names(dat_sub)) {
       dat_sub[[column]] <- as.numeric(dat_sub[[column]])
     }
   }
 
-  formula_comp <- as.formula(paste0("~ ", phenotype, " + ", covars))
+  rhs <- paste0(phenotype, " + ", covars)
+  if (isTRUE(arm_interaction)) {
+    rhs <- paste0(rhs, " + AD_binary:", phenotype)
+  }
+  formula_comp <- as.formula(paste0("~ ", rhs))
   formula_var <- if (diff_var) as.formula(paste0("~ ", phenotype)) else ~ 1
 
   cat("  formula_composition:", deparse(formula_comp), "\n")

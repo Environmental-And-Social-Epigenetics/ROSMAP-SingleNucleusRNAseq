@@ -32,7 +32,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]  # ROSMAP_Code/Transcriptomics
 
 PHENO_CSV = (
-    REPO_ROOT / "Data" / "Phenotypes" / "TSAI_DEJAGER_all_patients_wACEscores.csv"
+    Path(
+        os.environ.get(
+            "ACE_SCORES_CSV",
+            str(REPO_ROOT / "Data" / "Phenotypes" / "TSAI_DEJAGER_all_patients_wACEscores.csv"),
+        )
+    )
 )
 DEG_SUMMARY_CSV = SCRIPT_DIR / "DEG" / "Tsai" / "deg_summary.csv"
 OUTPUT_PDF = SCRIPT_DIR / "ace_correlation_investigation.pdf"
@@ -582,10 +587,7 @@ PIPELINE CHANGES NEEDED:
 def resolve_pheno_csv() -> Path:
     if PHENO_CSV.exists():
         return PHENO_CSV
-    alt = Path("/orcd/data/lhtsai/001/mabdel03/ROSMAP_Data/Single_Nucleus/Phenotypes/TSAI_DEJAGER_all_patients_wACEscores.csv")
-    if alt.exists():
-        return alt
-    raise SystemExit(f"ERROR: phenotype CSV not found at:\n  {PHENO_CSV}\n  {alt}")
+    raise SystemExit(f"ERROR: phenotype CSV not found at:\n  {PHENO_CSV}\nSet ACE_SCORES_CSV or source config/paths.sh.")
 
 
 def main() -> None:

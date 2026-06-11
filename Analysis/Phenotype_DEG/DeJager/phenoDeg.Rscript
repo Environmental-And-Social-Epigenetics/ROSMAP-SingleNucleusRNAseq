@@ -1,0 +1,187 @@
+#!/usr/bin/env Rscript
+# phenoDeg.Rscript -- Pseudobulk DESeq2 DEG for msex or cogdx_binary phenotype.
+#
+# Reads one per-celltype H5AD (raw counts) produced by prep_celltype_splits.py,
+# joins it to ROSMAP phenotype CSV by projid, pseudobulks by patient, then
+# fits a DESeq2 model with the chosen phenotype as the test variable.
+#
+# Phenotypes:
+#   msex:         contrast on msex (0=female, 1=male).
+#                 Design: ~ age_death + pmi + cogdx_binary + msex
+#   cogdx_binary: 1 if cogdx in {4,5} (AD), 0 if cogdx in {1,2} (control).
+#                 Design: ~ age_death + pmi + msex + cogdx_binary
+#
+# Output: deseq_<phenotype>_<celltype>.rda (full results object)
+#         deseq_<phenotype>_<celltype>.csv (flat table with gene,log2FoldChange,lfcSE,pvalue,padj,baseMean)
+
+suppressPackageStartupMessages({
+  library(zellkonverter)
+  library(SingleCellExperiment)
+  library(scran)
+  library(DESeq2)
+  library(dplyr)
+})
+
+required_pheno_cols <- c("projid", "msex", "cogdx", "age_death", "pmi")
+
+args <- commandArgs(trailingOnly = TRUE)
+phenotype <- NULL
+celltype <- NULL
+integration <- NULL
+input_dir <- ""
+output_dir <- ""
+pheno_path <- ""
+
+i <- 1
+while (i <= length(args)) {
+  if (args[i] == "--integration" && i < length(args)) {
+    integration <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--phenotype" && i < length(args)) {
+    phenotype <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--celltype" && i < length(args)) {
+    celltype <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--input-dir" && i < length(args)) {
+    input_dir <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--output-dir" && i < length(args)) {
+    output_dir <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--pheno-csv" && i < length(args)) {
+    pheno_path <- args[i + 1]; i <- i + 2
+  } else {
+    i <- i + 1
+  }
+}
+
+if (is.null(phenotype) || !(phenotype %in% c("msex", "cogdx_binary"))) {
+  stop("ERROR: --phenotype must be one of: msex, cogdx_binary")
+}
+if (is.null(celltype)) stop("ERROR: --celltype is required")
+if (is.null(integration)) stop("ERROR: --integration is required")
+if (!nzchar(input_dir)) stop("ERROR: --input-dir is required")
+if (!nzchar(output_dir)) stop("ERROR: --output-dir is required")
+if (!nzchar(pheno_path)) stop("ERROR: --pheno-csv is required")
+
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+cat("Integration:", integration, "\n")
+cat("Phenotype:  ", phenotype, "\n")
+cat("Cell type:  ", celltype, "\n")
+cat("Input dir:  ", input_dir, "\n")
+cat("Output dir: ", output_dir, "\n")
+cat("Pheno CSV:  ", pheno_path, "\n")
+
+# ── Phenotype CSV ─────────────────────────────────────────────────────────────
+pheno <- read.csv(pheno_path)
+missing <- setdiff(required_pheno_cols, colnames(pheno))
+if (length(missing) > 0) {
+  stop("ERROR: phenotype CSV missing columns: ", paste(missing, collapse = ", "))
+}
+pheno <- pheno %>%
+  mutate(projid = as.character(projid)) %>%
+  distinct(projid, .keep_all = TRUE)  # dedupe — pheno CSV has duplicate rows per projid
+
+# Build cogdx_binary: 1 = AD (cogdx 4 or 5), 0 = control (cogdx 1 or 2), else NA.
+pheno$cogdx_binary <- NA_integer_
+pheno$cogdx_binary[pheno$cogdx %in% c(1, 2)] <- 0L
+pheno$cogdx_binary[pheno$cogdx %in% c(4, 5)] <- 1L
+
+cat("Phenotype distribution:\n")
+cat("  msex:         ", paste(names(table(pheno$msex)), table(pheno$msex), sep = "=", collapse = ", "), "\n")
+cat("  cogdx_binary: ", paste(names(table(pheno$cogdx_binary, useNA = "always")), table(pheno$cogdx_binary, useNA = "always"), sep = "=", collapse = ", "), "\n")
+
+# ── Load per-celltype H5AD ────────────────────────────────────────────────────
+h5ad_path <- file.path(input_dir, paste0(celltype, ".h5ad"))
+if (!file.exists(h5ad_path)) {
+  # Try broad_<celltype>.h5ad (Exc/Inh use this prefix in the prep output)
+  h5ad_path <- file.path(input_dir, paste0("broad_", celltype, ".h5ad"))
+}
+if (!file.exists(h5ad_path)) {
+  stop("ERROR: no H5AD found at ", file.path(input_dir, paste0(celltype, ".h5ad")), " or broad_ variant")
+}
+cat("Loading:", h5ad_path, "\n")
+
+sce <- zellkonverter::readH5AD(h5ad_path, reader = "R")
+cat("Loaded:", ncol(sce), "cells x", nrow(sce), "genes\n")
+
+if (!"counts" %in% assayNames(sce)) {
+  assayNames(sce)[assayNames(sce) == "X"] <- "counts"
+}
+
+meta_df <- as.data.frame(colData(sce))
+meta_df$barcode <- colnames(sce)
+meta_df$projid <- as.character(meta_df$projid)
+meta_df <- merge(meta_df, pheno, by = "projid", all.x = TRUE, suffixes = c("", ".pheno"))
+
+# Drop cells where the test phenotype is NA
+test_vec <- meta_df[[phenotype]]
+keep <- !is.na(test_vec)
+meta_df <- meta_df[keep, ]
+cat("Cells with non-NA", phenotype, ":", nrow(meta_df), "of", ncol(sce), "\n")
+
+if (nrow(meta_df) < 100) {
+  stop("ERROR: too few cells with phenotype data (n=", nrow(meta_df), ")")
+}
+
+sce <- sce[, colnames(sce) %in% meta_df$barcode]
+meta_df <- meta_df[match(colnames(sce), meta_df$barcode), ]
+colData(sce) <- DataFrame(meta_df)
+
+# ── Pseudobulk by projid ──────────────────────────────────────────────────────
+pseudo <- aggregateAcrossCells(sce, ids = colData(sce)$projid)
+cat("Pseudobulked patients:", ncol(pseudo), "\n")
+
+# Drop patients missing any covariate or test variable
+keep_p <- !is.na(colData(pseudo)$age_death) &
+          !is.na(colData(pseudo)$pmi) &
+          !is.na(colData(pseudo)$msex) &
+          !is.na(colData(pseudo)$cogdx_binary)
+pseudo <- pseudo[, keep_p]
+cat("After filtering on covariates, patients:", ncol(pseudo), "\n")
+
+if (ncol(pseudo) < 10) {
+  stop("ERROR: too few patients with complete covariates (n=", ncol(pseudo), ")")
+}
+
+# Scale continuous covariates
+colData(pseudo)$age_death <- as.numeric(scale(as.numeric(colData(pseudo)$age_death)))
+colData(pseudo)$pmi       <- as.numeric(scale(as.numeric(colData(pseudo)$pmi)))
+colData(pseudo)$msex      <- factor(as.integer(colData(pseudo)$msex), levels = c(0, 1))
+colData(pseudo)$cogdx_binary <- factor(as.integer(colData(pseudo)$cogdx_binary), levels = c(0, 1))
+
+# ── DESeq2 ────────────────────────────────────────────────────────────────────
+if (phenotype == "msex") {
+  design_formula <- ~ age_death + pmi + cogdx_binary + msex
+  contrast_name  <- "msex_1_vs_0"
+} else {
+  design_formula <- ~ age_death + pmi + msex + cogdx_binary
+  contrast_name  <- "cogdx_binary_1_vs_0"
+}
+
+cat("DESeq2 design:", deparse(design_formula), "\n")
+cat("Contrast:     ", contrast_name, "\n")
+
+dds <- DESeqDataSetFromMatrix(
+  countData = assay(pseudo, "counts"),
+  colData = colData(pseudo),
+  design = design_formula
+)
+dds <- DESeq(dds)
+res <- results(dds, name = contrast_name)
+cat("DESeq2 done.\n")
+cat("  N genes:        ", nrow(res), "\n")
+cat("  N padj < 0.05:  ", sum(res$padj < 0.05, na.rm = TRUE), "\n")
+cat("  N padj < 0.1:   ", sum(res$padj < 0.1, na.rm = TRUE), "\n")
+
+# Save full .rda
+out_rda <- file.path(output_dir, paste0("deseq_", phenotype, "_", celltype, ".rda"))
+save(res, dds, pseudo, file = out_rda)
+cat("Wrote", out_rda, "\n")
+
+# Save flat CSV (gene-level)
+res_df <- as.data.frame(res)
+res_df$gene <- rownames(res_df)
+res_df <- res_df[, c("gene", "baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")]
+out_csv <- file.path(output_dir, paste0("deseq_", phenotype, "_", celltype, ".csv"))
+write.csv(res_df, file = out_csv, row.names = FALSE)
+cat("Wrote", out_csv, "\n")
+
+cat("\nDone.\n")

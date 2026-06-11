@@ -1,0 +1,124 @@
+#!/usr/bin/env Rscript
+# phenoDeg_Exc.Rscript -- DESeq2 for the Exc pseudobulk that was produced by
+# pseudobulk_Exc_python.py (avoids the R dgCMatrix INT_MAX limit).
+#
+# Reads pseudobulk_counts_Exc.csv (genes × patients) and pseudobulk_meta_Exc.csv
+# (one row per patient with msex, cogdx, age_death, pmi columns), joins to the
+# canonical phenotype CSV, then fits the same DESeq2 designs as phenoDeg.Rscript.
+
+suppressPackageStartupMessages({
+  library(DESeq2)
+  library(dplyr)
+})
+
+required_pheno_cols <- c("projid", "msex", "cogdx", "age_death", "pmi")
+
+args <- commandArgs(trailingOnly = TRUE)
+phenotype <- NULL
+integration <- NULL
+input_dir <- ""    # results_<integration>/Exc_pseudobulk/
+output_dir <- ""   # results_<integration>/<phenotype>/
+pheno_path <- ""
+
+i <- 1
+while (i <= length(args)) {
+  if (args[i] == "--integration" && i < length(args)) {
+    integration <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--phenotype" && i < length(args)) {
+    phenotype <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--input-dir" && i < length(args)) {
+    input_dir <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--output-dir" && i < length(args)) {
+    output_dir <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--pheno-csv" && i < length(args)) {
+    pheno_path <- args[i + 1]; i <- i + 2
+  } else {
+    i <- i + 1
+  }
+}
+
+if (is.null(phenotype) || !(phenotype %in% c("msex", "cogdx_binary"))) {
+  stop("ERROR: --phenotype must be one of: msex, cogdx_binary")
+}
+if (is.null(integration) || !nzchar(input_dir) || !nzchar(output_dir) || !nzchar(pheno_path)) {
+  stop("ERROR: --integration, --input-dir, --output-dir, --pheno-csv all required")
+}
+
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+# ── Load pseudobulk -----------------------------------------------------------
+counts_path <- file.path(input_dir, "pseudobulk_counts_Exc.csv")
+meta_path <- file.path(input_dir, "pseudobulk_meta_Exc.csv")
+if (!file.exists(counts_path) || !file.exists(meta_path)) {
+  stop("ERROR: missing ", counts_path, " or ", meta_path)
+}
+
+counts <- read.csv(counts_path, row.names = 1, check.names = FALSE)
+cat("Loaded counts:", nrow(counts), "genes x", ncol(counts), "patients\n")
+
+# Patient IDs come in as column names of counts (strings).
+patients <- colnames(counts)
+
+# ── Load + join phenotype -----------------------------------------------------
+pheno <- read.csv(pheno_path)
+missing <- setdiff(required_pheno_cols, colnames(pheno))
+if (length(missing) > 0) {
+  stop("ERROR: phenotype CSV missing columns: ", paste(missing, collapse = ", "))
+}
+pheno <- pheno %>%
+  mutate(projid = as.character(projid)) %>%
+  distinct(projid, .keep_all = TRUE)  # dedupe — pheno CSV has duplicates
+pheno$cogdx_binary <- NA_integer_
+pheno$cogdx_binary[pheno$cogdx %in% c(1, 2)] <- 0L
+pheno$cogdx_binary[pheno$cogdx %in% c(4, 5)] <- 1L
+
+meta <- data.frame(projid = patients, stringsAsFactors = FALSE)
+meta <- left_join(meta, pheno, by = "projid")
+rownames(meta) <- meta$projid
+cat("Patients matched to phenotype:", sum(!is.na(meta[[phenotype]])), "/", nrow(meta), "\n")
+
+# Drop patients missing the test variable or covariates
+keep <- !is.na(meta$age_death) & !is.na(meta$pmi) &
+        !is.na(meta$msex) & !is.na(meta$cogdx_binary)
+counts <- counts[, keep, drop = FALSE]
+meta <- meta[keep, , drop = FALSE]
+cat("After covariate filter, patients:", ncol(counts), "\n")
+
+if (ncol(counts) < 10) {
+  stop("ERROR: too few patients (", ncol(counts), ")")
+}
+
+# Scale continuous covariates
+meta$age_death <- as.numeric(scale(as.numeric(meta$age_death)))
+meta$pmi       <- as.numeric(scale(as.numeric(meta$pmi)))
+meta$msex      <- factor(as.integer(meta$msex), levels = c(0, 1))
+meta$cogdx_binary <- factor(as.integer(meta$cogdx_binary), levels = c(0, 1))
+
+if (phenotype == "msex") {
+  design_formula <- ~ age_death + pmi + cogdx_binary + msex
+  contrast_name  <- "msex_1_vs_0"
+} else {
+  design_formula <- ~ age_death + pmi + msex + cogdx_binary
+  contrast_name  <- "cogdx_binary_1_vs_0"
+}
+cat("Design:", deparse(design_formula), "\n")
+cat("Contrast:", contrast_name, "\n")
+
+dds <- DESeqDataSetFromMatrix(
+  countData = as.matrix(counts),
+  colData = meta,
+  design = design_formula
+)
+dds <- DESeq(dds)
+res <- results(dds, name = contrast_name)
+cat("DESeq2 done. N padj < 0.05:", sum(res$padj < 0.05, na.rm = TRUE), "\n")
+
+# Save
+out_rda <- file.path(output_dir, paste0("deseq_", phenotype, "_Exc.rda"))
+save(res, dds, file = out_rda)
+res_df <- as.data.frame(res)
+res_df$gene <- rownames(res_df)
+res_df <- res_df[, c("gene", "baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")]
+out_csv <- file.path(output_dir, paste0("deseq_", phenotype, "_Exc.csv"))
+write.csv(res_df, out_csv, row.names = FALSE)
+cat("Wrote", out_rda, "and", out_csv, "\n")

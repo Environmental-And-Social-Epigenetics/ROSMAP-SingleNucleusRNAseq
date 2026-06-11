@@ -1,0 +1,176 @@
+library(zellkonverter)
+library(SingleCellExperiment)
+library(scran)
+library(DESeq2)
+library(dplyr)
+
+required_pheno_cols <- c(
+  "projid", "tot_adverse_exp", "early_hh_ses",
+  "msex", "age_death", "pmi", "niareagansc"
+)
+
+args <- commandArgs(trailingOnly = TRUE)
+integration <- "derived_batch"
+phenotype <- "tot_adverse_exp"
+input_dir <- Sys.getenv("ACE_DEG_INPUT_DIR", "")
+output_dir <- Sys.getenv("ACE_DEG_OUTPUT_DIR", "")
+pheno_path <- Sys.getenv("ACE_SCORES_CSV", "")
+smoke_mode <- FALSE
+
+i <- 1
+while (i <= length(args)) {
+  if (args[i] == "--integration" && i < length(args)) {
+    integration <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--phenotype" && i < length(args)) {
+    phenotype <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--input-dir" && i < length(args)) {
+    input_dir <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--output-dir" && i < length(args)) {
+    output_dir <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--pheno-csv" && i < length(args)) {
+    pheno_path <- args[i + 1]; i <- i + 2
+  } else if (args[i] == "--smoke") {
+    smoke_mode <- TRUE; i <- i + 1
+  } else {
+    i <- i + 1
+  }
+}
+
+if (integration != "derived_batch") {
+  stop("ERROR: this fork is locked to integration=derived_batch (got '", integration, "')")
+}
+if (phenotype != "tot_adverse_exp") {
+  stop("ERROR: this fork is locked to phenotype=tot_adverse_exp (got '", phenotype, "')")
+}
+if (!nzchar(input_dir))  stop("ERROR: --input-dir or ACE_DEG_INPUT_DIR required")
+if (!nzchar(output_dir)) stop("ERROR: --output-dir or ACE_DEG_OUTPUT_DIR required")
+if (!nzchar(pheno_path)) stop("ERROR: --pheno-csv or ACE_SCORES_CSV required")
+
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+ct_label <- "In-PV_Basket"
+h5ad_file <- "In-PV_Basket.h5ad"
+strat_label <- "Pooled"
+
+cat("=== ACE DEG fork: Pooled (M+F) x Low/No-AD x In-PV_Basket x tot_adverse_exp ===\n")
+cat("Integration:", integration, "\n")
+cat("Phenotype:", phenotype, "\n")
+cat("Cell type:", ct_label, "\n")
+cat("Input dir:", input_dir, "\n")
+cat("Output dir:", output_dir, "\n")
+cat("Phenotype CSV:", pheno_path, "\n")
+
+pheno <- read.csv(pheno_path)
+missing_pheno <- setdiff(required_pheno_cols, colnames(pheno))
+if (length(missing_pheno) > 0) {
+  stop("ERROR: phenotype CSV missing columns: ", paste(missing_pheno, collapse = ", "))
+}
+
+pheno <- pheno %>%
+  mutate(projid = as.character(projid)) %>%
+  filter(!is.na(tot_adverse_exp)) %>%
+  filter(niareagansc %in% c(3, 4))
+
+cat("Phenotype rows after niareagansc{3,4} filter:", nrow(pheno), "\n")
+cat("  msex x niareagansc:\n")
+print(table(pheno$msex, pheno$niareagansc, useNA = "ifany",
+            dnn = c("msex", "niareagansc")))
+if (nrow(pheno) < 10) {
+  stop("ERROR: too few subjects after Low-AD filter (n=", nrow(pheno), ")")
+}
+
+h5ad_path <- file.path(input_dir, h5ad_file)
+if (!file.exists(h5ad_path)) {
+  stop("ERROR: In-PV_Basket.h5ad not found at ", h5ad_path)
+}
+
+sce <- tryCatch(
+  zellkonverter::readH5AD(h5ad_path, reader = "R"),
+  error = function(e) stop("ERROR loading H5AD: ", conditionMessage(e))
+)
+cat("Loaded H5AD:", ncol(sce), "cells x", nrow(sce), "genes\n")
+
+if (!"counts" %in% assayNames(sce)) {
+  assayNames(sce)[assayNames(sce) == "X"] <- "counts"
+}
+
+meta_df <- as.data.frame(colData(sce))
+if (!"projid" %in% names(meta_df)) {
+  stop("ERROR: H5AD obs missing 'projid'")
+}
+meta_df$barcode <- colnames(sce)
+meta_df$projid <- as.character(meta_df$projid)
+meta_df <- merge(meta_df, pheno, by = "projid", all.x = TRUE, suffixes = c("", ".pheno"))
+meta_df <- meta_df[!is.na(meta_df$tot_adverse_exp), ]
+cat("Cells matching Low-AD + non-NA tot_adverse_exp:", nrow(meta_df), "\n")
+if (nrow(meta_df) < 10) {
+  stop("ERROR: too few cells (", nrow(meta_df), ") after subject filter")
+}
+
+sce <- sce[, colnames(sce) %in% meta_df$barcode]
+meta_df <- meta_df[match(colnames(sce), meta_df$barcode), ]
+colData(sce) <- DataFrame(meta_df)
+
+pseudo <- aggregateAcrossCells(sce, ids = colData(sce)$projid)
+n_patients <- ncol(pseudo)
+cat("Pseudobulked patients:", n_patients, "\n")
+cat("  msex breakdown (pseudobulk):\n")
+print(table(as.numeric(colData(pseudo)$msex), useNA = "ifany"))
+if (n_patients < 5) {
+  stop("ERROR: too few patients (", n_patients, ") for DESeq2")
+}
+
+if (smoke_mode) {
+  smoke_summary <- data.frame(
+    integration = integration,
+    phenotype = phenotype,
+    cell_type = ct_label,
+    stratum = strat_label,
+    niareagansc_filter = "3,4",
+    n_cells = ncol(sce),
+    n_genes = nrow(sce),
+    n_patients = n_patients,
+    n_male = sum(colData(pseudo)$msex == 1, na.rm = TRUE),
+    n_female = sum(colData(pseudo)$msex == 0, na.rm = TRUE),
+    stringsAsFactors = FALSE
+  )
+  write.csv(
+    smoke_summary,
+    file = file.path(output_dir, paste0("smoke_summary_", phenotype, "_", ct_label, "_LowAD_Pooled.csv")),
+    row.names = FALSE
+  )
+  cat("Smoke summary written.\n")
+  quit(save = "no", status = 0)
+}
+
+colData(pseudo)$age_death <- as.numeric(scale(as.numeric(colData(pseudo)$age_death)))
+colData(pseudo)$pmi <- as.numeric(scale(as.numeric(colData(pseudo)$pmi)))
+colData(pseudo)$msex <- as.numeric(colData(pseudo)$msex)
+
+saveRDS(
+  pseudo,
+  file = file.path(output_dir, paste0("pseudobulk_ACE_", strat_label, "_", ct_label, "_LowAD.rds"))
+)
+
+pvals <- as.numeric(colData(pseudo)[[phenotype]])
+if (sum(!is.na(pvals)) < 5) stop("ERROR: too few non-NA values for ", phenotype)
+pseudo_sub <- pseudo[, !is.na(pvals)]
+colData(pseudo_sub)[[phenotype]] <- as.numeric(colData(pseudo_sub)[[phenotype]])
+
+design_formula <- as.formula(paste0("~ age_death + pmi + msex + ", phenotype))
+cat("Design formula: ", deparse(design_formula), "\n", sep = "")
+
+dds <- DESeqDataSetFromMatrix(
+  countData = assay(pseudo_sub, "counts"),
+  colData = colData(pseudo_sub),
+  design = design_formula
+)
+dds <- DESeq(dds)
+res <- results(dds, name = phenotype)
+save(
+  res,
+  file = file.path(output_dir, paste0("deseqAnalysisACE_", phenotype, "_", ct_label, "_", strat_label, "_LowAD.rda"))
+)
+cat("DESeq2 done:", sum(res$padj < 0.05, na.rm = TRUE), "DEGs (padj < 0.05),",
+    sum(res$padj < 0.10, na.rm = TRUE), "DEGs (padj < 0.10)\n")
+cat("ACE DEG (PV basket, Low-AD, Pooled M+F) analysis complete.\n")

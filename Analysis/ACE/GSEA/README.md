@@ -1,37 +1,34 @@
-# ACE GSEA — Gene Set Enrichment Analysis
+# ACE GSEA -- Gene Set Enrichment Analysis
 
-WebGestaltR pathway enrichment analysis for ACE DEG results.
+WebGestaltR ranked GSEA for ACE differential expression results.
 
 ## Method
 
-1. Take DEG results from `Analysis/ACE/DEG/` (DESeq2 outputs)
-2. Rank genes by signed significance: `sign(log2FC) * -log10(pvalue)`
-3. Run WebGestaltR GSEA against multiple pathway databases:
-   - Gene Ontology (BP, CC, MF — redundancy-reduced)
-   - KEGG, Reactome, Panther, Wikipathway
-   - Transcription factor targets
-4. Generate bubble plots showing enrichment landscape across cell types
+Gene-level DESeq2 results are ranked by `sign(log2FC) * -log10(pvalue)` and
+tested against 8 pathway/network databases (GO-BP, GO-CC, GO-MF, KEGG,
+Panther, Reactome, Wikipathway, TF targets) using the WebGestaltR GSEA
+implementation.
+
+## Cohorts
+
+- **[Tsai/](Tsai/)** -- Tsai cohort prefrontal cortex snRNA-seq
+- **DeJager/** -- DeJager cohort (to be implemented)
 
 ## Prerequisites
 
-- `${GSEA_ANALYSIS_ENV}` conda environment
-- Completed DEG analysis (requires `.rda` result files)
+- Completed DEG analysis (`Analysis/ACE/DEG/`)
+- `${GSEA_ANALYSIS_ENV}` conda environment with R and WebGestaltR
 
-## Running
+## Quick Start
 
 ```bash
-source config/paths.sh
+# Tsai cohort (submits 6 SLURM jobs)
 cd Analysis/ACE/GSEA/Tsai
-sbatch run_enrichment.sh
+bash aceGseaT.sh
 ```
 
 ## Outputs
 
-Under `${ACE_OUTPUT_ROOT}/GSEA/Tsai/`:
-- `overallWebGestaltRResult{Sex}{CellType}.rds` — enrichment results per cell type
-- `{dataset}{Sex}Heatmap{pathway}.png` — bubble plot heatmaps
-
-## Subdirectories
-
-- `DeJager/` — GSEA on DeJager DEG results
-- `Tsai/` — GSEA on Tsai DEG results
+Results are written to `${ACE_OUTPUT_ROOT}/GSEA/{Tsai,DeJager}/` with a
+`gsea_summary.csv` per phenotype/sex combination containing NES, FDR, and
+leading edge information for each cell type and database.

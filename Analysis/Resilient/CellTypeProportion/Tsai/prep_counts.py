@@ -58,11 +58,15 @@ def default_h5ad_paths() -> dict[str, Path]:
     tsai_processing = repo / "Data" / "Transcriptomics" / "Tsai" / "Processing_Outputs"
     return {
         "derived_batch": Path(
-            os.environ.get("TSAI_INTEGRATED", str(tsai_processing / "03_Integrated"))
+            os.environ.get("TSAI_INTEGRATED", str(tsai_processing / "03_Integrated" / "derived_batch"))
         )
         / "tsai_annotated.h5ad",
         "projid": Path(
-            os.environ.get("TSAI_INTEGRATED_PROJID", str(tsai_processing / "03_Integrated_projid"))
+            os.environ.get("TSAI_INTEGRATED_PROJID", str(tsai_processing / "03_Integrated" / "projid"))
+        )
+        / "tsai_annotated.h5ad",
+        "no_harmony": Path(
+            os.environ.get("TSAI_INTEGRATED_NO_HARMONY", str(tsai_processing / "03_Integrated" / "no_harmony"))
         )
         / "tsai_annotated.h5ad",
     }
@@ -82,6 +86,7 @@ def normalize_integration(name: str) -> str:
         "batch": "derived_batch",
         "derived_batch": "derived_batch",
         "projid": "projid",
+        "no_harmony": "no_harmony",
     }
     if name not in aliases:
         choices = ", ".join(sorted(aliases))
@@ -173,7 +178,7 @@ def main() -> None:
     parser.add_argument(
         "--integration",
         default="derived_batch",
-        choices=["batch", "derived_batch", "projid"],
+        choices=["batch", "derived_batch", "projid", "no_harmony"],
         help="Integrated annotated object to summarize.",
     )
     parser.add_argument(

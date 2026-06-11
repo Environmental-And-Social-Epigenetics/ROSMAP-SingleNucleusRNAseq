@@ -93,7 +93,19 @@ run_deg_for_file <- function(h5ad_file, ct_label) {
   cat("\n=== Cell type:", ct_label, "===\n")
 
   h5ad_path <- file.path(input_dir, h5ad_file)
-  sce <- zellkonverter::readH5AD(h5ad_path, reader = "R")
+  sce <- tryCatch(
+    zellkonverter::readH5AD(h5ad_path, reader = "R"),
+    error = function(e) {
+      if (grepl("too many nonzero values", conditionMessage(e))) {
+        cat("  SKIP:", ct_label, "- H5AD too large for R dgCMatrix (>2^31 nnz).\n")
+        cat("  Use legacy/pseudobulk_broad_Exc.py for this cell type.\n")
+      } else {
+        cat("  ERROR loading H5AD:", conditionMessage(e), "\n")
+      }
+      return(NULL)
+    }
+  )
+  if (is.null(sce)) return(invisible(NULL))
   cat("  Loaded:", ncol(sce), "cells x", nrow(sce), "genes\n")
 
   if (!"counts" %in% assayNames(sce)) {

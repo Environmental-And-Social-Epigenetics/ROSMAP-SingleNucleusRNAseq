@@ -75,14 +75,15 @@ def normalize_integration(integration: str) -> str:
 
 def default_paths(integration: str) -> tuple[Path, Path, Path]:
     integration = normalize_integration(integration)
+    tsai_processing = repo_root() / "Data" / "Transcriptomics" / "Tsai" / "Processing_Outputs"
     annotated = (
-        env_path("TSAI_INTEGRATED_PROJID", workspace_root() / "Tsai_Data" / "Processing_Outputs" / "03_Integrated_projid")
+        env_path("TSAI_INTEGRATED_PROJID", tsai_processing / "03_Integrated" / "projid")
         if integration == "projid"
-        else env_path("TSAI_INTEGRATED", workspace_root() / "Tsai_Data" / "Processing_Outputs" / "03_Integrated")
+        else env_path("TSAI_INTEGRATED", tsai_processing / "03_Integrated" / "derived_batch")
     ) / "tsai_annotated.h5ad"
     doublet_dir = env_path(
         "TSAI_DOUBLET_REMOVED",
-        workspace_root() / "Tsai_Data" / "Processing_Outputs" / "02_Doublet_Removed",
+        tsai_processing / "02_Doublet_Removed",
     )
     output_dir = (
         env_path("ANALYSIS_OUTPUT_ROOT", workspace_root() / "Analysis_Outputs")

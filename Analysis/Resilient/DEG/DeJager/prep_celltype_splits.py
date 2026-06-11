@@ -36,6 +36,8 @@ INTEGRATION_TO_ENV = {
     "patient_id": "DEJAGER_INTEGRATED_PATIENT_ID",
     "pool_batch": "DEJAGER_INTEGRATED_POOL_BATCH",
     "derived_batch": "DEJAGER_INTEGRATED_DERIVED_BATCH",
+    "sequencing_date": "DEJAGER_INTEGRATED_SEQUENCING_DATE",
+    "no_harmony": "DEJAGER_INTEGRATED_NO_HARMONY",
 }
 
 
@@ -64,19 +66,15 @@ def broad_group(ct_clean: str) -> str:
 
 
 def default_paths(integration: str) -> tuple[Path, Path, Path]:
+    dejager_processing = repo_root() / "Data" / "Transcriptomics" / "DeJager" / "Processing_Outputs"
     integrated_dir = env_path(
         INTEGRATION_TO_ENV[integration],
-        workspace_root() / "DeJager_Data" / "Processing_Outputs" / f"03_Integrated_{integration}",
+        dejager_processing / "03_Integrated" / integration,
     )
-    if integration == "library_id":
-        integrated_dir = env_path(
-            "DEJAGER_INTEGRATED",
-            workspace_root() / "DeJager_Data" / "Processing_Outputs" / "03_Integrated",
-        )
     annotated = integrated_dir / "dejager_annotated.h5ad"
     doublet_dir = env_path(
         "DEJAGER_DOUBLET_REMOVED",
-        workspace_root() / "DeJager_Data" / "Processing_Outputs" / "02_Doublet_Removed",
+        dejager_processing / "02_Doublet_Removed",
     )
     output_dir = (
         env_path("ANALYSIS_OUTPUT_ROOT", workspace_root() / "Analysis_Outputs")

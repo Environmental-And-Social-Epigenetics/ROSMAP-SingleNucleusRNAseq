@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -p pi_lhtsai,pi_manoli
+#SBATCH -p pi_lhtsai,pi_manoli,ou_bcs_low,mit_normal
 #SBATCH -n 8
 #SBATCH -t 08:00:00
 #SBATCH --mem=64G

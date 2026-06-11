@@ -1,18 +1,21 @@
-# ACE SCENIC — Regulatory Network Inference
+# ACE SCENIC -- Regulatory Network Inference
 
-pySCENIC regulatory network analysis for the ACE phenotype, adapted from the
-SocIsl implementation in `Analysis/SocIsl/SCENIC/`.
+pySCENIC regulatory network analysis for the ACE (Adverse Childhood
+Experiences) phenotype. Infers gene regulatory networks and transcription
+factor regulons, then tests their association with ACE exposure.
 
 ## Method
 
-1. Load integrated annotated H5AD, subset by cell type and sex
+1. Load integrated annotated h5ad, subset by cell type and sex
 2. Micropool cells (~50 per pool) to reduce sparsity
-3. Run GRNBoost2 for gene regulatory network inference
-4. Prune with motif enrichment (cisTarget ranking databases)
-5. Score regulon activity per sample with AUCell
-6. Test association between regulon activity and ACE phenotype using OLS
-   regression with covariates (age, PMI, NIA, batch)
-7. FDR correction (Benjamini-Hochberg)
+3. CPM normalize micropools
+4. Run GRNBoost2 for gene regulatory network inference
+5. Prune with motif enrichment (cisTarget ranking databases)
+6. Extract regulons (TF + target gene sets)
+7. Score regulon activity per sample with AUCell
+8. Test association between regulon activity and ACE phenotype using OLS
+   regression with covariates (age_death, pmi, niareagansc)
+9. FDR correction (Benjamini-Hochberg)
 
 ## Prerequisites
 
@@ -28,25 +31,44 @@ SocIsl implementation in `Analysis/SocIsl/SCENIC/`.
 
 ```bash
 source config/paths.sh
-cd Analysis/ACE/SCENIC/Tsai
-sbatch aceScenic.sh
+
+# Tsai dataset
+bash Analysis/ACE/SCENIC/Tsai/aceScenicT.sh [INTEGRATION] [PHENOTYPE]
 ```
 
-## Outputs
-
-Under `${ACE_OUTPUT_ROOT}/SCENIC/Tsai/`:
-- `{sex}_regulonsFULL_Tsai{celltype}.csv` — regulon list
-- `{sex}_auc_mtxFULL_Tsai{celltype}.csv` — AUCell activity matrix
-- `{sex}_pVals{celltype}.csv` — statistical results with FDR
-- `{celltype}{sex}Volcano.png` — volcano plots
+Defaults: INTEGRATION=derived_batch, PHENOTYPE=tot_adverse_exp
 
 ## Phenotype
 
-Replaces `social_isolation_avg` with ACE phenotype column (configurable via
-`--phenotype`, default: `ace_aggregate`). Covariates: `age_death`, `pmi`,
-`niareagansc`, `patient_id` (batch).
+Default phenotype is `tot_adverse_exp` (total adverse experiences count).
+Other options: `early_hh_ses`, `ace_aggregate`. The phenotype column must
+exist in `${ACE_SCORES_CSV}`.
+
+Covariates: `age_death`, `pmi`, `niareagansc`.
+
+Sex stratification: msex=1 (Male), msex=0 (Female). Patient lists are derived
+from the phenotype metadata at runtime, not hardcoded.
 
 ## Subdirectories
 
-- `DeJager/` — SCENIC analysis on DeJager dataset
-- `Tsai/` — SCENIC analysis on Tsai dataset
+- `Tsai/` -- SCENIC analysis on Tsai dataset
+- `DeJager/` -- SCENIC analysis on DeJager dataset
+
+## Outputs
+
+Under `${ACE_OUTPUT_ROOT}/SCENIC/{cohort}/results_{integration}/{phenotype}/`:
+
+```
+{Sex}_{CellType}/
+  adjacencies.csv.gz       # GRNBoost2 TF-gene edges
+  regulons.pkl             # Regulon objects
+  regulons_list.csv        # Regulon names and target counts
+  auc_matrix.csv           # Micropool x regulon AUCell scores
+  regression_results.csv   # Statistical results with FDR
+```
+
+## Resource Requirements
+
+- Memory: 400 GB per job
+- CPUs: 20 cores per job
+- Time: up to 48 hours per cell type

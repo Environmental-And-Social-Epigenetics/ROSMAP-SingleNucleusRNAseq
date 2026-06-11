@@ -35,6 +35,7 @@ INTEGRATION_TO_ENV = {
     "patient_id": "DEJAGER_INTEGRATED_PATIENT_ID",
     "pool_batch": "DEJAGER_INTEGRATED_POOL_BATCH",
     "derived_batch": "DEJAGER_INTEGRATED_DERIVED_BATCH",
+    "sequencing_date": "DEJAGER_INTEGRATED_SEQUENCING_DATE",
 }
 
 
@@ -65,13 +66,8 @@ def broad_group(ct_clean: str) -> str:
 def default_paths(integration: str) -> tuple[Path, Path, Path]:
     integrated_dir = env_path(
         INTEGRATION_TO_ENV[integration],
-        workspace_root() / "DeJager_Data" / "Processing_Outputs" / f"03_Integrated_{integration}",
+        repo_root() / "Data" / "Transcriptomics" / "DeJager" / "Processing_Outputs" / "03_Integrated" / integration,
     )
-    if integration == "library_id":
-        integrated_dir = env_path(
-            "DEJAGER_INTEGRATED",
-            workspace_root() / "DeJager_Data" / "Processing_Outputs" / "03_Integrated",
-        )
     annotated = integrated_dir / "dejager_annotated.h5ad"
     doublet_dir = env_path(
         "DEJAGER_DOUBLET_REMOVED",
@@ -178,9 +174,17 @@ def main() -> None:
 
     obs_df = read_obs_h5py(anno_path)
     obs_df["broad_type"] = obs_df["cell_type"].apply(lambda ct: broad_group(clean_ct_name(str(ct))))
-    obs_df["dr_barcode"] = obs_df["anno_barcode"].str.rsplit("-", n=1).str[0]
+    # Strip the trailing "-<library_id>" suffix that scanpy concat (with
+    # index_unique="-" and keys=library_ids) appended. library_ids contain
+    # dashes themselves (e.g. "190403-B4-A"), so we cannot use a fixed
+    # rsplit count — strip per-row by removing the known library_id suffix.
+    obs_df["library_id_str"] = obs_df["library_id"].astype(str)
+    obs_df["dr_barcode"] = [
+        ab[: -(len(lib) + 1)] if ab.endswith(f"-{lib}") else ab
+        for ab, lib in zip(obs_df["anno_barcode"].astype(str), obs_df["library_id_str"])
+    ]
     obs_df = obs_df.set_index("dr_barcode")
-    obs_by_library = {lib: grp for lib, grp in obs_df.groupby("library_id")}
+    obs_by_library = {lib: grp for lib, grp in obs_df.groupby("library_id", observed=True)}
     library_ids = sorted(obs_by_library)
     if args.sample_limit > 0:
         library_ids = library_ids[: args.sample_limit]

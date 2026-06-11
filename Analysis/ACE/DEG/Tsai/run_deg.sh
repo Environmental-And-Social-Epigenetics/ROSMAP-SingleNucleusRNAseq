@@ -1,6 +1,8 @@
 #!/bin/bash
 #SBATCH -p pi_lhtsai,pi_manoli
 #SBATCH -n 4
+#SBATCH --mem=200G
+#SBATCH -t 24:00:00
 #SBATCH -o %j.out
 #SBATCH -e %j.err
 
@@ -27,7 +29,9 @@ normalize_integration() {
   esac
 }
 
+set +u
 activate_env "${NEBULA_ENV}"
+set -u
 
 export HDF5_USE_FILE_LOCKING=FALSE
 

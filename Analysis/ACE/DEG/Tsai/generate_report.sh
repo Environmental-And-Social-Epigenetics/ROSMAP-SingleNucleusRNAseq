@@ -89,11 +89,12 @@ echo ""
 # ── Locate Claude CLI ────────────────────────────────────────────────────────
 CLAUDE_BIN=$(which claude 2>/dev/null || echo "")
 if [[ -z "$CLAUDE_BIN" ]]; then
-  # Try known locations
+  # Try portable user-level locations.
   for candidate in \
-    /orcd/home/002/mabdel03/conda_envs/consortium/bin/claude \
+    "${CLAUDE_BIN_OVERRIDE:-}" \
     "$HOME/.local/bin/claude" \
     "$HOME/.claude/bin/claude"; do
+    [[ -z "$candidate" ]] && continue
     if [[ -x "$candidate" ]]; then
       CLAUDE_BIN="$candidate"
       break
